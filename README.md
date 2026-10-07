@@ -2,7 +2,46 @@
 
 An experimental native macOS app exploring a block world beneath real Finder desktop icons. This is an early prototype, not an MVP. `SPEC.md` is the source of truth; development follows its roadmap one slice at a time.
 
-## Current scope
+## Current build and next steps
+
+**Implemented: Slices 0–19.** The current app has a seed browser, pan/zoom editor, circuit authoring, saved configuration, chunked terrain and a click-through live desktop with automatic Finder tracking. The last implementation built successfully and passed **178 automated tests**; the owner confirmed Slice 19's seed/location/restart walkthrough on 2026-10-07. This documentation update does not claim a new build or test run.
+
+The current footer is **Slice 19 · Seed browser**. It still stores one world at `~/Library/Application Support/RedstoneDesktop/world.json`. Moving around that seed leaves components at their world coordinates; applying another seed retains the same circuit. This prototype behavior will be replaced by the adopted plan below.
+
+**Next implementation: Slice 19A — Independent world library and migration.** Then Slice 19B adds named areas and explicit activation; Slice 20 Finder ghosts follows. Each slice receives its own automated tests, build, full test run and exact Mac walkthrough. New manual checkboxes stay pending until you confirm them.
+
+## Adopted plan: worlds and saved areas
+
+This plan is approved and documented in [SPEC.md](SPEC.md), but **not yet implemented**.
+
+| Concept | Meaning |
+| --- | --- |
+| World | A named saved map with a fixed seed and its own components and lever positions |
+| Saved area | A named camera bookmark into a world; it stores no separate circuit |
+| Editor selection | The world/area you are browsing or editing |
+| Active desktop area | The one saved area assigned to your desktop; it runs only while Desktop World is enabled |
+
+For example, save **Morning shortcuts** and **Project launcher** in your seed-42 world, and **Experiments** in your seed-2026 world. Components stay where you built them. Overlapping areas in one world share the same components. Two independently created worlds with the same seed share terrain generation but have separate builds; reopen them through the world list.
+
+The planned flow after Slice 19B is:
+
+1. Preview a seed and choose **Create World…** to save a new empty world. This selects it for editing without activating it.
+2. Build, pan and explore. **Save Area…** gives the proposed view a name without changing your live desktop.
+3. Select any world/area from the list to browse it. You can edit an inactive world while another world runs. To edit the active world, disable Desktop World first.
+4. Choose **Activate on Desktop** to use the selected saved area's camera and circuit. Unsaved browsing changes are not applied; save another area first. Enabling/disabling controls whether the assigned area is running.
+5. Quit/reopen: all worlds/areas and the active selection restore, but Desktop World starts disabled. Temporary editor browsing is not saved.
+
+Inactive worlds remain paused. The active world's whole circuit simulates, including wires outside the visible area; only visible output tiles can dispatch desktop actions. Switching resets transient pulses/delays and cancels pending work from the old session. Saved ON levers resume and can activate outputs when you explicitly enable or switch areas. Re-activating the same world/camera does not restart it.
+
+Real Finder files stay on your actual desktop. They are neither copied into worlds nor repositioned when you switch; their occupancy is recalculated against the active area's camera. Future editor ghosts will show a projection against the selected area's proposed camera.
+
+Slice 19A will migrate your current world into `~/Library/Application Support/RedstoneDesktop/library.json`, retaining your existing identity, chosen seed, circuit, levers, terrain patches and camera as the first **Desktop** area. The old world.json stays untouched as a backup. New worlds get empty procedural terrain and a default **Home** area rather than your existing demo circuits/grass patches. A valid library takes precedence over the backup; failed/corrupt restoration preserves saved data and blocks writes. Until 19B, new-world browsing/editing requires the desktop disabled and does not activate those worlds.
+
+No deletion, copying circuits between worlds, terrain regeneration or thumbnails are required in these two slices. Their detailed tasks, migration rules and acceptance checks are in SPEC.md Sections 3.8, 7.1, 25, 29 and the roadmap.
+
+## Implemented slice history
+
+The entries below describe the behavior and evidence at each slice's implementation. They are not all features or instructions of the current build; use **Current build and next steps** above and the **Slice 19 walkthrough** below for today's app. In particular, manual Finder reads became automatic in Slice 18, and seed replacement is current prototype behavior scheduled to change in 19A.
 
 Slices 0–1 provide a SwiftUI editor placeholder and tested domain primitives for coordinates, camera, directions, power, and component identity. Domain files use only the Swift standard library and do not depend on AppKit or SpriteKit.
 
@@ -91,6 +130,10 @@ open build/Build/Products/Debug/RedstoneDesktop.app
 Alternatively, open the generated `RedstoneDesktop.xcodeproj` and run the `RedstoneDesktop` scheme. The generated project and build products are ignored by Git. `project.yml` is the editable project definition. The bundle identifier stays stable for later macOS permission testing.
 
 When new source files are added, regenerate the project before building. A build compiles the source into the `.app`; a test run builds it and runs XCTest checks. Neither command requires changing anything in Xcode. If an earlier version is running, quit it with Command-Q before opening the new build so you see the latest code.
+
+## Historical validation walkthroughs
+
+These walkthroughs retain owner acceptance evidence for their respective builds. Earlier footer labels, temporary-save behavior and manual Finder-read instructions are historical. Today's app uses the Slice 19 footer, persistence and automatic Finder refresh; the adopted world/area plan will receive new walkthroughs as 19A and 19B land. Do not reset saved data or undo later functionality to reproduce an old build.
 
 ## Manual validation — Slice 0
 
@@ -229,7 +272,7 @@ The owner confirmed this regression check on 2026-10-07: the demo works as befor
 4. Click PRESS with OUTPUT empty: the path should light for about one second and nothing should open. Put a harmless folder/document center on OUTPUT, then press after the path turns off: the item should open. Move it away or replace it and confirm the corresponding result still changes.
 5. Confirm Finder selection/dragging still works and disabling/re-enabling removes/restores the world with an unpowered circuit. Report any changed click behavior, missing wire segments, or misplaced components.
 
-These were the Slice 10 checks. For the current build, use the Slice 11 walkthrough below.
+These were the Slice 10 checks. For the current build, use the Slice 19 walkthrough below.
 
 
 ## Manual regression check — Slice 11
@@ -288,7 +331,7 @@ The owner confirmed this visual walkthrough on 2026-10-07, reporting “Looks go
 6. Move a harmless folder/document onto a visible output and refresh Finder items (or enable polling). Its border/badge should change to green **ITEM**; moving it away should return it to **EMPTY**. Real Finder icons stay above the renderer and can cover parts of these badges. If you can conveniently put two item centers in one output tile, its state should be red **MANY**, and no item should open; ambiguity is also covered by automated fixtures.
 7. Confirm Finder selection/dragging and ordinary-window click rejection still work. Disable/re-enable: all circuits should return unpowered, output occupancy should reflect the last successful Finder snapshot, and no stale white flash should remain.
 
-Please report whether visual states follow the circuit correctly, or describe any unreadable labels, missing segments, stale badge, or unexpected opening. On confirmation, the next implementation is Slice 14 (Placement rules), with new demo circuits placed to the right if needed.
+Please report whether visual states follow the circuit correctly, or describe any unreadable labels, missing segments, stale badge, or unexpected opening. Slice 14 followed this historical revision; future demo circuits continue to the right.
 
 
 ## Developer placement walkthrough — Slice 14
@@ -309,12 +352,12 @@ Debug build and 123 tests passed for this revision. The owner confirmed the walk
 7. Disable the world again. Click **Reset test placements** in the developer window; the patch list should return to empty. Enable the world and confirm the placed dust is gone, while terrain/decorations and the original circuits remain.
 8. Optional: with the world disabled, place a repeater on a dry test tile and choose its direction/delay. Enable the world and check the matching arrow/delay label. Reset afterwards if desired.
 
-Changes are temporary for this app session. This walkthrough remains available for regression; the current main window is the Slice 15 editor below.
+Changes are temporary for this app session. This describes the Slice 14 build; the current editor is described in the Slice 19 walkthrough below.
 
 
 ## Basic editor walkthrough — Slice 15
 
-This revision built and passed all 135 tests. The owner confirmed the walkthrough on 2026-10-07 with “It works! Thats neat.” The corresponding Slice 15 MANUAL checkbox is checked based on that Mac report. These steps remain for regression; the current footer is Slice 16.
+This revision built and passed all 135 tests. The owner confirmed the walkthrough on 2026-10-07 with “It works! Thats neat.” The corresponding Slice 15 MANUAL checkbox is checked based on that Mac report. These describe the Slice 15 build; the current footer is Slice 19.
 
 1. Quit the old app with **Command-Q**, then launch this build:
 
@@ -341,7 +384,7 @@ This revision built and passed all 135 tests. The owner confirmed the walkthroug
 8. On the **real desktop**, put a harmless folder on OUTPUT (14, 7), and keep PRESS (10, 7) and its neighboring tiles clear of Finder icons. Use **Desktop Controls…** to inspect pointer tile coordinates if necessary. Press the real desktop button: the circuit should light up, with about a **0.2-second repeater delay**, then request opening the folder once. Try it with the output empty too: the circuit should still light up without opening anything. The original circuits should continue working.
 9. Disable Desktop World and confirm your new circuit remains editable. Erase one component and verify its terrain stays intact. Please confirm whether you could author and run this circuit using only the UI, and report any missing hover preview, wrong tile placement, or layout/input problem.
 
-Slice 15 changes were temporary. The current Slice 16 build saves circuit edits as described below; editor pan/zoom still resets on reopening.
+Slice 15 changes were temporary. Slice 16 introduced saving circuit edits as described below; editor pan/zoom still resets on reopening.
 
 
 ## Saving and restart walkthrough — Slice 16
@@ -392,7 +435,7 @@ open build/terrain-preview.svg
 
 This creates a comparison image outside the source/bundle: seed **42** on the left, seed **2026** on the right. Both cover x/y **−64…63**. Colors indicate terrain; dark dots indicate decorations; faint lines mark 32-tile chunk boundaries. The seeds should have different land/water layouts, and the faint chunk lines should not create artificial breaks in terrain. Re-running produces identical output. These previews are developer data plots, not an interactive seed browser or polished terrain art.
 
-The generator's fixed snapshot, chunk consistency, negative-coordinate and seed-diversity checks are automated. The next implementation is **Slice 18 — Chunked terrain renderer**.
+The generator's fixed snapshot, chunk consistency, negative-coordinate and seed-diversity checks are automated. Slice 18 subsequently connected this generator to the renderer; the next planned implementation today is Slice 19A.
 
 
 ## Chunked terrain and automatic Finder walkthrough — Slice 18
@@ -414,7 +457,7 @@ The owner confirmed the Slice 17 regression on 2026-10-07. This revision adds vi
 
 Please confirm whether **long panning keeps retained chunk/node counts bounded**, **idle generated/texture counts stay fixed**, and **enabling works without manually reading Finder**. The owner confirmed these checks on 2026-10-07 with “Great! it works”; both Slice 18 MANUAL checkboxes are checked based on that report.
 
-Your save remains at `~/Library/Application Support/RedstoneDesktop/world.json`. Legacy saves are migrated in memory; the next edit/save writes format 2 atomically. Seed browsing and choosing the desktop area are Slice 19; there is no seed control yet.
+Your save remains at `~/Library/Application Support/RedstoneDesktop/world.json`. Legacy saves are migrated in memory; the next edit/save writes format 2 atomically. At the Slice 18 revision there was no seed control; the current Slice 19 build adds it below.
 
 
 ## Seed browser and choose area — Slice 19
@@ -434,4 +477,4 @@ Your save remains at `~/Library/Application Support/RedstoneDesktop/world.json`.
 8. Wait for **Saved.**, quit and reopen. Confirm the seed field restores the chosen seed. Click **Show desktop area** to browse to the saved desktop origin, then enable Desktop World and confirm it shows the same terrain/location.
 9. To return the desktop to its original location, click **Reset view**, then **Use This Area**. Reset view alone changes only browsing; applying sets desktop origin back to (0, 0). To restore the original surrounding terrain too, preview seed **2026** before applying. Your original circuits and right-hand construction area should be visible again.
 
-The owner confirmed this walkthrough on 2026-10-07; Slice 19’s MANUAL checkbox is complete. The app currently stores one world: changing its seed retains its circuit, while moving within that seed leaves components at their world coordinates. Independent saved worlds and named area bookmarks are a proposal recorded in SPEC.md, not yet implemented. The next existing roadmap slice is Finder ghosts and output snapping.
+The owner confirmed this walkthrough on 2026-10-07; Slice 19’s MANUAL checkbox is complete. The app currently stores one world: changing its seed retains its circuit, while moving within that seed leaves components at their world coordinates. Independent saved worlds and named areas are now the adopted plan in SPEC.md, still unimplemented. The next slices are **19A — Independent world library and migration**, then **19B — Named areas and explicit desktop activation**, followed by Slice 20 Finder ghosts/output snapping. This walkthrough describes the existing prototype; seed replacement and Use This Area will be superseded as those slices land.

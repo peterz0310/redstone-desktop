@@ -23,6 +23,8 @@ The intended workflow is:
 
 The project is an experiment first and a polished application second.
 
+Current implementation: Slices 0–19 are complete, with owner-confirmed Mac acceptance where required. The app still stores one world in format-2 `world.json`; changing its seed retains its circuit. The adopted target below adds independent worlds and saved areas in **Slice 19A**, then area browsing/activation in **Slice 19B**, before Slice 20. New tasks remain unchecked until implemented. Completed slice descriptions and dated decision entries are historical evidence; Sections 3.8, 7.1, 25 and 29 define the new target behavior.
+
 The most important early question is not whether attractive terrain or redstone can be made. Those are comparatively straightforward. The first major feasibility gate is:
 
 > Can a native macOS app render a click-through block world visually beneath Finder desktop icons, track the real icon positions, observe a click on a world button without breaking Finder, propagate a signal, and activate the Finder item occupying an output tile?
@@ -65,7 +67,9 @@ The world should eventually support:
 
 - deterministic seed-based terrain
 - editor pan/zoom and seed exploration
-- a chosen persistent desktop viewport
+- independent saved worlds with fixed seeds and their own circuits
+- named saved areas within each world
+- a chosen persistent desktop viewport, explicitly activated from the area list
 - terrain that constrains circuit placement
 - buttons
 - levers
@@ -202,6 +206,16 @@ First prove:
 - output action
 
 Then build the game layer.
+
+## 3.8 Worlds own components; areas bookmark views
+
+A **world** has a stable UUID, name, fixed generation settings, terrain profile and one circuit dictionary keyed by world coordinates. Its lever positions are durable. The seed determines terrain; it is not world identity. Independently created worlds may share a seed without sharing components.
+
+A **saved area** has its own UUID, name, world ID and desktop camera. It bookmarks a view into that world. It owns no components or cropped circuit snapshot. Overlapping areas in the same world see the same components; editing either view changes that world's circuit. Moving the camera never moves or duplicates components.
+
+The **library** stores worlds, saved areas and one active area ID. Editor selection is independent of this active desktop selection. Browsing or editing an inactive world never activates it. **Activate on Desktop** explicitly selects which saved area is used by desktop rendering, input, simulation and actions. Enabling/disabling Desktop World controls whether that selection is running.
+
+Fresh worlds begin with an empty circuit and procedural terrain. Preserve the prototype fixture only in the migrated world. Do not copy a user's existing components, fixture patches or lever positions into a new world.
 
 ---
 
@@ -413,6 +427,11 @@ Do not assume access.
 │   ├── Editor/
 │   ├── BuildMode/
 │   ├── Persistence/
+│   │   ├── WorldDocument.swift
+│   │   ├── WorldLibraryDocument.swift
+│   │   ├── SavedArea.swift
+│   │   ├── WorldLibraryStore.swift
+│   │   └── WorldAutosaver.swift
 │   ├── Diagnostics/
 │   └── Resources/
 └── RedstoneDesktopTests/
@@ -463,6 +482,22 @@ World + circuit + highlight state
 ```
 
 ---
+
+## 7.1 Library, editor selection and desktop runtime
+
+Library → editor-selected world + temporary editor camera → editor renderer.
+
+Library → active saved area → its world + saved desktop camera → desktop renderer, input, simulator, occupancy and actions.
+
+Keep these paths independent. Pure library/world/area values use Foundation/Swift only. Finder reads go through DesktopItemProviding and screen conversion through CoordinateMapper. SpriteKit receives snapshots, never storage ownership or action execution responsibilities.
+
+While Desktop World runs, simulate the **entire finite circuit dictionary of the active world**, including offscreen components. Do not clip connected circuits to an area rectangle or invent per-area simulators. Inactive worlds have no running simulation. Render only the visible region. Dispatch desktop actions only for output tiles whose mapped centers lie within the active physical desktop canvas; offscreen events do not queue an action for a later visit. Crossing a viewport edge does not break a wire. Fixed-path actions added later obey the same visibility gate. Do not simulate generated terrain.
+
+Each input/read/output operation is scoped to the active world ID and a runtime session token. Changing the active area, including a move within the same world, cancels pending work and creates a new session. Never apply an old completion to a new world with coincident tile coordinates. No catch-up simulation or replay of inactive-world events.
+
+Activation preflights the target world, saved camera and available display, then successfully flushes pending library configuration with the new active area ID before stopping the old runtime. Validation/save failure leaves the old active selection/runtime intact and reports an actionable error. After a successful save, shut down old monitors/timers/actions, restore the target's durable lever positions into a fresh simulator, rebuild desktop mapping/rendering, clear transient highlights/pulses/history, and refresh Finder through the serialized tracker. If rendering cannot start after that commit, leave Desktop World disabled with an error and the saved target selected; never report a running desktop or silently resume the previous world.
+
+Activation preserves the enabled/disabled state: switching while enabled runs the target, switching while disabled prepares it for the next explicit enable. Re-activating the exact same world/camera updates/saves the active area ID if selecting a different bookmark, but is a runtime no-op after pending edits are saved: it does not reset a held circuit or re-open an output. Enabling or switching to a different area can produce a new output rising edge from a saved ON lever, as in the current lifecycle; document this in the Mac walkthrough. Startup always restores selection with Desktop World disabled and no Finder query/action.
 
 # 8. Coordinate system
 
@@ -814,7 +849,7 @@ Normal SwiftUI window with:
 
 Editor camera and desktop camera are separate.
 
-Panning around the editor must not move the actual wallpaper until the user clicks **Use This Area** or enables an explicit live-preview mode.
+Panning, choosing a world/area and seed exploration must not move the actual wallpaper. After Slice 19B, **Save Area** bookmarks the proposed view and **Activate on Desktop** explicitly activates a saved area. No automatic live-preview mode is required. The Slice 19 **Use This Area** workflow is the earlier prototype behavior and is superseded by these controls.
 
 ---
 
@@ -843,16 +878,12 @@ Use a project-owned seeded hash/PRNG/noise implementation.
 
 ```swift
 struct WorldGenerationSettings: Codable {
-    var generationVersion: Int
+    var generationVersion = 1
     var seed: UInt64
-    var biomeScale: Double
-    var terrainScale: Double
-    var decorationDensity: Double
-    var waterThreshold: Double
 }
 ```
 
-The UI may initially expose only seed.
+Additional generation controls can be added in a later version; the current generator exposes only version and seed. The UI exposes unsigned decimal UInt64 seed entry and Random while exploring a possible new world. Generation settings are fixed after creation; previewing another seed does not change an existing world. Generation version 1 fixes the remaining scales/thresholds in code.
 
 ## 15.4 Suggested generation layers
 
@@ -1415,61 +1446,35 @@ No need for full 3D positional audio.
 
 # 25. Editor UX
 
-Suggested layout:
+Target layout after Slice 19B:
 
 ```text
-┌────────────────────────────────────────────────────────────────┐
-│ World: My Desktop       Seed: 8483920291       [Use This Area] │
-├──────────────┬──────────────────────────────────┬──────────────┤
-│ Tools        │                                  │ Inspector    │
-│              │          world canvas            │              │
-│ Select       │                                  │ Tile         │
-│ Dust         │    terrain + circuit             │ Component    │
-│ Button       │    + Finder ghost icons          │ Power        │
-│ Lever        │                                  │ Output mode  │
-│ Repeater     │                                  │              │
-│ Output       │                                  │              │
-│ Erase        │                                  │              │
-├──────────────┴──────────────────────────────────┴──────────────┤
-│ Finder connected · 17 items · 48 pt/tile · Sim 20 Hz          │
-└────────────────────────────────────────────────────────────────┘
+Worlds / Saved Areas | World canvas + tools | Inspector
+New World: Seed / Preview / Random / Create World
+Selected: Experiments / Bench       Desktop: Shortcuts / Morning
+Save Area…                         Activate on Desktop
 ```
 
-Editor must support:
+Editor must support world creation/list/rename, area save/list/rename, pan, zoom, selection, placement/erase, component rotation, repeater delay, shared placement validation, viewport outlines and later Finder ghosts. World/area names must be nonempty after trimming; UUIDs identify records even when names coincide. Show each world's seed, its saved areas and the active desktop badge so the selected editor world cannot be mistaken for the live one. World/area deletion, circuit duplication, thumbnails, search and editor simulation are deferred.
 
-- pan
-- zoom
-- select
-- place
-- erase
-- component rotate where relevant
-- repeater delay edit
-- placement validation
-- seed entry
-- random seed
-- desktop viewport rectangle
-- Finder ghost overlay
+## 25.1 Browsing, saved areas and activation
 
-## 25.1 Editor camera vs desktop camera
+- Selecting a world or saved area changes only editor selection and temporary browsing camera. Selecting a world starts at its first saved area (Home for a new world); every world must retain at least one area. Selecting an area browses to its saved origin; editor zoom remains independent of desktop points-per-tile.
+- **Save Area…** names and saves a new bookmark in the selected world using the proposed lower-left origin and desktop tile scale. Saving does not activate or replace the existing active bookmark. Area cameras are fixed for this first version; save another area to bookmark a different view. Renaming changes only its label.
+- Each newly created world receives a default **Home** area at origin (0, 0), 64 logical points per tile. The migrated world's first area uses its existing saved camera, not this default.
+- **Activate on Desktop** targets the selected saved area, using its saved camera, not an unsaved pan/zoom draft. If browsing has moved away, label the saved target clearly and offer Save Area. A seed preview must be created as a world before it can be edited, saved as an area or activated.
+- Orange shows the proposed area in the selected world. Blue shows the active desktop viewport only when that viewport belongs to the selected world; an active area in another world is identified in text, never projected into the wrong map. All outlines use CoordinateMapper and the current display's logical dimensions; an area stores camera, not a frozen display size.
+- Only the enabled active world's configuration is locked for editing. An inactive world can be edited while another world runs. Domain mutation methods enforce this by world ID, not only UI disabling. Disable Desktop World to edit the active world. Browsing and Select remain available at all times.
+- Rendering inactive worlds shows their configuration/durable lever positions without attributing active-world power or occupancy to them. Until Slice 20 adds separately labeled Finder projections, inactive-world occupancy is unavailable rather than copied from the active world. No editor click executes an output or advances simulation.
+- Temporary selection/pan/zoom is not persisted. Reopening selects the saved active area for editing, with Desktop World disabled. **Show Desktop Area** selects that world/area and browses to its origin; **Reset View** returns only editor browsing to origin zero.
 
-The editor has temporary exploration state.
+## 25.2 Seeds belong to worlds
 
-The desktop has persisted camera state.
+Generation settings are immutable for an existing world. **Preview** and **Random** explore terrain for a possible new world using an empty circuit and no prototype overrides. **Cancel Preview** returns to the previously selected world; **Create World…** saves a new UUID/name, chosen seed, empty circuit and Home area, then selects it in the editor without activating it.
 
-Browsing must not alter desktop until **Use This Area** is invoked.
+Selecting a stored world restores its own components and lever positions. Entering the same seed again does not look up or merge worlds; use the world list to reopen an existing save. Creating another world with the same seed deliberately creates independent builds.
 
-## 25.2 Seed changes after circuit exists
-
-Do not silently invalidate a circuit.
-
-At minimum:
-
-- detect components that become invalid under new terrain
-- warn before applying
-
-Simpler V1 policy is acceptable:
-
-> Once circuit editing begins, changing seed requires Reset World.
+Remove the prototype's apply-new-seed-to-existing-circuit path when Slice 19A lands. There is no implicit reset, component transfer or terrain replacement for existing worlds. Import/export, explicit duplication and terrain regeneration/migration tools remain later work.
 
 ## 25.3 Output snapping
 
@@ -1577,44 +1582,36 @@ Aim initially for comfortably under ~5% CPU while static, but profile rather tha
 
 # 29. Persistence
 
-Start with one Codable JSON world document.
+The current Slice 19 app stores a format-2 WorldDocument at `~/Library/Application Support/RedstoneDesktop/world.json`. Slice 19A migrates to a single atomic **library.json** in that directory. One file holds world records, area records and active selection, avoiding a partially committed cross-file world/index update. Keep Codable JSON, Foundation storage, debounce autosave and explicit Save Now; no database or backend.
 
-Example:
+## 29.1 Target durable model
 
-```json
-{
-  "formatVersion": 1,
-  "id": "uuid",
-  "name": "My Desktop",
-  "generation": {
-    "generationVersion": 1,
-    "seed": 8483920291
-  },
-  "camera": {
-    "worldOrigin": { "x": -142.25, "y": 80.0 },
-    "pointsPerTile": 48.0
-  },
-  "circuit": {
-    "components": []
-  },
-  "terrainOverrides": [],
-  "resourcePack": {
-    "kind": "builtin"
-  }
-}
-```
+- `WorldLibraryDocument`, library format version 1: arrays of worlds and saved areas plus a nonoptional `activeAreaID`.
+- `WorldDocument`, world format version 3: stable UUID/name, fixed generation settings, terrain profile (`procedural` or `legacyFixtureV1`), circuit configuration and ON lever coordinates. Move the old document camera into an area. Recreate legacy fixture overrides/unspecified cells by profile; procedural worlds have none. Future user terrain overrides require an explicit schema addition.
+- `SavedArea`: stable UUID/name, `worldID` and CameraState. No components, Finder paths, simulation state or stored screen dimensions.
+- Exclude editor selection/camera, enabled state, runtime power, button timers, repeater histories, pending actions, Finder items/permissions and generated terrain caches.
 
-Version at minimum:
+Validate unique world/area IDs, nonempty names, at least one world and at least one area per world, every area reference, active area reference, supported library/world/generator/profile versions, finite representable camera with 16…128 points-per-tile, component placement/configuration and lever membership. Validate cameras against the actual display again at activation. Retain the existing 2 MB encoded-document bound for the entire initial library; report a limit error without dropping worlds or overwriting the previous save. Raise limits only in an explicit later change with tests.
 
-- world format
-- generator
-- resource-pack manifest
+Store normal app data in Application Support and replace the complete library atomically. Autosave after 0.75 seconds of edit inactivity, coalescing pending writes into the latest **whole library snapshot**, including edits to multiple worlds. Flush on quit/disable and before activation. Failed saves retain the latest pending snapshot for retry and never claim Saved. Store-backed tests use isolated temporary files/fakes, never the owner's Application Support file.
 
-Store normal app data in Application Support.
+Version library and world documents independently from generation and resource-pack manifest versions. This library change does not alter generation-version-1 terrain or introduce asset-pack persistence.
 
-Use atomic writes.
+## 29.2 Migration and restoration
 
-Autosave with a short debounce, e.g. 0.5–1 second after edit activity stops.
+1. If library.json exists, load and validate it. It is authoritative even when world.json remains. Damaged/unsupported/oversized library data disables writes for the session; never fall back to the old save and overwrite the library.
+2. If library.json is absent and world.json exists, decode its supported format 1 or 2. Preserve world UUID/name, current chosen seed/generator, components, lever positions and legacy terrain exactly. Format 1 retains the established seed-2026 migration. Create one **Desktop** area at the saved camera and select it as active.
+3. Write/validate the migrated library atomically before reporting migration complete. Leave the source world.json byte-for-byte untouched as a backup. Repeat startup with a valid library must reuse its IDs and must not import the backup again. If migration fails, preserve both source and any previous destination, block writes for the session and report recovery guidance.
+4. If neither file exists, create an initial library with one new procedural empty world and Home area. Prototype fixtures remain available to automated tests/explicit developer tools, not normal fresh worlds.
+5. Restore the active area for editor browsing, but always start desktop integration disabled. Enabling uses that saved world's area, independent of later editor selection.
+
+No saved data is deleted as part of migration. Distinguish missing from unreadable/corrupt data. Recovery instructions must distinguish current library.json from legacy world.json; moving the backup does not repair a damaged authoritative library.
+
+## 29.3 Minimal scope
+
+Slice 19A supplies models, migration, whole-library persistence, world creation/selection and immutable seeds. Saved-area domain records exist for migration/default areas, but the named-area browser/activation UX is Slice 19B. Until 19B, world switching/creation/editing can require Desktop World disabled and the live desktop remains assigned to the original active world; new-world activation is not implied by browsing. The interim Use This Area control may adjust only that active world's camera bookmark, never its seed or another world's active assignment. Document this temporary UI precisely.
+
+Slice 19B adds named areas and independent editor/desktop selection, including inactive-world editing while another world runs. It replaces Use This Area with Save Area / Activate on Desktop and implements the runtime contract in Section 7.1. Existing saves and proven Finder/action/coordinate boundaries remain intact.
 
 ---
 
@@ -1625,6 +1622,7 @@ Eventually behave like a desktop utility.
 Suggested status/menu commands:
 
 - Open Editor
+- Show Desktop Area
 - Enable/Disable Desktop World
 - Enter/Exit Build Mode
 - Refresh Finder
@@ -1671,6 +1669,9 @@ Show:
 app version
 macOS version
 active screens
+editor-selected world/area IDs and names
+active desktop world/area IDs and names
+library/migration/save status
 screen frames
 backing scales
 desktop window status
@@ -1787,7 +1788,14 @@ Must cover:
 - circuit loops do not hang
 - occupancy ambiguity
 - JSON round trips
-- migrations
+- migrations preserving legacy identity/circuit/camera/lever data and source bytes
+- independent worlds including duplicate seeds and coincident component coordinates
+- overlapping area bookmarks sharing one circuit
+- invalid/dangling library references and damaged-library preservation
+- autosave coalescing edits across worlds
+- inactive-world editing and browse/live isolation
+- world/session-scoped cancellation across activation and failed activation
+- entire active-world simulation with offscreen output action suppression
 - resource-pack manifest validation
 
 ## 36.2 Integration tests with fakes
@@ -1812,6 +1820,9 @@ Maintain explicit manual validation for things an automated agent cannot safely 
 - Finder resizing recalibrates
 - display resolution changes survive
 - permissions behave sensibly
+- worlds and named areas restore independently after restart
+- browsing/editing another world leaves the active desktop unchanged
+- explicit area activation remaps real Finder targets and cancels old actions
 
 The AI may mark a `MANUAL` checkbox complete only after the owner confirms the corresponding checks passed on their Mac. Record that confirmation as owner-reported validation, separate from automated test results. Never infer manual completion from a build or test run.
 
@@ -1866,7 +1877,7 @@ Keep existing desktop demo circuits in place. Extend any additional test circuit
 
 # 38. IMPLEMENTATION ROADMAP
 
-The roadmap is deliberately granular.
+The roadmap is deliberately granular. Adopted order after Slice 19 is **19A → 19B → 20**, then the existing numbered slices. Lettered additions preserve earlier slice numbers and validation history. Documentation planning is not implementation acceptance.
 
 ---
 
@@ -2299,11 +2310,89 @@ Acceptance:
 
 ---
 
+## Slice 19A — Independent world library and migration
+
+### Goal
+
+Give each world its own permanent seed, coordinate-keyed circuit and save identity; preserve the owner's existing build before changing the UI's seed semantics.
+
+### Tasks
+
+- [ ] Foundation-only library/world-format-3/saved-area models and reference validation.
+- [ ] Atomic library.json store, whole-library debounce/Save Now/quit flush and bounded damaged-data handling.
+- [ ] Idempotent format-1/2 world.json migration retaining original source bytes, identity, terrain profile, circuit, levers and camera in the first area.
+- [ ] Empty procedural fresh worlds and default Home areas; no inherited demo/user components.
+- [ ] SwiftUI world list, names/seed display, create/rename/select world while Desktop World disabled.
+- [ ] Preview/Random/Create World with an empty candidate; existing world seeds fixed; remove seed replacement of existing builds.
+- [ ] Route all editor/developer mutations and saves to the selected world; browsing never selects the active desktop world implicitly.
+- [ ] Interim desktop lifecycle continues using the saved active world/area; scope Use This Area to it and document the temporary restriction.
+- [ ] Update tests for world ownership, seed independence, migration/failure preservation, references and multi-world autosave; build and run the full suite.
+- [ ] Update README with exact current controls, new save/recovery path and Mac walkthrough.
+
+### Automated acceptance
+
+- [ ] Seed-42 and seed-2026 worlds retain independent circuit edits at identical coordinates; duplicate-seed worlds remain independent too.
+- [ ] Legacy restoration/migration preserves every configuration value and source file, and a second launch does not duplicate records.
+- [ ] Corrupt/unsupported library or legacy input cannot be overwritten; failed saves retain pending edits for retry.
+- [ ] World creation/selection/seed preview causes no Finder read, simulation, desktop reassignment or action.
+- [ ] Edits in multiple worlds survive one coalesced whole-library save and restore.
+
+### Manual acceptance
+
+- [ ] MANUAL: existing saved circuit, terrain, lever settings and desktop camera survive migration and restart.
+- [ ] MANUAL: create worlds with seeds 42 and 2026, author different components, switch and reopen; each restores its own build without copying.
+- [ ] MANUAL: selecting a world does not activate it; the original desktop selection still works after explicit enable.
+
+**Status: planned; not implemented.** This is the next slice. Named-area UI and switching the active desktop to new worlds wait for 19B.
+
+---
+
+## Slice 19B — Named areas and explicit desktop activation
+
+### Goal
+
+Browse a list of built areas across worlds and explicitly choose one for the desktop, without transferring components.
+
+### Tasks
+
+- [ ] Saved-area list grouped by world, Save Area and rename with stable IDs; display seeds and active badge.
+- [ ] Save proposed camera as a new bookmark; selecting/browsing an area never changes its stored camera or desktop assignment.
+- [ ] Separate editor selection from activeAreaID; Show Desktop Area and startup selection restore.
+- [ ] Replace Use This Area with Save Area / Activate on Desktop; activate saved camera, never an unsaved browsing draft.
+- [ ] Allow inactive-world editing while live active-world configuration stays locked in both UI and domain mutation methods.
+- [ ] Scope editor power/occupancy and viewport outlines by world identity; no active overlay on an unrelated world.
+- [ ] Preflight and save-before-switch with clear failure status; invalidate old input/actions by world ID/session, rebuild mapping, reset transient state and refresh Finder.
+- [ ] One full active-world simulator, paused inactive worlds and visibility-gated output actions; no circuit clipping or deferred offscreen launches.
+- [ ] No-op activation of the same world/camera; enabled-state preservation and saved-lever resume semantics.
+- [ ] Tests for overlapping bookmarks, browsing/live isolation, inactive edits, activation failures/stale completions/offscreen outputs and restart selection; build/run full suite.
+- [ ] Update README with exact Mac checks and recovery/navigation instructions.
+
+### Automated acceptance
+
+- [ ] Overlapping areas share a world circuit, while areas of another world never show/copy those components.
+- [ ] Browse/save/rename/edit inactive world while desktop runs changes no live mapper/simulator/action target.
+- [ ] Successful activation uses the selected saved world/camera; invalid/save-failed activation leaves the old runtime intact.
+- [ ] Late callbacks/actions from an old world/session never open a coincident-coordinate target after switching.
+- [ ] Offscreen circuit components continue transmitting, but offscreen outputs and inactive worlds dispatch no desktop action.
+- [ ] Active area ID and all worlds/areas survive restart; desktop starts disabled and no action occurs until explicit enable.
+
+### Manual acceptance
+
+- [ ] MANUAL: name two areas in one world and one in another; select/edit them and confirm builds stay at their map locations.
+- [ ] MANUAL: browsing and editing an inactive world leaves the enabled desktop unchanged; active-world editing requires disabling it.
+- [ ] MANUAL: Activate on Desktop switches terrain/circuit/camera to the saved area, and the selected active area survives quit/reopen.
+- [ ] MANUAL: a harmless Finder occupant opens only from the active area's visible output; switching cancels the previous world's pending pulse/action.
+
+**Status: planned; not implemented.** Complete and validate 19A before starting this slice. Finder ghosts follow in Slice 20.
+
+---
+
 ## Slice 20 — Finder ghosts in editor
 
 - [ ] show real Finder items as ghosts/markers
 - [ ] update when tracker changes
-- [ ] map through proposed desktop camera
+- [ ] map through the selected world's proposed/saved desktop camera, separately from live occupancy
+- [ ] scope ghosts/occupancy by selected world and label them as a projection when it is inactive
 - [ ] show occupancy state
 - [ ] snap output to tile under Finder icon center
 
@@ -2492,6 +2581,8 @@ Do not implement sound importing in this slice.
 ## Slice 31 — Diagnostics UI completion
 
 - [ ] permissions
+- [ ] editor-selected and active desktop world/area identity
+- [ ] library/migration/save status
 - [ ] screen geometry
 - [ ] raw/mapped Finder positions
 - [ ] item count
@@ -2564,6 +2655,8 @@ If Finder coordinate behavior makes cross-display mapping unreliable, document t
 Do not call the project MVP until these work:
 
 - [ ] seeded top-down terrain
+- [ ] independent saved worlds with fixed seeds and isolated circuits
+- [ ] named areas and explicit desktop activation
 - [ ] persistent chosen desktop area
 - [ ] cursor block highlight
 - [ ] Finder icons naturally appear above world
@@ -2837,7 +2930,7 @@ Start at Slice 0 unless the repository clearly proves earlier slices are complet
 
 # 46. Decision log
 
-Use this section as implementation discovers reality.
+Use this section as implementation discovers reality. Dated entries describe decisions/status at that time; later adopted decisions supersede conflicting earlier behavior. The current contract is in Sections 3.8, 7.1, 25 and 29, and the roadmap order in Section 38.
 
 Format:
 
@@ -3277,6 +3370,8 @@ Consequences: all eight Slice 19 implementation tasks are complete. Its MANUAL s
 
 ## 2026-10-07 — Owner confirms Slice 19; proposal for independent worlds and saved areas
 
+Historical proposal: adopted by the following decision and the 19A/19B roadmap. Its pending language records the earlier discussion, not the current plan.
+
 Context: the owner reports “It works!” for Slice 19 and asks whether circuits can belong to their seeded map, with a list of built areas to browse/edit and one explicitly active desktop area. Mark Slice 19's MANUAL checkbox complete based on that owner report. This turn discusses a product/model adjustment rather than implementing Slice 20.
 
 Current behavior: there is one WorldDocument and one circuit dictionary. Camera movement within the same seed leaves components at their original world coordinates. Applying a different seed changes generation settings in that same document, retaining the existing circuit; it does not load a separate saved map. Seed previews also retain that circuit for validation.
@@ -3288,3 +3383,16 @@ Architecture assessment: this fits existing pure World/Circuit models, Coordinat
 Recommended implementation sequence if adopted: add a small world-library/persistence migration slice, then a named-area list and explicit activation slice before Finder ghosts. Preserve the current document as the first world, including identity, chosen seed, camera, circuit and levers; preserve the source save during migration and retain fail-closed damaged-document handling. Fresh worlds should not receive the old world's user components or automatically inherit prototype demo fixtures. Test independent edits across seeds, shared coordinates for overlapping areas, browse/live isolation, cancelled stale actions, atomic persistence and restart restoration.
 
 Consequences: this is a recorded proposal, not an implemented feature or a change to the ordered roadmap. Slice 20 and later remain unchecked. Only SPEC.md and README.md are changed this turn; no new application build/test results or manual acceptance beyond Slice 19 are claimed.
+
+
+## 2026-10-07 — Adopt independent worlds and named areas; documentation first
+
+Context: the owner approved the independent-worlds/saved-areas proposal and requested bringing all documentation up to date before resuming implementation slice by slice.
+
+Decision: adopt the contracts in Sections 3.8, 7.1, 25 and 29. Insert Slice 19A (library/migration/world selection) and Slice 19B (named areas/explicit activation) between completed Slice 19 and untouched Slice 20, preserving existing numbered milestones and manual validation history. Supersede the proposal's pending-adoption status and the prototype's seed-replacement workflow for future implementation; current code remains Slice 19 until these slices land.
+
+Worlds own circuits and immutable generation settings; seeds are not save identity. Areas are named camera bookmarks sharing their world's components. A single atomic library.json stores world/area records and active selection. Migration preserves the old world.json source and configuration, retaining prototype terrain only in the migrated world. New worlds are procedural and empty. Browse/Save Area do not activate; explicit Activate on Desktop targets a saved area. Inactive worlds are paused, with inactive-world editing allowed in 19B while enabled active-world edits remain locked.
+
+Resolve the earlier offscreen question by simulating the full active-world circuit without clipping wires, but dispatching actions only from outputs whose mapped centers are inside the active desktop canvas. Switching saves/preflights first, invalidates old world/session work, resets transient state and refreshes Finder. Same-world/same-camera activation is a no-op; enabled state is preserved on other successful switches. Saved ON levers can cause a fresh rising edge on explicit enable/different-area activation. Restoration never enables the desktop automatically.
+
+Consequences: this turn changes SPEC.md and README.md only. New roadmap tasks and MANUAL checks remain unchecked. No source code, owner data, generation fingerprints, APIs or assets change. The next implementation is Slice 19A; no new application build/test or physical Mac result is claimed for this documentation update.
