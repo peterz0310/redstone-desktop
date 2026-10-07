@@ -22,7 +22,7 @@ Slice 8 groups icon centers into world tiles using a pure `DesktopOccupancyResol
 
 Manual acceptance through Slice 8 is complete based on the owner's confirmations on 2026-10-07. The roadmap records those reports separately from automated validation. Future manual checks will be checked off as the owner confirms them.
 
-**Slice 9 activation and opening are now owner-confirmed:** on 2026-10-07 the owner reported that PRESS works and an item placed on OUTPUT opens. The associated-window gate resolved the prior rejection in their tested configuration. Build and 64 automated tests passed before that confirmation. SPEC records the first three manual checks as complete; moving the occupant away and replacing it with a different item still need confirmation before Gate A closes and Slice 10 begins.
+**Slice 9 is complete; feasibility Gate A passed:** on 2026-10-07 the owner confirmed activation, occupant opening, no target after moving the item away, and opening a different replacement item. All five roadmap manual checks are checked based on those real-Mac reports. The associated-window gate resolved the prior rejections in their tested configuration. The last code revision built successfully and passed 64 automated tests. Slice 10 (World model) is next.
 
 Slice 9 adds a fixed **PRESS (2, 3) → four dust tiles → OUTPUT (7, 3)** circuit. When the interaction gate accepts a PRESS click, it refreshes Finder positions, then starts a 20-tick pulse at 20 Hz. Dust turns yellow, the button/output turn orange, and the output flashes white. A separate `OpenItemAction` uses [NSWorkspace.open](https://developer.apple.com/documentation/appkit/nsworkspace/open(_:)) to request normal macOS opening of exactly one current occupant. The editor reports the request result; acceptance by macOS does not prove the target application's UI opened correctly.
 
@@ -175,7 +175,7 @@ The owner confirmed Slice 8 with “It works!” on 2026-10-07. Its boundary-tra
 8. Check that icons remain selectable/draggable and that clicking one on or near PRESS does not power the circuit. Place a normal window over PRESS, including a Finder folder window, and click inside it: the hidden circuit must not activate. If a click is ignored, return to blank desktop first and keep the PRESS area clear.
 9. If two centers can fit in OUTPUT, confirm it opens neither and reports ambiguity. Disable Desktop World and confirm the circuit disappears. Re-enable and confirm it starts unpowered.
 
-Report any wrong target, unexpected repeated opening, window click activating a hidden button, or delayed/missing pulse. Slice 9's first three MANUAL acceptance items are owner-confirmed. The move-away and replacement checks remain unchecked; Gate A must pass before Slice 10.
+Report any wrong target, unexpected repeated opening, window click activating a hidden button, or delayed/missing pulse. All five Slice 9 MANUAL acceptance items are owner-confirmed and checked in SPEC. Gate A passed on 2026-10-07; these instructions remain available for regression checks.
 
 ### Slice 9 recipient-gate validation
 

@@ -2068,7 +2068,7 @@ This alignment must be trustworthy before further UI investment.
 
 Prove the central concept before building the engine.
 
-**Status: activation and opening confirmed by the owner on 2026-10-07.** The corrected associated-window gate accepts PRESS on their Mac. Three manual checks are complete; moving the occupant away and replacing it with a different item still require confirmation before Gate A closes and Slice 10 begins.
+**Status: complete; feasibility Gate A passed on 2026-10-07.** The owner confirmed all five manual acceptance checks, including moving the occupant away and replacing it with a different item. Slice 10 is next.
 
 ### Tasks
 
@@ -2086,8 +2086,8 @@ Prove the central concept before building the engine.
 - [x] MANUAL: place harmless folder/file/app alias on output.
 - [x] MANUAL: press button and see signal.
 - [x] MANUAL: occupant opens.
-- [ ] MANUAL: move occupant away; no target remains.
-- [ ] MANUAL: move a different item onto output; new item becomes target.
+- [x] MANUAL: move occupant away; no target remains.
+- [x] MANUAL: move a different item onto output; new item becomes target.
 
 ### FEASIBILITY GATE A
 
@@ -2952,6 +2952,16 @@ Context: after the associated-window/PID correction, the owner reports “That w
 Decision: mark the clicking-button task and the first three Slice 9 MANUAL checks complete: place an item on output, press and see signal, and occupant opens. This is owner-reported real-Mac validation, distinct from the 64 passing automated tests.
 
 Consequences: the previous click-gate blocker is resolved for the owner's tested configuration. Moving the occupant away and moving a different item onto output have not yet been confirmed in this report; those two MANUAL checks remain unchecked. Gate A remains open until they pass. No claims are added for window-overlap, repeat-press, or ambiguity manual checks not explicitly reported.
+
+---
+
+## 2026-10-07 — Owner confirms target removal and replacement; Gate A passes
+
+Context: after the final two Slice 9 manual instructions, the owner reports “It passes those checks.” This confirms that moving the occupant away leaves no target and moving a different item onto output changes the target.
+
+Decision: mark the remaining two Slice 9 MANUAL checks complete based on the owner's real-Mac report. All Slice 9 tasks and its five manual acceptance checks are now complete; feasibility Gate A passes for the tested configuration.
+
+Consequences: Slice 10 (World model) is next and remains unchecked. The earlier gate failures and partial confirmations remain in the log as history. No new claims are made about other configurations or additional manual checks not reported by the owner. The last implementation revision built successfully and passed 64 automated tests; this update changes documentation only.
 
 ---
 
