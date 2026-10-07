@@ -8,6 +8,7 @@ final class AppState: ObservableObject {
     @Published private(set) var pointer: PointerSnapshot?
     @Published private(set) var lastClick: DesktopClickSnapshot?
     @Published private(set) var observedClickCount = 0
+    let desktopWorld = FixedTestCircuit.makeWorld()
     let desktopCamera = CameraState(worldOrigin: WorldPoint(x: 0, y: 0), pointsPerTile: 64)
     let finderDiagnostics: FinderDiagnosticsModel
     let desktopItemTracker: DesktopItemTracker
@@ -101,7 +102,7 @@ final class AppState: ObservableObject {
                     controller?.scene.updateHighlight(snapshot.tile)
                 }
                 desktopController = controller
-                controller.scene.updateTestCircuit(testCircuit)
+                controller.scene.updateWorld(desktopWorld, poweredTiles: testCircuit.poweredTiles)
                 finderReferenceScreen = finderReferenceProviding()
                 updateFinderState(finderDiagnostics.items, error: finderDiagnostics.error, hasRead: finderDiagnostics.hasRead)
                 pointerMonitor = monitor
@@ -146,7 +147,7 @@ final class AppState: ObservableObject {
         next.advanceTick()
         let changedPower = next.isPowered != testCircuit.isPowered
         testCircuit = next
-        if changedPower { desktopController?.scene.updateTestCircuit(next) }
+        if changedPower { desktopController?.scene.updateWorld(desktopWorld, poweredTiles: next.poweredTiles) }
     }
 
     func handleCircuitClick(_ tile: WorldCoordinate, identity: MouseEventIdentity = MouseEventIdentity()) {
@@ -187,14 +188,14 @@ final class AppState: ObservableObject {
                 return
             }
             let events = self.testCircuit.press(at: tile)
-            controller.scene.updateTestCircuit(self.testCircuit)
-            guard !events.isEmpty else {
+            controller.scene.updateWorld(self.desktopWorld, poweredTiles: self.testCircuit.poweredTiles)
+            guard case let .outputActivated(outputTile)? = events.first else {
                 self.lastActionResult = "Pulse extended; output opens once per rising activation."
                 return
             }
-            controller.scene.flashOutput()
+            controller.scene.flashOutput(at: outputTile)
             self.lastActionResult = self.openItemAction.perform(
-                occupancy: self.desktopOccupancy.state(at: FixedTestCircuit.output))
+                occupancy: self.desktopOccupancy.state(at: outputTile))
         }
     }
 

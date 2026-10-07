@@ -22,11 +22,13 @@ Slice 8 groups icon centers into world tiles using a pure `DesktopOccupancyResol
 
 Manual acceptance through Slice 8 is complete based on the owner's confirmations on 2026-10-07. The roadmap records those reports separately from automated validation. Future manual checks will be checked off as the owner confirms them.
 
-**Slice 9 is complete; feasibility Gate A passed:** on 2026-10-07 the owner confirmed activation, occupant opening, no target after moving the item away, and opening a different replacement item. All five roadmap manual checks are checked based on those real-Mac reports. The associated-window gate resolved the prior rejections in their tested configuration. The last code revision built successfully and passed 64 automated tests. Slice 10 (World model) is next.
+**Slice 9 is complete; feasibility Gate A passed:** on 2026-10-07 the owner confirmed activation, occupant opening, no target after moving the item away, and opening a different replacement item. All five roadmap manual checks are checked based on those real-Mac reports. The associated-window gate resolved the prior rejections in their tested configuration. The last code revision built successfully and passed 64 automated tests. Slice 10 (World model) is implemented below.
 
 Slice 9 adds a fixed **PRESS (2, 3) → four dust tiles → OUTPUT (7, 3)** circuit. When the interaction gate accepts a PRESS click, it refreshes Finder positions, then starts a 20-tick pulse at 20 Hz. Dust turns yellow, the button/output turn orange, and the output flashes white. A separate `OpenItemAction` uses [NSWorkspace.open](https://developer.apple.com/documentation/appkit/nsworkspace/open(_:)) to request normal macOS opening of exactly one current occupant. The editor reports the request result; acceptance by macOS does not prove the target application's UI opened correctly.
 
 Each rising pulse requests one open. Pressing again while powered extends the pulse without another activation. Empty, ambiguous, and unavailable outputs open nothing. An initial explicit Finder read is required. A busy Finder read asks you to retry rather than queueing presses. The world remains click-through. Normal component clicks require the captured recipient to be Finder's desktop window at the public desktop-icon level. The monitor carries NSEvent.windowNumber plus public CGEvent handling-window and target-process fields. The gate prefers [NSEvent.windowNumber](https://developer.apple.com/documentation/appkit/nsevent/windownumber) as the window associated with the event, using the handling-window field only when it is absent. It queries that window's metadata, checks its owner, and rejects ordinary Finder/application windows. Target PID is diagnostic data; it need not match the window owner. Missing identity produces a diagnostic message rather than guessing. Unrelated Dock windows do not participate in this decision. No screenshots are used. A conservative one-tile margin around PRESS protects nearby Finder icon/label interaction because center-only scripting data does not establish exact hit regions. Keep PRESS and its neighboring tiles clear. Disabling the desktop invalidates pending activation reads and stops the pulse timer. This slice adds neither script execution nor a general circuit engine.
+
+Slice 10 adds pure Swift `World`, `Tile`, `TerrainID`, `DecorationID`, and `CircuitWorld` value types. Terrain tiles and coordinate-keyed circuit components are separate data, and runtime power is supplied separately to the renderer. The existing demo is now a model fixture; `DesktopScene` contains no fixed test-circuit coordinates. It draws visible model tiles, decoration labels, components, and dust paths, and clears/rebuilds them as the model or viewport changes. The six demo tiles have simple grass-color fills; the checker remains behind unspecified tiles. There is no procedural terrain or general simulator yet. Debug build and all 72 tests pass, including the existing fake Finder/open integration.
 
 ## Development
 
@@ -187,3 +189,20 @@ Clicking the checkerboard is clicking the real Finder desktop: the overlay is cl
 4. If PRESS is still rejected, report the full message and the Press clicks count. The editor now shows event-window, handling-window, target-PID, selected-window, owner bundle/PID, and layer values for every PRESS attempt, including accepted attempts. Copy that complete metadata line and the result if activation still fails.
 
 The separate command-line probe did not receive the owner's clicks and provides no recipient-field evidence. Validation must use the app's actual monitor. Do not infer working desktop activation from the fixture tests.
+
+## Manual regression check — Slice 10
+
+Slice 10 has no new MANUAL acceptance checkbox; this checks that moving rendering to the model preserved the previously proven desktop behavior.
+
+1. Quit the previous app with **Command-Q**, then launch the latest build:
+
+   ```sh
+   open /Users/peterzielinski/git/redstone-desktop/build/Build/Products/Debug/RedstoneDesktop.app
+   ```
+
+2. Confirm the footer says **Slice 10 · World model**. Enable Desktop World, open Finder Diagnostics, and read Finder items. Leave polling stopped initially.
+3. Expose PRESS at (2, 3), keeping its neighboring tiles clear. The wire still leads to OUTPUT at (7, 3). The tiles under the circuit have plain grass-color fills; this is expected placeholder model rendering.
+4. Click PRESS with OUTPUT empty: the path should light for about one second and nothing should open. Put a harmless folder/document center on OUTPUT, then press after the path turns off: the item should open. Move it away or replace it and confirm the corresponding result still changes.
+5. Confirm Finder selection/dragging still works and disabling/re-enabling removes/restores the world with an unpowered circuit. Report any changed click behavior, missing wire segments, or misplaced components.
+
+Next is Slice 11 — Circuit simulator core; this slice keeps the existing fixed pulse and does not implement the general engine.

@@ -6,10 +6,13 @@ final class DesktopScene: SKScene {
     let mapper: CoordinateMapper
     private let highlight = SKShapeNode()
     private let clickFlash = SKShapeNode()
+    private let tileLayer = SKNode()
     private let circuitLayer = SKNode()
     private let outputFlash = SKShapeNode()
     private let occupancyLayer = SKNode()
     private let finderMarkers = SKNode()
+    private var renderedWorld: World?
+    private var renderedPower: Set<WorldCoordinate> = []
     private(set) var highlightedTile: WorldCoordinate?
 
     init(screen: ScreenDescriptor, mapper: CoordinateMapper) {
@@ -29,7 +32,9 @@ final class DesktopScene: SKScene {
         clickFlash.strokeColor = .systemOrange
         clickFlash.zPosition = 2
         clickFlash.isHidden = true
-        circuitLayer.name = "test-circuit"
+        tileLayer.name = "world-tiles"
+        tileLayer.zPosition = 0.25
+        circuitLayer.name = "circuit"
         circuitLayer.zPosition = 0.75
         outputFlash.name = "output-flash"
         outputFlash.strokeColor = .white
@@ -50,6 +55,7 @@ final class DesktopScene: SKScene {
 
     override func didChangeSize(_ oldSize: CGSize) {
         rebuildChecker()
+        if let world = renderedWorld { updateWorld(world, poweredTiles: renderedPower) }
     }
 
     func updateHighlight(_ coordinate: WorldCoordinate?) {
@@ -103,42 +109,84 @@ final class DesktopScene: SKScene {
         }
     }
 
-    func updateTestCircuit(_ circuit: FixedTestCircuit) {
+    func updateWorld(_ world: World, poweredTiles: Set<WorldCoordinate> = []) {
+        renderedWorld = world
+        renderedPower = poweredTiles
+        tileLayer.removeAllChildren()
         circuitLayer.removeAllChildren()
-        let powered = circuit.isPowered
-        let coordinates = [FixedTestCircuit.button] + FixedTestCircuit.dust + [FixedTestCircuit.output]
-        let wire = CGMutablePath()
-        for (index, tile) in coordinates.enumerated() {
-            let rect = mapper.sceneRect(forTile: tile, on: screen)
-            let center = CGPoint(x: rect.midX, y: rect.midY)
-            if index == 0 { wire.move(to: center) } else { wire.addLine(to: center) }
+        let viewport = CGRect(origin: .zero, size: size)
+        for (coordinate, tile) in world.tiles.sorted(by: { ($0.key.y, $0.key.x) < ($1.key.y, $1.key.x) }) {
+            let rect = mapper.sceneRect(forTile: coordinate, on: screen)
+            guard rect.intersects(viewport) else { continue }
+            let node = SKShapeNode(rect: rect.insetBy(dx: 0.5, dy: 0.5))
+            node.name = "tile:\(coordinate.x),\(coordinate.y)"
+            node.fillColor = terrainColor(tile.terrain)
+            node.strokeColor = .clear
+            tileLayer.addChild(node)
+            if let decoration = tile.decoration {
+                let label = SKLabelNode(text: decoration.rawValue)
+                label.fontName = "Menlo"
+                label.fontSize = 9
+                label.verticalAlignmentMode = .center
+                label.position = CGPoint(x: rect.midX, y: rect.midY)
+                tileLayer.addChild(label)
+            }
         }
-        let dust = SKShapeNode(path: wire)
-        dust.name = "dust-path"
-        dust.strokeColor = powered ? .systemYellow : .systemRed
-        dust.lineWidth = 8
-        circuitLayer.addChild(dust)
-        for (tile, title) in [(FixedTestCircuit.button, "PRESS"), (FixedTestCircuit.output, "OUTPUT")] {
-            let rect = mapper.sceneRect(forTile: tile, on: screen).insetBy(dx: 8, dy: 8)
-            let node = SKShapeNode(rect: rect)
-            node.name = title
-            node.fillColor = powered ? .systemOrange : .darkGray
-            node.strokeColor = .white
-            node.lineWidth = 2
-            circuitLayer.addChild(node)
-            let label = SKLabelNode(text: title)
-            label.fontName = "Menlo-Bold"
-            label.fontSize = 10
-            label.fontColor = .white
-            label.verticalAlignmentMode = .center
-            label.position = CGPoint(x: rect.midX, y: rect.midY)
-            circuitLayer.addChild(label)
+        for (coordinate, component) in world.circuit.components.sorted(by: { ($0.key.y, $0.key.x) < ($1.key.y, $1.key.x) }) {
+            let rect = mapper.sceneRect(forTile: coordinate, on: screen)
+            guard component.kind != .empty, rect.intersects(viewport) else { continue }
+            let center = CGPoint(x: rect.midX, y: rect.midY)
+            let powered = poweredTiles.contains(coordinate)
+            if component.kind == .dust {
+                let wire = CGMutablePath()
+                wire.addEllipse(in: CGRect(x: center.x - 4, y: center.y - 4, width: 8, height: 8))
+                for neighbor in world.circuit.occupiedCardinalNeighbors(at: coordinate) {
+                    let neighborRect = mapper.sceneRect(forTile: neighbor, on: screen)
+                    wire.move(to: center)
+                    // Reach the neighboring component center, including buttons and outputs.
+                    wire.addLine(to: CGPoint(x: neighborRect.midX, y: neighborRect.midY))
+                }
+                let node = SKShapeNode(path: wire)
+                node.name = "dust-path"
+                node.strokeColor = powered ? .systemYellow : .systemRed
+                node.fillColor = node.strokeColor
+                node.lineWidth = 8
+                circuitLayer.addChild(node)
+            } else {
+                let title = component.kind == .button ? "PRESS" : component.kind.rawValue.uppercased()
+                let node = SKShapeNode(rect: rect.insetBy(dx: 8, dy: 8))
+                node.name = title
+                node.zPosition = 0.1
+                node.fillColor = powered ? .systemOrange : .darkGray
+                node.strokeColor = .white
+                node.lineWidth = 2
+                circuitLayer.addChild(node)
+                let label = SKLabelNode(text: title)
+                label.fontName = "Menlo-Bold"
+                label.fontSize = 10
+                label.fontColor = .white
+                label.zPosition = 0.2
+                label.verticalAlignmentMode = .center
+                label.position = center
+                circuitLayer.addChild(label)
+            }
         }
     }
 
-    func flashOutput() {
+    private func terrainColor(_ terrain: TerrainID) -> NSColor {
+        switch terrain {
+        case .grass: return NSColor(calibratedRed: 0.28, green: 0.5, blue: 0.35, alpha: 1)
+        case .dirt: return .brown
+        case .stone: return .gray
+        case .sand: return NSColor(calibratedRed: 0.8, green: 0.72, blue: 0.45, alpha: 1)
+        case .shallowWater: return .cyan
+        case .deepWater: return .blue
+        }
+    }
+
+    func flashOutput(at coordinate: WorldCoordinate) {
         outputFlash.removeAllActions()
-        outputFlash.path = CGPath(rect: mapper.sceneRect(forTile: FixedTestCircuit.output, on: screen).insetBy(dx: 3, dy: 3), transform: nil)
+        outputFlash.path = CGPath(rect: mapper.sceneRect(forTile: coordinate, on: screen).insetBy(dx: 3, dy: 3), transform: nil)
         outputFlash.alpha = 1
         outputFlash.isHidden = false
         outputFlash.run(.sequence([.fadeOut(withDuration: 0.5), .hide()]))
@@ -146,6 +194,7 @@ final class DesktopScene: SKScene {
 
     private func rebuildChecker() {
         removeAllChildren()
+        addChild(tileLayer)
         addChild(circuitLayer)
         addChild(outputFlash)
         addChild(occupancyLayer)

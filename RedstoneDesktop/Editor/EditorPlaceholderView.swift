@@ -53,7 +53,7 @@ struct EditorPlaceholderView: View {
                 .font(.caption.monospaced())
             }
             Spacer()
-            Text("Slice 9 · Button-to-output circuit")
+            Text("Slice 10 · World model")
                 .font(.caption)
                 .foregroundStyle(.secondary)
         }

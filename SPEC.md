@@ -2097,14 +2097,14 @@ Do not build the full editor until this works.
 
 ## Slice 10 — World model
 
-- [ ] `World`
-- [ ] `Tile`
-- [ ] `TerrainID`
-- [ ] `DecorationID`
-- [ ] `CircuitWorld`
-- [ ] circuit dictionary keyed by world coordinate
-- [ ] unit tests
-- [ ] renderer consumes model, not hardcoded test data
+- [x] `World`
+- [x] `Tile`
+- [x] `TerrainID`
+- [x] `DecorationID`
+- [x] `CircuitWorld`
+- [x] circuit dictionary keyed by world coordinate
+- [x] unit tests
+- [x] renderer consumes model, not hardcoded test data
 
 ---
 
@@ -2962,6 +2962,20 @@ Context: after the final two Slice 9 manual instructions, the owner reports “I
 Decision: mark the remaining two Slice 9 MANUAL checks complete based on the owner's real-Mac report. All Slice 9 tasks and its five manual acceptance checks are now complete; feasibility Gate A passes for the tested configuration.
 
 Consequences: Slice 10 (World model) is next and remains unchecked. The earlier gate failures and partial confirmations remain in the log as history. No new claims are made about other configurations or additional manual checks not reported by the owner. The last implementation revision built successfully and passed 64 automated tests; this update changes documentation only.
+
+---
+
+## 2026-10-07 — Explicit world and circuit model
+
+Context: the owner confirmed every Slice 9 manual acceptance check, passing Gate A, and authorized Slice 10. The scene previously contained fixed test button/output coordinates and a single hardcoded wire.
+
+Decision: add pure Codable/Equatable/Sendable World, Tile, TerrainID, DecorationID, and CircuitWorld types. World stores explicit tile data and a separate coordinate-keyed component dictionary. Missing terrain is unspecified; there is no generator or implied placement rule. Geometric cardinal adjacency is overflow-safe and is not a signal-propagation rule.
+
+Keep the proven feasibility circuit as a model fixture created by FixedTestCircuit.makeWorld. Runtime power is separate from component identity. DesktopScene consumes the supplied World and a powered-coordinate set, draws only visible explicit tiles/components, and rebuilds that content on size changes. Output flashes use the event's output coordinate rather than a renderer constant. The checker remains a diagnostic background; six explicit grass tiles use plain placeholder fills. No general simulator, editor authoring, seeded terrain, persistence I/O, or resource packs are introduced.
+
+Validation: Debug build and all 72 tests pass. The pure World/Circuit sources type-check independently of AppKit and SpriteKit. Tests cover value independence, negative-coordinate Codable round trips, all semantic IDs, cardinal/limit adjacency, the feasibility fixture, rendering an alternate model, clearing removed content, per-coordinate visual power, output geometry, and resize culling. Earlier fake Finder/open integration remains green. No new MANUAL item is inferred from those tests; a short owner regression check of the existing desktop demo is documented in README.
+
+Consequences: all Slice 10 tasks are complete. Slice 11 (Circuit simulator core) is next and remains unchecked. The demo still uses the fixed feasibility pulse, rather than claiming the full engine exists.
 
 ---
 

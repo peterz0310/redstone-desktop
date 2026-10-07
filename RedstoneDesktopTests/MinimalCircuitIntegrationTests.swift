@@ -149,19 +149,19 @@ final class MinimalCircuitIntegrationTests: XCTestCase {
     func testCircuitVisualsUseMapperAndRemainBounded() throws {
         let mapper = try CoordinateMapper(canvasFrame: screen.frame, camera: CameraState(worldOrigin: WorldPoint(x: 0, y: 0), pointsPerTile: 64))
         let scene = DesktopScene(screen: screen, mapper: mapper)
-        let layer = try XCTUnwrap(scene.childNode(withName: "test-circuit"))
+        let layer = try XCTUnwrap(scene.childNode(withName: "circuit"))
         var circuit = FixedTestCircuit()
-        scene.updateTestCircuit(circuit)
+        scene.updateWorld(FixedTestCircuit.makeWorld(), poweredTiles: circuit.poweredTiles)
         let path = try XCTUnwrap(layer.childNode(withName: "dust-path") as? SKShapeNode)
         let offColor = path.strokeColor
         let button = try XCTUnwrap(layer.childNode(withName: "PRESS") as? SKShapeNode)
         XCTAssertEqual(button.path?.boundingBoxOfPath, mapper.sceneRect(forTile: FixedTestCircuit.button, on: screen).insetBy(dx: 8, dy: 8))
         _ = circuit.press(at: FixedTestCircuit.button)
-        scene.updateTestCircuit(circuit)
+        scene.updateWorld(FixedTestCircuit.makeWorld(), poweredTiles: circuit.poweredTiles)
         XCTAssertNotEqual((layer.childNode(withName: "dust-path") as? SKShapeNode)?.strokeColor, offColor)
-        for _ in 0..<10 { scene.updateTestCircuit(circuit); scene.flashOutput() }
-        XCTAssertEqual(layer.children.count, 5)
-        XCTAssertEqual(scene.children.count, 8)
+        for _ in 0..<10 { scene.updateWorld(FixedTestCircuit.makeWorld(), poweredTiles: circuit.poweredTiles); scene.flashOutput(at: FixedTestCircuit.output) }
+        XCTAssertEqual(layer.children.count, 8)
+        XCTAssertEqual(scene.children.count, 9)
         let flash = try XCTUnwrap(scene.childNode(withName: "output-flash") as? SKShapeNode)
         XCTAssertFalse(flash.isHidden)
         XCTAssertEqual(flash.path?.boundingBoxOfPath, mapper.sceneRect(forTile: FixedTestCircuit.output, on: screen).insetBy(dx: 3, dy: 3))

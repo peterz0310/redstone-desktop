@@ -151,7 +151,7 @@ final class DesktopClickMonitorTests: XCTestCase {
             XCTAssertFalse(flash.isHidden)
             XCTAssertEqual(flash.alpha, 1)
             XCTAssertEqual(flash.path?.boundingBoxOfPath, mapper.sceneRect(forTile: tile, on: testScreen).insetBy(dx: 1, dy: 1))
-            XCTAssertEqual(scene.children.count, 8)
+            XCTAssertEqual(scene.children.count, 9)
         }
     }
 

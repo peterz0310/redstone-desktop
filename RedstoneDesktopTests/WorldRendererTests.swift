@@ -1,0 +1,54 @@
+import AppKit
+import SpriteKit
+import XCTest
+@testable import RedstoneDesktop
+
+final class WorldRendererTests: XCTestCase {
+    @MainActor
+    func testRendererFollowsDifferentModelCoordinatesAndRemovesOldContent() throws {
+        let screen = ScreenDescriptor(id: "negative", frame: CGRect(x: -640, y: -100, width: 640, height: 480), backingScale: 2)
+        let mapper = try CoordinateMapper(canvasFrame: screen.frame, camera: CameraState(worldOrigin: WorldPoint(x: 0, y: 0), pointsPerTile: 64))
+        let scene = DesktopScene(screen: screen, mapper: mapper)
+        let button = WorldCoordinate(x: 1, y: 1), dust = WorldCoordinate(x: 2, y: 1), output = WorldCoordinate(x: 3, y: 1)
+        let tile = WorldCoordinate(x: 0, y: 0)
+        let world = World(tiles: [tile: Tile(terrain: .dirt, decoration: .rock)],
+                          circuit: CircuitWorld(components: [button: CircuitComponent(kind: .button), dust: CircuitComponent(kind: .dust), output: CircuitComponent(kind: .output)]))
+        let layer = try XCTUnwrap(scene.childNode(withName: "circuit"))
+        let terrain = try XCTUnwrap(scene.childNode(withName: "world-tiles"))
+        scene.updateWorld(world)
+        let buttonNode = try XCTUnwrap(layer.childNode(withName: "PRESS") as? SKShapeNode)
+        XCTAssertEqual(buttonNode.path?.boundingBoxOfPath, mapper.sceneRect(forTile: button, on: screen).insetBy(dx: 8, dy: 8))
+        let outputNode = try XCTUnwrap(layer.childNode(withName: "OUTPUT") as? SKShapeNode)
+        XCTAssertEqual(outputNode.path?.boundingBoxOfPath, mapper.sceneRect(forTile: output, on: screen).insetBy(dx: 8, dy: 8))
+        XCTAssertEqual(terrain.children.count, 2)
+        XCTAssertEqual((terrain.children.last as? SKLabelNode)?.text, "rock")
+        let offColor = buttonNode.fillColor
+        scene.updateWorld(world, poweredTiles: [button])
+        XCTAssertNotEqual((layer.childNode(withName: "PRESS") as? SKShapeNode)?.fillColor, offColor)
+        XCTAssertEqual(layer.children.count, 5)
+        scene.flashOutput(at: output)
+        let flash = try XCTUnwrap(scene.childNode(withName: "output-flash") as? SKShapeNode)
+        XCTAssertEqual(flash.path?.boundingBoxOfPath, mapper.sceneRect(forTile: output, on: screen).insetBy(dx: 3, dy: 3))
+        scene.updateWorld(World())
+        XCTAssertTrue(layer.children.isEmpty)
+        XCTAssertTrue(terrain.children.isEmpty)
+        XCTAssertEqual(scene.children.count, 9)
+    }
+
+    @MainActor
+    func testVisibleModelTilesAreReevaluatedOnResizeWithoutNodeGrowth() throws {
+        let screen = ScreenDescriptor(id: "fixture", frame: CGRect(x: 0, y: 0, width: 640, height: 480), backingScale: 1)
+        let mapper = try CoordinateMapper(canvasFrame: screen.frame, camera: CameraState(worldOrigin: WorldPoint(x: 0, y: 0), pointsPerTile: 64))
+        let scene = DesktopScene(screen: screen, mapper: mapper)
+        let world = World(tiles: [WorldCoordinate(x: 10, y: 0): Tile(terrain: .sand)])
+        let terrain = try XCTUnwrap(scene.childNode(withName: "world-tiles"))
+        scene.updateWorld(world)
+        XCTAssertTrue(terrain.children.isEmpty)
+        for _ in 0..<5 {
+            scene.size = CGSize(width: 800, height: 480)
+            XCTAssertEqual(terrain.children.count, 1)
+            scene.size = CGSize(width: 640, height: 480)
+            XCTAssertTrue(terrain.children.isEmpty)
+        }
+    }
+}
