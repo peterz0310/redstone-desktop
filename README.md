@@ -44,7 +44,9 @@ The three existing demo rows keep their positions. Future test circuits will ext
 
 Slice 14 adds pure terrain capabilities and one shared placement evaluator/transaction. Components cannot be placed on water, unspecified terrain, decorations, or an occupied circuit cell. Rejected attempts preserve the entire world, and accepted placements preserve existing terrain and unrelated components. **Developer Placement…** opens a small SwiftUI rule-testing form with component/test-tile selection, repeater configuration, preview feedback, placement, and patch-only reset. Its explicit terrain patch is to the right at x=10–15. Disable Desktop World to edit, then enable it to inspect/use the placed components. Configuration lasts across enable/disable during this app session; relaunch starts from the fixture because persistence comes later. Debug build and all **123 tests** pass; the owner confirmed the placement-form regression on 2026-10-07. This is the roadmap's developer UI; the general canvas editor is Slice 15.
 
-Slice 15 replaces the main placeholder with a SwiftUI editor and SpriteKit canvas: Select, Pan, Dust, Button, Lever, Repeater, Output, and Erase tools; anchored scroll/button zoom; an inspector with repeater direction/delay; and green/red placement previews with rejection reasons. Its independent camera leaves the real desktop unchanged. Editing requires Desktop World disabled, while selection and browsing remain available when running. Existing diagnostic controls are in **Desktop Controls…**. A finite grass construction area occupies x=10–25, y=7–11 to the right of the existing circuits. The editor displays cached output occupancy without querying Finder. Debug build and all **135 tests** pass; useful-circuit authoring on the owner's Mac remains pending. Changes are temporary until Slice 16 persistence.
+Slice 15 replaces the main placeholder with a SwiftUI editor and SpriteKit canvas: Select, Pan, Dust, Button, Lever, Repeater, Output, and Erase tools; anchored scroll/button zoom; an inspector with repeater direction/delay; and green/red placement previews with rejection reasons. Its independent camera leaves the real desktop unchanged. Editing requires Desktop World disabled, while selection and browsing remain available when running. Existing diagnostic controls are in **Desktop Controls…**. A finite grass construction area occupies x=10–25, y=7–11 to the right of the existing circuits. The editor displays cached output occupancy without querying Finder. Debug build and all **135 tests** pass; the owner confirmed useful-circuit authoring on their Mac on 2026-10-07. Slice 16 adds persistence below.
+
+Slice 16 adds versioned Codable JSON persistence, an atomic WorldStore, debounced autosave and quit-time flush. Circuit components, repeater configuration, desktop camera and lever positions restore from `~/Library/Application Support/RedstoneDesktop/world.json`. The terrain fixture is recreated by version, not saved tile-by-tile. Desktop World always starts disabled; Finder data and transient simulation/actions are excluded. The footer reports pending/saved/error status, and **Save Now** retries failed writes. Corrupt/unsupported documents are preserved with saving disabled for that session. Debug build and all **148 tests** pass; the owner's quit/reopen manual validation is pending.
 
 ## Development
 
@@ -306,7 +308,7 @@ Changes are temporary for this app session. This walkthrough remains available f
 
 ## Basic editor walkthrough — Slice 15
 
-The application builds and all 135 automated tests pass. Please verify the visible editor and author a circuit on your Mac before the Slice 15 MANUAL checkbox is checked.
+This revision built and passed all 135 tests. The owner confirmed the walkthrough on 2026-10-07 with “It works! Thats neat.” The corresponding Slice 15 MANUAL checkbox is checked based on that Mac report. These steps remain for regression; the current footer is Slice 16.
 
 1. Quit the old app with **Command-Q**, then launch this build:
 
@@ -333,4 +335,30 @@ The application builds and all 135 automated tests pass. Please verify the visib
 8. On the **real desktop**, put a harmless folder on OUTPUT (14, 7), and keep PRESS (10, 7) and its neighboring tiles clear of Finder icons. Use **Desktop Controls…** to inspect pointer tile coordinates if necessary. Press the real desktop button: the circuit should light up, with about a **0.2-second repeater delay**, then request opening the folder once. Try it with the output empty too: the circuit should still light up without opening anything. The original circuits should continue working.
 9. Disable Desktop World and confirm your new circuit remains editable. Erase one component and verify its terrain stays intact. Please confirm whether you could author and run this circuit using only the UI, and report any missing hover preview, wrong tile placement, or layout/input problem.
 
-The circuit stays only for this app session. Quitting/reopening resets the fixture; saving and restoring are the next slice, **Slice 16**.
+Slice 15 changes were temporary. The current Slice 16 build saves circuit edits as described below; editor pan/zoom still resets on reopening.
+
+
+## Saving and restart walkthrough — Slice 16
+
+1. Quit the old app with **Command-Q**, then launch the new build:
+
+   ```sh
+   open /Users/peterzielinski/git/redstone-desktop/build/Build/Products/Debug/RedstoneDesktop.app
+   ```
+
+2. Confirm **Slice 16 · Persistence** in the footer. On your first launch of this version there is no saved world yet, so the initial fixture appears. Edits made in the previous temporary build cannot be recovered.
+3. Keep Desktop World disabled. Rebuild your circuit from the Slice 15 table above, or place a few components on the right-hand grass. Select a repeater and apply a distinctive direction/delay, such as **East, 3 redstone ticks**. Erase one original or newly placed component if you want to verify deletions too.
+4. Watch the footer: it should briefly say **Unsaved changes…**, then **Saved.** after about 0.75 seconds. **Save Now** also saves pending changes immediately. Pan/zoom does not save because it is temporary browsing, separate from the desktop camera.
+5. Quit with **Command-Q**, then launch using the same command. The footer should report **World restored. Desktop World starts disabled.** Confirm that placements, erased cells and repeater direction/delay match your edits. Terrain should remain intact. It is expected that the editor view resets and no file opens on startup.
+6. Make another component edit and quit immediately, before the debounce has time to finish. Reopen and confirm that edit also survived; quitting should flush it.
+7. Optional lever check: read Finder items, enable Desktop World, and turn a clear desktop lever ON. Disable and quit, then reopen. Read Finder items and explicitly enable Desktop World again: the lever should resume ON. **A saved ON lever can activate its output when you enable the world.** Use a harmless folder or empty output for this check. Turn it OFF and confirm the OFF position survives another restart.
+
+The saved file is outside the repository:
+
+```text
+~/Library/Application Support/RedstoneDesktop/world.json
+```
+
+If restoration fails, the footer explains the problem and saving is disabled so the original file stays untouched. To recover, quit, use Finder's **Go → Go to Folder…** to open the directory above, and move `world.json` somewhere safe as a backup before relaunching. The app will start a new fixture; keep that backup for diagnosis. Corrupted-file handling has automated coverage, so deliberately damaging your saved circuit is not required for the Mac acceptance check.
+
+Please confirm that both normal quit/reopen and immediate quit after editing restore the correct circuit. The Slice 16 MANUAL checkbox remains pending that report. Deterministic terrain generation is the next slice.

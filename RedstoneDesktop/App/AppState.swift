@@ -11,7 +11,12 @@ final class AppState: ObservableObject {
     @Published private(set) var desktopWorld = EditorConstructionArea.makeWorld()
     @Published private(set) var developerPlacementStatus = "Choose a component and test tile."
     private let circuitPlacement = CircuitPlacement()
-    let desktopCamera = CameraState(worldOrigin: WorldPoint(x: 0, y: 0), pointsPerTile: 64)
+    private(set) var desktopCamera = CameraState(worldOrigin: WorldPoint(x: 0, y: 0), pointsPerTile: 64)
+    @Published private(set) var persistenceStatus = "Persistence is disabled for this session."
+    private var document = WorldDocument()
+    private var savedLevers: Set<WorldCoordinate> = []
+    private var autosaver: WorldAutosaver?
+    var canSaveWorld: Bool { autosaver != nil }
     let finderDiagnostics: FinderDiagnosticsModel
     let desktopItemTracker: DesktopItemTracker
     @Published private(set) var finderMappings: [FinderItemMapping] = []
@@ -43,6 +48,8 @@ final class AppState: ObservableObject {
        desktopInteractionAssessment: @escaping (MouseEventIdentity) -> DesktopInteractionAssessment = { DesktopInteractionGate.assess($0) },
        tickScheduler: any CircuitTickScheduling = CircuitTickScheduler(),
        itemOpener: any ItemOpening = WorkspaceItemOpener(),
+       worldStore: (any WorldStoring)? = nil,
+       autosaveDelay: Duration = .milliseconds(750),
        finderReferenceProviding: @escaping () -> ScreenDescriptor? = {
            NSScreen.screens.first.map { ScreenDescriptor(screen: $0) }
        }) {
@@ -56,6 +63,22 @@ final class AppState: ObservableObject {
         desktopItemTracker = DesktopItemTracker(diagnostics: finderDiagnostics)
         finderItemsObserver = Publishers.CombineLatest3(finderDiagnostics.$items, finderDiagnostics.$error, finderDiagnostics.$hasRead).sink { [weak self] items, error, hasRead in
             MainActor.assumeIsolated { self?.updateFinderState(items, error: error, hasRead: hasRead) }
+        }
+        simulator = CircuitSimulator(world: desktopWorld.circuit)
+        if let worldStore {
+            do {
+                if let restored = try worldStore.load() {
+                    desktopWorld = try restored.restoredWorld()
+                    desktopCamera = restored.camera
+                    document = restored
+                    savedLevers = restored.activeLevers
+                    persistenceStatus = "World restored. Desktop World starts disabled."
+                } else { persistenceStatus = "New world. Edits will autosave." }
+                simulator = CircuitSimulator(world: desktopWorld.circuit)
+                autosaver = WorldAutosaver(store: worldStore, delay: autosaveDelay) { [weak self] in self?.persistenceStatus = $0 }
+            } catch {
+                persistenceStatus = "Could not restore world: \(error.localizedDescription) Saved file preserved; autosave disabled. Repair or move the file before reopening."
+            }
         }
         terminationObserver = NotificationCenter.default.publisher(for: NSApplication.willTerminateNotification)
             .sink { [weak self] _ in
@@ -84,6 +107,7 @@ final class AppState: ObservableObject {
         if result.isAllowed {
             desktopWorld = next
             simulator = CircuitSimulator(world: next.circuit)
+            worldDidChange()
             developerPlacementStatus = "Placed \(component.kind.rawValue) at (\(coordinate.x), \(coordinate.y)). Enable Desktop World to view it."
         } else { developerPlacementStatus = result.message }
         return result
@@ -103,6 +127,7 @@ final class AppState: ObservableObject {
         next.circuit.components.removeValue(forKey: coordinate)
         desktopWorld = next
         simulator = CircuitSimulator(world: next.circuit)
+        worldDidChange()
         developerPlacementStatus = "Erased component at (\(coordinate.x), \(coordinate.y)); terrain preserved."
         return true
     }
@@ -123,6 +148,7 @@ final class AppState: ObservableObject {
         next.circuit.components[coordinate] = component
         desktopWorld = next
         simulator = CircuitSimulator(world: next.circuit)
+        worldDidChange()
         developerPlacementStatus = "Repeater updated at (\(coordinate.x), \(coordinate.y))."
         return true
     }
@@ -136,11 +162,23 @@ final class AppState: ObservableObject {
         for target in DeveloperPlacementFixture.targets { next.circuit.components.removeValue(forKey: target.coordinate) }
         desktopWorld = next
         simulator = CircuitSimulator(world: next.circuit)
+        worldDidChange()
         developerPlacementStatus = "Test placements reset; original circuits and terrain preserved."
     }
 
+    private func worldDidChange() {
+        savedLevers = savedLevers.filter { desktopWorld.circuit.components[$0]?.kind == .lever }
+        document.camera = desktopCamera
+        document.circuit = desktopWorld.circuit
+        document.activeLevers = savedLevers
+        autosaver?.schedule(document)
+    }
+
+    func saveWorldNow() { autosaver?.flush() }
+
     /// Used by both disable and the app's termination notification.
     func shutdown() {
+        saveWorldNow()
         desktopSession = UUID()
         activationTask?.cancel()
         tickScheduler.stop()
@@ -183,6 +221,9 @@ final class AppState: ObservableObject {
                     controller?.scene.updateHighlight(snapshot.tile)
                 }
                 desktopController = controller
+                // Durable lever positions resume only after explicitly enabling the world.
+                simulator = CircuitSimulator(world: desktopWorld.circuit)
+                for lever in savedLevers { simulator.toggleLever(at: lever) }
                 controller.scene.updateWorld(desktopWorld, poweredTiles: simulator.poweredTiles)
                 finderReferenceScreen = finderReferenceProviding()
                 updateFinderState(finderDiagnostics.items, error: finderDiagnostics.error, hasRead: finderDiagnostics.hasRead)
@@ -302,6 +343,8 @@ final class AppState: ObservableObject {
                 self.lastActionResult = "Button pulse queued; repeats extend it without another rising activation."
             } else {
                 self.simulator.toggleLever(at: tile)
+                self.savedLevers = self.simulator.activeLevers
+                self.worldDidChange()
                 self.lastActionResult = self.simulator.activeLevers.contains(tile)
                     ? "Lever on; power updates on the next tick." : "Lever off; power updates on the next tick."
             }

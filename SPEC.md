@@ -2214,25 +2214,27 @@ Acceptance:
 
 ### Manual acceptance
 
-- [ ] MANUAL: useful circuit can be authored without code changes.
+- [x] MANUAL: useful circuit can be authored without code changes.
 
-**Status: implemented; owner manual acceptance pending.** Debug application build and all 135 automated tests pass. README.md provides a circuit-authoring walkthrough. Editing is available while Desktop World is disabled; editor browsing uses an independent camera. Changes last for this app session; persistence is Slice 16.
+**Status: complete; owner-confirmed manual acceptance on 2026-10-07.** The owner reported “It works! Thats neat.” after the circuit-authoring walkthrough. This records Mac validation separately from the 135 passing automated tests. Editing is available while Desktop World is disabled; editor browsing uses an independent camera. Persistence is implemented in Slice 16 below.
 
 ---
 
 ## Slice 16 — Persistence
 
-- [ ] versioned `WorldDocument`
-- [ ] `WorldStore`
-- [ ] atomic write
-- [ ] autosave debounce
-- [ ] restore last world
-- [ ] JSON tests
-- [ ] corrupted-document handling
+- [x] versioned `WorldDocument`
+- [x] `WorldStore`
+- [x] atomic write
+- [x] autosave debounce
+- [x] restore last world
+- [x] JSON tests
+- [x] corrupted-document handling
 
 ### Manual acceptance
 
 - [ ] MANUAL: build, quit, reopen, state is restored.
+
+**Status: implemented; owner restart validation pending.** Debug application build and all 148 automated tests pass. World configuration autosaves to Application Support after 0.75 seconds and flushes on quit. Damaged/unsupported documents are preserved with autosave disabled. README.md describes the restart checks.
 
 ---
 
@@ -3195,3 +3197,20 @@ Add an explicit 80-tile grass construction area at x=10–25, y=7–11, to the r
 Validation: Debug application build and all 135 tests pass. Twelve new tests cover mapper pan/anchor zoom, independent bounded navigation, every placement tool, invalid/occupied rejection, terrain-preserving erase, repeater inspection/configuration, live-edit locks, out-of-canvas input, bounded preview/selection nodes, cached occupancy without Finder reads, native local mouse click/pan coordinates, hosting without permissions, and an authored button/dust/repeater/dust/output circuit with a fresh occupant opened once after its configured delay. Pure World/Circuit sources also type-check independently of AppKit and SpriteKit. A temporary test window's teardown ownership was corrected in the test harness; it is not evidence of an application-window failure.
 
 Consequences: all fourteen Slice 15 implementation tasks are complete. The MANUAL useful-circuit authoring checkbox remains unchecked until the owner validates the current Mac walkthrough. Automated hosting and synthetic mouse events do not establish visible/native-interaction acceptance. Slice 16 and later remain unchecked. No persistence, procedural terrain, Finder ghosts, resource packs, private APIs, or backend are added.
+
+
+## 2026-10-07 — Owner confirms Slice 15; Slice 16 persistence
+
+Context: the owner reported “It works! Thats neat.” after the basic editor's circuit-authoring/run walkthrough. Mark Slice 15's MANUAL acceptance complete based on that owner-reported Mac validation, separate from its 135 automated tests. Continue directly to Slice 16.
+
+Decision: introduce Foundation-only WorldDocument, WorldStore and a main-actor WorldAutosaver adapter. Format version 1 includes stable world identity/name, terrain fixture version 1, desktop camera, circuit configuration and ON lever coordinates. Recreate the explicit fixture tiles by version instead of persisting terrain tile-by-tile. Generator settings are deliberately deferred until Slice 17; a future schema/version adjustment will distinguish generated worlds from this prototype fixture. Editor camera remains temporary exploration state.
+
+Store the last world at ~/Library/Application Support/RedstoneDesktop/world.json. Use Apple's documented [Application Support location](https://developer.apple.com/documentation/foundation/url/applicationsupportdirectory) and [atomic Data write](https://developer.apple.com/documentation/foundation/nsdata/writingoptions/atomic). Autosave after 0.75 seconds of no further configuration edits, retaining only the newest snapshot. Save Now retries a failed write. Disable/quit synchronously flushes pending changes before clearing runtime power, tasks and monitors. Tests inject stores; normal AppState test construction has persistence disabled and never reads/writes the owner's actual file.
+
+Restore configuration before desktop integration starts. Startup always leaves Desktop World disabled and does not query Finder or open files. Saved ON lever positions resume after explicit enable; outputs can activate at that point if Finder has been explicitly read. Disable clears runtime power/pulses/history while preserving durable lever positions. Buttons, runtime power, repeater history, pending actions, Finder data/paths, permissions and enabled state are not saved. Edits/reset prune removed lever coordinates and share the existing placement policy.
+
+Validation rejects unsupported document/fixture versions, invalid cameras, invalid component configuration/placement, lever coordinates that are not levers, malformed/truncated JSON and documents over 2 MB. Missing files start a new fixture. Other load failures display an actionable status and disable all writes for that session, preserving the original file even after subsequent edits/quit. Failed saves retain the newest pending snapshot for retry; no silent success or destructive reset is claimed.
+
+Validation: Debug application build and all 148 automated tests pass. Thirteen persistence tests cover JSON/value round trips, terrain reconstruction without stored tiles, stable identity and camera, version/configuration validation, nested Application Support-style directory creation, full-file replacement, invalid-save and filesystem-failure preservation, damaged/oversized documents, debounce coalescing and flush cancellation, failed-save retry, AppState edit/erase/repeater restoration on shutdown/reopen, corrupt-load write blocking, developer patch reset, rejected-edit no-save, and saved lever resume with explicit enable/Finder access. Existing 135 tests remain green.
+
+Consequences: all seven Slice 16 implementation tasks are complete. Its MANUAL restart checkbox awaits the owner's Mac test; automated lifecycle calls do not prove Command-Q/relaunch behavior. Slice 17 and later remain unchecked. No terrain generator, seed UI, general import/export, resource-pack code, backend or private API is introduced.

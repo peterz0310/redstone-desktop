@@ -12,6 +12,7 @@ struct EditorView: View {
                 Spacer()
                 Button(appState.isDesktopWorldEnabled ? "Disable Desktop World" : "Enable Desktop World") { appState.toggleDesktopWorld() }
                 Button("Finder Diagnostics…") { openWindow(id: "finder-diagnostics") }
+                Button("Save Now") { appState.saveWorldNow() }.disabled(!appState.canSaveWorld)
                 Button("Desktop Controls…") { openWindow(id: "desktop-controls") }
             }.padding(12)
             Divider()
@@ -45,7 +46,8 @@ struct EditorView: View {
             VStack(alignment: .leading, spacing: 4) {
                 Text(appState.isDesktopWorldEnabled ? "Desktop running — disable it to edit. Select and Pan still work." : "Editing enabled. Green preview: allowed; red: blocked. Use the grass area to the right (x=10–25, y=7–11).")
                 Text(editor.status).foregroundStyle(.secondary)
-                Text("Slice 15 · Basic editor · Changes last for this app session")
+                Text(appState.persistenceStatus).foregroundStyle(.secondary).textSelection(.enabled)
+                Text("Slice 16 · Persistence")
                     .font(.caption)
             }.font(.callout).frame(maxWidth: .infinity, alignment: .leading).padding(10)
         }
