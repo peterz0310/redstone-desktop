@@ -10,6 +10,7 @@ final class AppState: ObservableObject {
     @Published private(set) var observedClickCount = 0
     @Published private(set) var desktopWorld = EditorConstructionArea.makeWorld()
     @Published private(set) var developerPlacementStatus = "Choose a component and test tile."
+    private let automaticallyRefreshFinder: Bool
     private let circuitPlacement = CircuitPlacement()
     private(set) var desktopCamera = CameraState(worldOrigin: WorldPoint(x: 0, y: 0), pointsPerTile: 64)
     @Published private(set) var persistenceStatus = "Persistence is disabled for this session."
@@ -49,10 +50,12 @@ final class AppState: ObservableObject {
        tickScheduler: any CircuitTickScheduling = CircuitTickScheduler(),
        itemOpener: any ItemOpening = WorkspaceItemOpener(),
        worldStore: (any WorldStoring)? = nil,
+       automaticallyRefreshFinder: Bool = false,
        autosaveDelay: Duration = .milliseconds(750),
        finderReferenceProviding: @escaping () -> ScreenDescriptor? = {
            NSScreen.screens.first.map { ScreenDescriptor(screen: $0) }
        }) {
+        self.automaticallyRefreshFinder = automaticallyRefreshFinder
         self.tickScheduler = tickScheduler
         self.desktopInteractionAssessment = desktopInteractionAssessment
         openItemAction = OpenItemAction(opener: itemOpener)
@@ -73,7 +76,10 @@ final class AppState: ObservableObject {
                     document = restored
                     savedLevers = restored.activeLevers
                     persistenceStatus = "World restored. Desktop World starts disabled."
-                } else { persistenceStatus = "New world. Edits will autosave." }
+                } else {
+                    desktopWorld = try document.restoredWorld()
+                    persistenceStatus = "New world. Edits will autosave."
+                }
                 simulator = CircuitSimulator(world: desktopWorld.circuit)
                 autosaver = WorldAutosaver(store: worldStore, delay: autosaveDelay) { [weak self] in self?.persistenceStatus = $0 }
             } catch {
@@ -239,6 +245,7 @@ final class AppState: ObservableObject {
                 controller.enable()
                 monitor.start()
                 isDesktopWorldEnabled = true
+                if automaticallyRefreshFinder && finderDiagnostics.permission != .denied { desktopItemTracker.start() }
                 startCircuitTimer()
                 lastActionResult = "Place a harmless Finder item on OUTPUT (7, 3), then click PRESS (2, 3)."
                 desktopStatus = clicks.start()
@@ -315,7 +322,9 @@ final class AppState: ObservableObject {
             return
         }
         guard finderDiagnostics.hasRead, finderDiagnostics.permission == .allowed else {
-            lastActionResult = "Read Finder Items in Finder Diagnostics before using \(inputTitle)."
+            lastActionResult = automaticallyRefreshFinder
+                ? "Finder is connecting or unavailable; wait for refresh, or inspect Finder Diagnostics."
+                : "Read Finder Items in Finder Diagnostics before using \(inputTitle)."
             return
         }
         lastActionResult = "\(inputTitle) click received; refreshing Finder items…"

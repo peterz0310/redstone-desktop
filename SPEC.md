@@ -2263,18 +2263,20 @@ Acceptance:
 
 ## Slice 18 — Chunked terrain renderer
 
-- [ ] visible chunk calculation
-- [ ] `ChunkCache`
-- [ ] chunk SpriteKit nodes
-- [ ] add/remove as camera moves
-- [ ] nearest-neighbor rendering
-- [ ] original placeholder assets
-- [ ] render metrics
+- [x] visible chunk calculation
+- [x] `ChunkCache`
+- [x] chunk SpriteKit nodes
+- [x] add/remove as camera moves
+- [x] nearest-neighbor rendering
+- [x] original placeholder assets
+- [x] render metrics
 
 ### Manual acceptance
 
 - [ ] MANUAL: long editor pan does not grow nodes indefinitely.
 - [ ] MANUAL: idle renderer does not regenerate terrain continuously.
+
+**Status: implemented; owner renderer validation pending.** Debug build and all 169 automated tests pass. The renderer retains visible chunks plus one margin, bakes original nearest-filtered textures into one sprite per chunk, and reports cache/node/generation/texture counts. Existing fixture terrain and saved circuits are preserved over generated surroundings. README.md gives the long-pan and idle checks.
 
 ---
 
@@ -3233,3 +3235,22 @@ Validation: Debug build and all 157 tests pass; pure World/Circuit files also ty
 Generate a standalone developer comparison with scripts/terrain-preview.sh. It compiles only the pure domain/generator plus an artifact writer and writes build/terrain-preview.svg: 128×128 samples per seed at coordinates −64…63, 32-tile chunk lines and decoration dots. The generated image was inspected and the two seeds visibly differ without artificial chunk borders. This is a data preview, not verification of a live desktop terrain renderer. Snapshot fingerprints were recorded after inspection; changing version-1 output requires an explicit version/migration decision.
 
 Consequences: all ten Slice 17 tasks and three acceptance items are complete. This slice has no roadmap MANUAL checkbox; no new one is invented. The application footer identifies Slice 17, while existing fixture rendering, saved JSON, desktop camera and circuit behavior remain intact. Generated-world persistence/migration will be added when generated worlds enter the application; current format-1 fixture documents are not rewritten or reinterpreted. Slice 18 and later remain unchecked. No chunk cache/render nodes, seed UI, procedural live terrain replacement, resource packs, private APIs or backend are introduced.
+
+
+## 2026-10-07 — Owner confirms Slice 17; automatic Finder refresh and Slice 18
+
+Context: the owner confirmed the Slice 17 regression behaves and looks basically identical, and requested removing the repeated need to press Read Finder Items. Record that as owner-reported Mac validation, separate from the 157 automated tests. Slice 17 has no MANUAL checkbox. Continue to Slice 18 and make the requested Finder workflow change.
+
+Decision: the normal app enables automatic Finder refresh when Desktop World is enabled, using the existing serialized DesktopItemTracker at 2 Hz, including its immediate initial read. Startup with Desktop World disabled still does not query Finder. Disable/quit stops polling and cancels pending reads; late cancelled results remain ignored. A read error pauses polling, and a known denied permission is not automatically retried on each enable in that app session. Finder Diagnostics retains explicit read/retry controls. Main editor reports Finder errors. Input/output actions continue to use fresh serialized reads and never choose stale or ambiguous targets. The dependency flag is explicit in app startup so isolated tests can continue without real Finder access.
+
+Add pure ChunkCache and mapper-owned bounded visible-chunk/geometry calculation. Cache only the requested visible chunks plus one chunk margin; checked arithmetic, invalid origins and an allocation bound of 256 chunks protect degenerate viewports. TerrainChunkRenderer retains one SKSpriteNode and one 256×256 texture per chunk, rather than 1,024 child sprites per chunk. It bakes project-owned 8×8 semantic terrain/decorative placeholder pixels, using Apple's public [bitmap representation](https://developer.apple.com/documentation/appkit/nsbitmapimagerep) and [nearest texture filtering](https://developer.apple.com/documentation/spritekit/sktexturefilteringmode). No assets are loaded from another game or pack.
+
+Retain chunk data/textures across editor scene/camera recreation, reposition through CoordinateMapper, reuse overlapping chunks and remove evicted nodes/textures. Camera/viewport changes alone do not rebuild retained textures. Circuit, power, occupancy and hover changes do not regenerate terrain. Expose current retained chunks/chunk nodes plus cumulative generated-chunk/texture-build counts in the editor footer. The cumulative counts increase while exploring; only retained counts should stay bounded. No per-frame terrain generation is installed.
+
+World now resolves explicit terrain overrides before an optional generator. The existing fixture and grass construction area remain exact overrides, preserving circuits and all earlier terrain. Preserve the developer form's intentionally unspecified tile (14, 5) through a generic unspecified-tile set. Placement and Inspector use the same World.tile lookup, so generated water/decorations constrain edits and generated dry cells can be authored/saved. Renderer combines the same overrides with cached base chunks; no generated tile dictionary accumulates in World.
+
+Persistence format 2 adds generation settings (generation version 1, default seed 2026). Decode format-1 fixture saves into format 2 in memory, preserving ID/name, camera, circuit, lever positions and fixture version; add generated surroundings without changing the original override tiles. No load-time rewrite is performed. Next accepted edit/save writes format 2 atomically. Generated terrain and the override fixture are recreated, not stored tile-by-tile. Unsupported/malformed documents still block writes and preserve the original file.
+
+Validation: Debug build, standalone pure World/Circuit typecheck and all 169 tests pass. Seven renderer/cache tests cover negative mapper chunk boundaries/margins, bounded cache eviction/seed invalidation, one nearest sprite per chunk, idle/power/occupancy texture reuse, long pan node bounds, camera-scene recreation reuse, explicit/unspecified override pixels and placement consistency, and distinct original semantic placeholder art. Two persistence tests cover format-1 migration preserving configuration and generated-cell placement/restoration without serialized tiles. Three automatic-Finder tests cover initial enable/read, stop on disable, denied-read pause/no repeated request, and a fresh occupant opening without any explicit diagnostic read. Existing cancellation/serialization/Finder and circuit tests remain green. A new test listener initially fulfilled its initial-read expectation on subsequent successful reads; it was corrected to observe only the first matching publication. No application or API behavior contradiction is inferred from that test-harness failure.
+
+Consequences: all seven Slice 18 implementation tasks are complete. Its two MANUAL checkboxes remain pending the owner's visible long-pan/idle validation. README.md also requests checking automatic refresh and preserved circuits after migration. Slice 19 and later remain unchecked. No seed browser, Use This Area, Finder ghosts, resource packs, private macOS API or backend is added. Future examples continue to the right of existing circuits.

@@ -47,7 +47,11 @@ struct EditorView: View {
                 Text(appState.isDesktopWorldEnabled ? "Desktop running — disable it to edit. Select and Pan still work." : "Editing enabled. Green preview: allowed; red: blocked. Use the grass area to the right (x=10–25, y=7–11).")
                 Text(editor.status).foregroundStyle(.secondary)
                 Text(appState.persistenceStatus).foregroundStyle(.secondary).textSelection(.enabled)
-                Text("Slice 17 · Terrain generator")
+                if let error = appState.finderDiagnostics.error {
+                    Text("Finder unavailable: \(error) — open Finder Diagnostics to retry.").foregroundStyle(.red).font(.caption)
+                }
+                Text("Terrain: \(editor.terrainMetrics.retainedChunks) cached chunks · \(editor.terrainMetrics.chunkNodes) chunk nodes · \(editor.terrainMetrics.generatedChunks) generated · \(editor.terrainMetrics.textureBuilds) textures").font(.caption)
+                Text("Slice 18 · Chunked terrain")
                     .font(.caption)
             }.font(.callout).frame(maxWidth: .infinity, alignment: .leading).padding(10)
         }
@@ -60,8 +64,8 @@ struct EditorView: View {
                 Text("Inspector").font(.headline)
                 if let coordinate = editor.selectedTile {
                     Text("Tile (\(coordinate.x), \(coordinate.y))").font(.body.monospaced())
-                    Text("Terrain: \(appState.desktopWorld.tiles[coordinate]?.terrain.rawValue ?? "unspecified")")
-                    Text("Decoration: \(appState.desktopWorld.tiles[coordinate]?.decoration?.rawValue ?? "none")")
+                    Text("Terrain: \(appState.desktopWorld.tile(at: coordinate)?.terrain.rawValue ?? "unspecified")")
+                    Text("Decoration: \(appState.desktopWorld.tile(at: coordinate)?.decoration?.rawValue ?? "none")")
                     Text("Component: \(appState.desktopWorld.circuit.components[coordinate]?.kind.rawValue ?? "none")")
                     Text("Power: \(appState.simulator.power(at: coordinate).rawValue)")
                     if appState.desktopWorld.circuit.components[coordinate]?.kind == .repeater {

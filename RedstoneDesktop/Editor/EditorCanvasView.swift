@@ -50,6 +50,12 @@ final class EditorCanvasSurface: SKView {
     func refresh() {
         guard let appState, let editor, let next = renderer.update(appState: appState, editor: editor, size: bounds.size) else { return }
         if scene !== next { presentScene(next) }
+        let metrics = next.terrainMetrics
+        if editor.terrainMetrics != metrics {
+            Task { @MainActor [weak editor] in
+                if editor?.terrainMetrics != metrics { editor?.terrainMetrics = metrics }
+            }
+        }
     }
 
     override func mouseMoved(with event: NSEvent) {

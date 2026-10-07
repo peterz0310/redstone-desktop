@@ -25,6 +25,41 @@ final class PersistenceTests: XCTestCase {
         return WorldStore(fileURL: directory.appendingPathComponent("support/world.json"))
     }
 
+    func testLegacyFixtureMigratesWithoutChangingIdentityCircuitOrProtectedTerrain() throws {
+        let original = WorldDocument()
+        var json = try XCTUnwrap(JSONSerialization.jsonObject(with: JSONEncoder().encode(original)) as? [String: Any])
+        json["formatVersion"] = 1
+        json.removeValue(forKey: "generation")
+        let migrated = try JSONDecoder().decode(WorldDocument.self, from: JSONSerialization.data(withJSONObject: json))
+        XCTAssertEqual(migrated.formatVersion, 2)
+        XCTAssertEqual(migrated.id, original.id)
+        XCTAssertEqual(migrated.circuit, original.circuit)
+        XCTAssertEqual(migrated.camera, original.camera)
+        let world = try migrated.restoredWorld()
+        XCTAssertEqual(world.tiles, EditorConstructionArea.makeWorld().tiles)
+        XCTAssertEqual(world.generation, WorldGenerationSettings(seed: 2026))
+        XCTAssertNil(world.tile(at: WorldCoordinate(x: 14, y: 5)))
+    }
+
+    func testGeneratedPlacementsSaveAndRestoreWithoutPersistingBaseTiles() throws {
+        var document = WorldDocument()
+        let generator = try WorldGenerator(settings: document.generation)
+        let target = try XCTUnwrap((32..<128).map { WorldCoordinate(x: $0, y: 32) }.first {
+            let tile = generator.tile(at: $0)
+            return !tile.terrain.definition.isLiquid && tile.decoration == nil
+        })
+        document.circuit.components[target] = CircuitComponent(kind: .output)
+        let store = try temporaryStore()
+        try store.save(document)
+        XCTAssertEqual(try store.load(), document)
+        XCTAssertEqual(try document.restoredWorld().tile(at: target), generator.tile(at: target))
+        let json = try XCTUnwrap(JSONSerialization.jsonObject(with: Data(contentsOf: store.fileURL)) as? [String: Any])
+        XCTAssertNil(json["tiles"])
+        XCTAssertNotNil(json["generation"])
+        document.generation.generationVersion = 99
+        XCTAssertThrowsError(try document.restoredWorld())
+    }
+
     func testDocumentRoundTripPreservesIdentityCameraCircuitAndLeverPositions() throws {
         var document = WorldDocument()
         document.camera.worldOrigin = WorldPoint(x: -42.25, y: 10.75)
@@ -70,14 +105,14 @@ final class PersistenceTests: XCTestCase {
         let files = try FileManager.default.contentsOfDirectory(atPath: store.fileURL.deletingLastPathComponent().path)
         XCTAssertEqual(files, ["world.json"])
         let object = try XCTUnwrap(JSONSerialization.jsonObject(with: Data(contentsOf: store.fileURL)) as? [String: Any])
-        XCTAssertEqual(object["formatVersion"] as? Int, 1)
+        XCTAssertEqual(object["formatVersion"] as? Int, 2)
     }
 
     func testFailedValidationPreservesExistingFile() throws {
         let store = try temporaryStore()
         try store.save(WorldDocument())
         let before = try Data(contentsOf: store.fileURL)
-        var invalid = WorldDocument(); invalid.formatVersion = 2
+        var invalid = WorldDocument(); invalid.formatVersion = 99
         XCTAssertThrowsError(try store.save(invalid))
         XCTAssertEqual(try Data(contentsOf: store.fileURL), before)
     }

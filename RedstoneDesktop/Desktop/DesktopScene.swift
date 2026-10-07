@@ -2,6 +2,8 @@ import SpriteKit
 
 /// Diagnostic world tiles and cursor outline, using CoordinateMapper exclusively.
 final class DesktopScene: SKScene {
+    private let terrainRenderer: TerrainChunkRenderer
+    var terrainMetrics: TerrainRenderMetrics { terrainRenderer.metrics }
     let screen: ScreenDescriptor
     let mapper: CoordinateMapper
     private let highlight = SKShapeNode()
@@ -17,7 +19,8 @@ final class DesktopScene: SKScene {
     private var renderedPower: Set<WorldCoordinate> = []
     private(set) var highlightedTile: WorldCoordinate?
 
-    init(screen: ScreenDescriptor, mapper: CoordinateMapper) {
+    init(screen: ScreenDescriptor, mapper: CoordinateMapper, terrainRenderer: TerrainChunkRenderer = TerrainChunkRenderer()) {
+        self.terrainRenderer = terrainRenderer
         self.screen = screen
         self.mapper = mapper
         super.init(size: screen.frame.size)
@@ -112,10 +115,13 @@ final class DesktopScene: SKScene {
     func updateWorld(_ world: World, poweredTiles: Set<WorldCoordinate> = []) {
         renderedWorld = world
         renderedPower = poweredTiles
-        tileLayer.removeAllChildren()
+        if world.generation == nil { tileLayer.removeAllChildren() }
         circuitLayer.removeAllChildren()
         let viewport = CGRect(origin: .zero, size: size)
-        for (coordinate, tile) in world.tiles.sorted(by: { ($0.key.y, $0.key.x) < ($1.key.y, $1.key.x) }) {
+        if world.generation != nil {
+            terrainRenderer.render(world, mapper: mapper, screen: screen, viewport: viewport, into: tileLayer)
+        }
+        for (coordinate, tile) in (world.generation == nil ? world.tiles : [:]).sorted(by: { ($0.key.y, $0.key.x) < ($1.key.y, $1.key.x) }) {
             let rect = mapper.sceneRect(forTile: coordinate, on: screen)
             guard rect.intersects(viewport) else { continue }
             let node = SKShapeNode(rect: rect.insetBy(dx: 0.5, dy: 0.5))

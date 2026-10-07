@@ -89,6 +89,36 @@ struct CoordinateMapper: Sendable {
         return CameraState(worldOrigin: origin, pointsPerTile: scale)
     }
 
+    /// Bounded visible chunks plus one margin; all scene/screen conversion stays here.
+    func visibleChunks(on screen: ScreenDescriptor, viewport: CGRect, margin: Int = 1) -> Set<ChunkCoordinate> {
+        guard margin >= 0, margin <= 2, viewport.width > 0, viewport.height > 0,
+              let first = tile(atScreen: CGPoint(x: screen.frame.minX + viewport.minX, y: screen.frame.minY + viewport.minY)),
+              let last = tile(atScreen: CGPoint(x: screen.frame.minX + viewport.maxX.nextDown, y: screen.frame.minY + viewport.maxY.nextDown)) else { return [] }
+        let low = ChunkCoordinate.containing(first), high = ChunkCoordinate.containing(last)
+        let minX = low.x.subtractingReportingOverflow(margin), minY = low.y.subtractingReportingOverflow(margin)
+        let maxX = high.x.addingReportingOverflow(margin), maxY = high.y.addingReportingOverflow(margin)
+        guard !minX.overflow, !minY.overflow, !maxX.overflow, !maxY.overflow else { return [] }
+        let width = maxX.partialValue.subtractingReportingOverflow(minX.partialValue)
+        let height = maxY.partialValue.subtractingReportingOverflow(minY.partialValue)
+        guard !width.overflow, !height.overflow, width.partialValue >= 0, height.partialValue >= 0,
+              width.partialValue < 32, height.partialValue < 32,
+              (width.partialValue + 1) * (height.partialValue + 1) <= 256 else { return [] }
+        var result: Set<ChunkCoordinate> = []
+        for y in minY.partialValue...maxY.partialValue {
+            for x in minX.partialValue...maxX.partialValue {
+                let chunk = ChunkCoordinate(x: x, y: y)
+                if chunk.worldOrigin != nil { result.insert(chunk) }
+            }
+        }
+        return result
+    }
+
+    func sceneRect(forChunk chunk: ChunkCoordinate, on screen: ScreenDescriptor) -> CGRect? {
+        guard let origin = chunk.worldOrigin else { return nil }
+        let tile = sceneRect(forTile: origin, on: screen)
+        return CGRect(origin: tile.origin, size: CGSize(width: tile.width * 32, height: tile.height * 32))
+    }
+
     /// Finder calibration confirmed by the owner on their Mac: raw point is an icon center measured right/down
     /// from the primary display's upper-left corner. No icon-size/menu-bar offset.
     /// Recheck visually if display or Finder behavior changes.

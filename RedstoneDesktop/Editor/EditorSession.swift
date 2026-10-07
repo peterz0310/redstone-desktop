@@ -28,6 +28,7 @@ final class EditorSession: ObservableObject {
     @Published var selectedTile: WorldCoordinate?
     @Published var hoveredTile: WorldCoordinate?
     @Published private(set) var status = "Select a tool. Drag with Pan; use +/− or scroll to zoom."
+    @Published var terrainMetrics = TerrainRenderMetrics()
     var viewport = CGSize(width: 800, height: 600)
 
     var proposedComponent: CircuitComponent? {

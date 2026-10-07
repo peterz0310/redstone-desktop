@@ -50,6 +50,8 @@ Slice 16 adds versioned Codable JSON persistence, an atomic WorldStore, debounce
 
 Slice 17 adds a pure, stateless deterministic terrain generator, versioned UInt64 seed settings, integer hash/smooth 2D noise, elevation/moisture/temperature, biome selection, all six terrain types and four decorations, and 32×32 chunk sampling. Negative and extreme integer coordinates are tested. Fixed version-1 fingerprints protect reproducibility, and adjacent chunks use the same global fields. Debug build and all **157 tests** pass. The live app still renders its persisted fixture: chunked terrain rendering is Slice 18, and seed browsing is Slice 19. A standalone comparison image can be generated with `scripts/terrain-preview.sh`.
 
+Slice 18 connects the generator to a bounded chunk renderer in the editor and desktop. Original code-drawn 8×8 placeholders are baked into one nearest-filtered sprite per 32×32 chunk. Only visible chunks plus a margin remain cached; camera moves reuse overlapping chunks, and power/occupancy updates do not regenerate terrain. The footer reports retained chunks/nodes and cumulative generation/texture counts. Format-1 saves migrate to format 2 with default seed **2026**, preserving original fixture tiles and circuits over generated surroundings; generated tiles are not saved individually. **Enabling Desktop World now reads Finder automatically and starts serialized 2 Hz polling.** Read Finder Items remains available for diagnosis/retry; denied access pauses automatic reads. Debug build and all **169 tests** pass; visible long-pan and idle checks remain pending.
+
 ## Development
 
 Requirements: macOS 14 or newer, Xcode with Swift 6 support, and XcodeGen 2.44 or newer. This bootstrap was built and tested with Xcode 27.0 on macOS 27.0; the minimum deployment version has not been tested on an older Mac.
@@ -389,3 +391,25 @@ open build/terrain-preview.svg
 This creates a comparison image outside the source/bundle: seed **42** on the left, seed **2026** on the right. Both cover x/y **−64…63**. Colors indicate terrain; dark dots indicate decorations; faint lines mark 32-tile chunk boundaries. The seeds should have different land/water layouts, and the faint chunk lines should not create artificial breaks in terrain. Re-running produces identical output. These previews are developer data plots, not an interactive seed browser or polished terrain art.
 
 The generator's fixed snapshot, chunk consistency, negative-coordinate and seed-diversity checks are automated. The next implementation is **Slice 18 — Chunked terrain renderer**.
+
+
+## Chunked terrain and automatic Finder walkthrough — Slice 18
+
+The owner confirmed the Slice 17 regression on 2026-10-07. This revision adds visible generated terrain and the requested automatic Finder refresh. Older walkthroughs asking you to press Read Finder Items are superseded by the enable-time automatic read.
+
+1. Quit the old app with **Command-Q**, then launch:
+
+   ```sh
+   open /Users/peterzielinski/git/redstone-desktop/build/Build/Products/Debug/RedstoneDesktop.app
+   ```
+
+2. Confirm **Slice 18 · Chunked terrain** in the footer. You should see colored generated land/water/decorations around the original fixture. Your saved components, repeater settings, original three rows and right-hand grass construction area should remain in place. The original grass beneath circuits and developer test terrain are deliberate overrides, so rectangular patch boundaries are expected; they are not generated chunk seams.
+3. Choose **Pan**, then repeatedly drag across the world for a minute or two. Try zooming out with **−**. Terrain should continue beyond the original patch, including negative coordinates. Watch **cached chunks** and **chunk nodes** in the footer: counts can vary with zoom/position but should stay in a similar bounded range, rather than growing with every visited area. **Generated** and **textures** are cumulative work counts and are expected to rise while exploring.
+4. Stop panning/zooming and note the generated/texture numbers. Wait about 15 seconds, then move the pointer over the canvas without panning. Those numbers should remain unchanged. Changing selection/hover or powering the circuit should not rebuild terrain textures. There should be no cracks or empty strips at 32-tile chunk boundaries.
+5. Click **Reset view**. Enable Desktop World **without pressing Read Finder Items**. Allow the initial refresh to finish, then minimize/move editor windows out of the way and press a clear desktop button. With a harmless folder on its output, it should open as before. If Finder permission has never been granted, enabling may show macOS's permission prompt; accept to test the feature.
+6. Optional: open Finder Diagnostics to inspect the automatic read/polling state. Move an icon and confirm its marker/occupancy follows. Disabling Desktop World should stop polling. If access is denied or a read fails, the editor should show the error and polling should pause; use the diagnostics read/retry controls after resolving access. There should be no repeating permission-prompt loop.
+7. With Desktop World disabled, edit a component and quit/reopen. Verify placements/settings survive migration to format 2. You can now place on generated dry terrain when it is free of decorations; generated water/decorations must reject placement. Future test circuits should still go to the right of the originals.
+
+Please confirm whether **long panning keeps retained chunk/node counts bounded**, **idle generated/texture counts stay fixed**, and **enabling works without manually reading Finder**. The two Slice 18 MANUAL checkboxes await that Mac report.
+
+Your save remains at `~/Library/Application Support/RedstoneDesktop/world.json`. Legacy saves are migrated in memory; the next edit/save writes format 2 atomically. Seed browsing and choosing the desktop area are Slice 19; there is no seed control yet.

@@ -2,7 +2,7 @@ import SwiftUI
 
 @main
 struct RedstoneDesktopApp: App {
-    @StateObject private var appState = AppState(worldStore: WorldStore.applicationDefault())
+    @StateObject private var appState = AppState(worldStore: WorldStore.applicationDefault(), automaticallyRefreshFinder: true)
 
     var body: some Scene {
         WindowGroup("Redstone Desktop") {

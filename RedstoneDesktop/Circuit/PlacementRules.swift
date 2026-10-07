@@ -44,7 +44,7 @@ struct PlacementRules: PlacementRuleEvaluating {
     func canPlace(component: CircuitComponent, at coordinate: WorldCoordinate, in world: World) -> PlacementResult {
         guard component.kind != .empty else { return .rejected(.emptyComponent) }
         guard !reservedCoordinates.contains(coordinate) else { return .rejected(.reserved) }
-        guard let tile = world.tiles[coordinate] else { return .rejected(.noSolidSurface) }
+        guard let tile = world.tile(at: coordinate) else { return .rejected(.noSolidSurface) }
         let terrain = tile.terrain.definition
         guard !terrain.isLiquid else { return .rejected(.liquid) }
         guard terrain.isSolidSurface else { return .rejected(.noSolidSurface) }

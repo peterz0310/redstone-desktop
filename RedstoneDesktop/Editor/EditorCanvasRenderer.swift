@@ -7,13 +7,14 @@ final class EditorCanvasRenderer {
     private var lastWorld: World?
     private var lastOccupancy: DesktopOccupancySnapshot?
     private var lastPower: Set<WorldCoordinate> = []
+    private let terrainRenderer = TerrainChunkRenderer()
     private let ghostRenderer = CircuitRenderer()
 
     func update(appState: AppState, editor: EditorSession, size: CGSize) -> DesktopScene? {
         guard let mapper = editor.mapper(size: size) else { return nil }
         if scene?.mapper.camera != editor.camera || scene?.size != size {
             let screen = ScreenDescriptor(id: "editor", frame: CGRect(origin: .zero, size: size), backingScale: 1)
-            scene = DesktopScene(screen: screen, mapper: mapper)
+            scene = DesktopScene(screen: screen, mapper: mapper, terrainRenderer: terrainRenderer)
             lastWorld = nil
             lastOccupancy = nil
         }
