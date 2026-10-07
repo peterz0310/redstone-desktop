@@ -1856,6 +1856,14 @@ No custom rendering engine until profiling proves SpriteKit insufficient.
 
 ---
 
+## 37.6 Owner workflow and demo layout
+
+When the owner confirms a slice, record that report and implement the next roadmap slice in the same turn; do not require a separate confirmation-only turn. Keep the one-slice-at-a-time and feasibility-stop rules.
+
+Keep existing desktop demo circuits in place. Extend any additional test circuits to their right (positive world X), rather than adding more rows above them. Preserve clear input/neighbor tiles for Finder interaction.
+
+---
+
 # 38. IMPLEMENTATION ROADMAP
 
 The roadmap is deliberately granular.
@@ -2146,20 +2154,22 @@ Required tests:
 - [x] exact timing tests
 - [x] visual state
 
-**Status: implemented.** Debug application build and all 101 automated tests pass. Owner Mac regression confirmation is pending; README.md contains the walkthrough. Slice 12 has no roadmap MANUAL checkbox.
+**Status: complete; owner-confirmed regression on 2026-10-07.** Debug application build and all 101 automated tests pass. The owner reported “It works!” after the README.md walkthrough. Slice 12 has no roadmap MANUAL checkbox.
 
 ---
 
 ## Slice 13 — Circuit renderer
 
-- [ ] dust shapes
-- [ ] powered/unpowered textures
-- [ ] button state
-- [ ] lever state
-- [ ] repeater orientation/delay
-- [ ] output occupancy
-- [ ] output trigger flash
-- [ ] renderer remains action-free
+- [x] dust shapes
+- [x] powered/unpowered textures
+- [x] button state
+- [x] lever state
+- [x] repeater orientation/delay
+- [x] output occupancy
+- [x] output trigger flash
+- [x] renderer remains action-free
+
+**Status: implemented.** Debug build and all 107 automated tests pass. Owner visual acceptance for this revision is pending; follow README.md.
 
 ### Manual acceptance
 
@@ -3020,6 +3030,32 @@ Keep the original button and lever rows. Add a third demo row at y=7: button (2,
 Validation: Debug build succeeds and all 101 automated tests pass. Pure World/Circuit files typecheck independently with Swift 6. New tests cover all delays on both edges, 20-snapshot button pulse duration, one-tick pulses, all orientations, forbidden input/emission directions, power restoration and downstream attenuation, aligned/reversed chains, output non-relay, delayed feedback loops, dictionary insertion order, integer limits, and delay Codable validation/defaulting. Renderer tests verify arrow/delay labels, power colors, geometry, and retained model after resize. Fake Finder integration verifies delayed opening uses the fresh occupant and disable/re-enable clears a pending repeater pulse.
 
 Consequences: all seven Slice 12 implementation/test tasks are complete. Owner Mac regression confirmation is pending, and no MANUAL checkbox changes. Slice 13 and later remain unchecked. README.md provides the new-row check and regression instructions. No general editor, polished textures, terrain generation, resource packs, script execution, backend, or private macOS API is added.
+
+---
+
+## 2026-10-07 — Owner confirms Slice 12; continue with rightward demos
+
+Context: after the repeater walkthrough, the owner reported “It works!” and requested documenting confirmation and implementing the next slice in a single step. They also requested that additional desktop test circuits go to the right rather than above existing rows.
+
+Decision: record Slice 12 regression as passed on the owner's Mac, separately from its 101 automated tests. Preserve existing circuits and extend future demo fixtures rightward. Record confirmation and continue to Slice 13 in this same turn.
+
+Consequences: Slice 12 is complete. It has no roadmap MANUAL checkbox, so none is invented. This confirmation does not imply Slice 13 visual acceptance.
+
+---
+
+## 2026-10-07 — Slice 13 snapshot-driven circuit renderer
+
+Context: circuit rendering used generic blocks and geometric dust lines. The next slice needs distinct visual states and output occupancy without introducing actions into SpriteKit.
+
+Decision: extract CircuitRenderer, consuming CircuitWorld, powered coordinates, occupancy snapshot, CoordinateMapper, and screen/viewport geometry. Use ten small original code-drawn placeholder textures under semantic CircuitTextureID values, cached per scene and rendered with nearest filtering. No texture files, Minecraft assets, pack loader, terrain generation, or general asset-import framework are added.
+
+Dust halves meet at shared tile edges and connect to component frames. They reject diagonal/empty neighbors and repeater side ports; corners, tees, and crosses follow the supplied model. Dust is red when off and yellow when powered. Buttons use raised/depressed images and PRESS/DOWN labels; levers change handle/image and OFF/ON label. Repeaters rotate an arrow image and retain their orientation/delay label, with distinct off/on images. Outputs use a power image independently of occupancy: EMPTY/gray, ITEM/green, MANY/red, N/A/purple. Occupancy changes do not alter simulation power. Finder remains above the renderer, so icons may cover parts of a block or badge.
+
+DesktopScene retains occupancy alongside world/power, so later power refreshes and viewport resizes preserve output state. Each output activation gets its own white 0.5-second fade/removal effect. Repeated activation of the same coordinate restarts that effect without accumulating nodes; different output coordinates can flash concurrently. Model removal clears obsolete output effects. Rendering receives snapshots only; it has no Finder provider or file-launch dependency. Existing OpenItemAction and simulation behavior are unchanged.
+
+Validation: Debug build succeeds and all 107 automated tests pass. New checks cover isolated/corner/tee/cross dust geometry, repeater side-port exclusion, texture reuse/filtering and off/on bitmap differences, committed button/lever states, all four output occupancy states while held powered, occupancy retention on resize, independent bounded output flashes, and removal cleanup. Existing repeater tests now also verify arrow-image rotation and texture switching. Fake Finder/action integration continues to pass. A generated native art contact sheet was inspected; this is texture inspection, not physical desktop validation.
+
+Consequences: all eight Slice 13 implementation tasks are complete. Its MANUAL visual-state checkbox remains unchecked until the owner confirms the current Mac walkthrough. Slice 14 and later remain unchecked. No new desktop test circuit is added; all three existing rows retain their positions, and future additions go to their right.
 
 ---
 

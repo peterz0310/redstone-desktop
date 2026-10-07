@@ -28,6 +28,8 @@ struct EditorPlaceholderView: View {
                 .font(.caption.monospaced())
             Text("Delayed PRESS: (2, 7) → REPEATER: (5, 7), 4 ticks → OUTPUT: (7, 7)")
                 .font(.caption.monospaced())
+            Text("OUTPUT badges: EMPTY · ITEM · MANY · N/A (Finder unavailable)")
+                .font(.caption)
             Text("Repeater power: \(appState.simulator.power(at: DemoCircuit.repeater).rawValue) · Output power: \(appState.simulator.power(at: DemoCircuit.repeaterOutput).rawValue)")
                 .font(.caption.monospaced())
             Text("Button-row dust power: " + DemoCircuit.dust.map { String(appState.simulator.power(at: $0).rawValue) }.joined(separator: ", "))
@@ -61,7 +63,7 @@ struct EditorPlaceholderView: View {
                 .font(.caption.monospaced())
             }
             Spacer()
-            Text("Slice 12 · Repeater")
+            Text("Slice 13 · Circuit renderer")
                 .font(.caption)
                 .foregroundStyle(.secondary)
         }

@@ -34,7 +34,12 @@ Slice 10 adds pure Swift `World`, `Tile`, `TerrainID`, `DecorationID`, and `Circ
 Slice 11 replaces the fixed pulse with a pure, deterministic `CircuitSimulator`. Buttons and levers supply power 15, cardinal dust attenuates by one per dust-to-dust step, and outputs emit one event when power rises from zero. The entire network settles within each tick using a bounded queue; loops cannot retain power after sources turn off. A separate scheduler requests 20 ticks per second. The original button row remains at y=3, and a second **LEVER (2, 5) → four dust tiles → OUTPUT (7, 5)** row demonstrates continuous power. The editor displays button-row dust strengths. Output actions wait for busy reads and refresh Finder occupancy before opening; simulation and rendering never launch files. Disabling resets runtime state; world persistence comes later. Debug build and all **86 tests** pass. The owner confirmed the Mac regression on 2026-10-07; repeaters remain for Slice 12.
 
 
-Slice 12 adds directional repeaters with model-configured **1–4 redstone ticks** of delay (2/4/6/8 simulation ticks). They read only behind their arrow, restore positive incoming power to 15, and emit only forward. Both edges are delayed equally; aligned chains add their delays. Bounded input histories and the existing iterative dust solver preserve deterministic behavior in loops. The renderer shows arrow/delay and powered color. A third **PRESS (2, 7) → dust → REPEATER (5, 7), → 4t → dust → OUTPUT (7, 7)** row provides a visible delayed demo. It opens the fresh occupant when output power rises, using the existing action adapter. Debug build and all **101 tests** pass; owner regression confirmation is pending. Repeater placement, rotation, and delay controls in a general editor remain for later slices.
+Slice 12 adds directional repeaters with model-configured **1–4 redstone ticks** of delay (2/4/6/8 simulation ticks). They read only behind their arrow, restore positive incoming power to 15, and emit only forward. Both edges are delayed equally; aligned chains add their delays. Bounded input histories and the existing iterative dust solver preserve deterministic behavior in loops. The renderer shows arrow/delay and powered color. A third **PRESS (2, 7) → dust → REPEATER (5, 7), → 4t → dust → OUTPUT (7, 7)** row provides a visible delayed demo. It opens the fresh occupant when output power rises, using the existing action adapter. Debug build and all **101 tests** pass; the owner confirmed the Mac regression on 2026-10-07. Repeater placement, rotation, and delay controls in a general editor remain for later slices.
+
+
+Slice 13 extracts a snapshot-driven `CircuitRenderer` and adds original cached textures for every circuit component's off/on state. PRESS/DOWN and lever OFF/ON are now distinct; repeater images rotate with their arrow and retain delay labels. Dust follows actual cardinal ports, with no line into a repeater's sides. OUTPUT shows **EMPTY** (gray), **ITEM** (green), **MANY** (red), or **N/A** (purple), independently of power. Separate output flashes can coexist. Occupancy survives power refreshes and viewport resize. The renderer has no Finder-query or action-execution dependency. Texture scaling uses SpriteKit's documented [nearest filtering](https://developer.apple.com/documentation/spritekit/sktexture/filteringmode). Debug build and all **107 tests** pass; the Slice 13 visual-state MANUAL check awaits your confirmation.
+
+The three existing demo rows keep their positions. Future test circuits will extend to their **right**, rather than above them. After you confirm a slice, the confirmation and next implementation will be handled in one turn.
 
 ## Development
 
@@ -235,7 +240,7 @@ Please report whether these checks pass, and copy the editor's result/metadata i
 
 ## Manual regression check — Slice 12
 
-The build and 101 automated tests pass. This new revision still needs your Mac confirmation; Slice 12 has no roadmap MANUAL checkbox. Earlier walkthroughs describe earlier builds.
+The owner confirmed this regression on 2026-10-07, reporting “It works!” separately from the 101 passing automated tests. Slice 12 has no roadmap MANUAL checkbox. These steps remain available for future regression checks; earlier walkthroughs describe earlier builds.
 
 1. Quit the previous Redstone Desktop app with **Command-Q**, then launch the latest build from Terminal:
 
@@ -251,3 +256,23 @@ The build and 101 automated tests pass. This new revision still needs your Mac c
 7. Confirm the original PRESS row at y=3 and continuous LEVER row at y=5 still behave as before, normal Finder selection/dragging works, and ordinary windows covering an input do not activate it.
 
 Please confirm these checks or copy the editor result/metadata for any failure. The demo uses one east-facing, four-tick repeater; all four directions/delays, chains, and feedback loops are covered by automated fixtures because there is no circuit authoring UI yet. Slice 13 (Circuit renderer) is next.
+
+
+## Manual acceptance — Slice 13
+
+Build and 107 automated tests pass. The roadmap's **MANUAL: visual state tracks simulation correctly** remains unchecked until you confirm this revision. No new circuit is added; use the same three rows.
+
+1. Quit the previous app with **Command-Q**, then launch the latest build:
+
+   ```sh
+   open /Users/peterzielinski/git/redstone-desktop/build/Build/Products/Debug/RedstoneDesktop.app
+   ```
+
+2. Confirm **Slice 13 · Circuit renderer** in the footer. Enable Desktop World. Before a Finder read, OUTPUT blocks should have a purple **N/A** badge/border. Read Finder items; empty outputs should switch to **EMPTY** with a gray border. Leave input blocks and their neighboring tiles clear of icons.
+3. Click PRESS **(2, 3)** with an empty output. Its icon should change from raised **PRESS** to depressed **DOWN**, dust from red to yellow, and output should light and flash white once. The row should return to its off appearance after the pulse.
+4. Click the lever **(2, 5)**. Its handle should flip and label change **OFF → ON**, with its wire staying yellow. A second click should return it to OFF and the wire to red. A held output should not flash/open repeatedly.
+5. Test the repeater row at **y=7**: its arrow should still point right with **→ 4t**, change from gray to lit after the delay, and restore its off image after the delayed falling edge. Opening an item on OUTPUT **(7, 7)** should still happen once per rising edge.
+6. Move a harmless folder/document onto a visible output and refresh Finder items (or enable polling). Its border/badge should change to green **ITEM**; moving it away should return it to **EMPTY**. Real Finder icons stay above the renderer and can cover parts of these badges. If you can conveniently put two item centers in one output tile, its state should be red **MANY**, and no item should open; ambiguity is also covered by automated fixtures.
+7. Confirm Finder selection/dragging and ordinary-window click rejection still work. Disable/re-enable: all circuits should return unpowered, output occupancy should reflect the last successful Finder snapshot, and no stale white flash should remain.
+
+Please report whether visual states follow the circuit correctly, or describe any unreadable labels, missing segments, stale badge, or unexpected opening. On confirmation, the next implementation is Slice 14 (Placement rules), with new demo circuits placed to the right if needed.

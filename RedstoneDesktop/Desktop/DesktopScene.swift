@@ -8,7 +8,9 @@ final class DesktopScene: SKScene {
     private let clickFlash = SKShapeNode()
     private let tileLayer = SKNode()
     private let circuitLayer = SKNode()
-    private let outputFlash = SKShapeNode()
+    private let outputFlash = SKNode()
+    private let circuitRenderer = CircuitRenderer()
+    private var renderedOccupancy: DesktopOccupancySnapshot = .unavailable("Read Finder Items.")
     private let occupancyLayer = SKNode()
     private let finderMarkers = SKNode()
     private var renderedWorld: World?
@@ -37,11 +39,7 @@ final class DesktopScene: SKScene {
         circuitLayer.name = "circuit"
         circuitLayer.zPosition = 0.75
         outputFlash.name = "output-flash"
-        outputFlash.strokeColor = .white
-        outputFlash.fillColor = NSColor.white.withAlphaComponent(0.5)
-        outputFlash.lineWidth = 4
         outputFlash.zPosition = 4
-        outputFlash.isHidden = true
         occupancyLayer.name = "desktop-occupancy"
         occupancyLayer.zPosition = 0.5
         finderMarkers.name = "finder-markers"
@@ -96,6 +94,8 @@ final class DesktopScene: SKScene {
     }
 
     func updateOccupancy(_ snapshot: DesktopOccupancySnapshot) {
+        renderedOccupancy = snapshot
+        rebuildCircuit()
         occupancyLayer.removeAllChildren()
         guard case let .available(tiles) = snapshot else { return }
         for occupancy in tiles.values where !occupancy.items.isEmpty {
@@ -132,57 +132,20 @@ final class DesktopScene: SKScene {
                 tileLayer.addChild(label)
             }
         }
-        for (coordinate, component) in world.circuit.components.sorted(by: { ($0.key.y, $0.key.x) < ($1.key.y, $1.key.x) }) {
-            let rect = mapper.sceneRect(forTile: coordinate, on: screen)
-            guard component.kind != .empty, rect.intersects(viewport) else { continue }
-            let center = CGPoint(x: rect.midX, y: rect.midY)
-            let powered = poweredTiles.contains(coordinate)
-            if component.kind == .dust {
-                let wire = CGMutablePath()
-                wire.addEllipse(in: CGRect(x: center.x - 4, y: center.y - 4, width: 8, height: 8))
-                for neighbor in world.circuit.occupiedCardinalNeighbors(at: coordinate) {
-                    let neighborRect = mapper.sceneRect(forTile: neighbor, on: screen)
-                    wire.move(to: center)
-                    // Reach the neighboring component center, including buttons and outputs.
-                    wire.addLine(to: CGPoint(x: neighborRect.midX, y: neighborRect.midY))
-                }
-                let node = SKShapeNode(path: wire)
-                node.name = "dust-path"
-                node.strokeColor = powered ? .systemYellow : .systemRed
-                node.fillColor = node.strokeColor
-                node.lineWidth = 8
-                circuitLayer.addChild(node)
-            } else {
-                let title = component.kind == .button ? "PRESS" : component.kind.rawValue.uppercased()
-                let node = SKShapeNode(rect: rect.insetBy(dx: 8, dy: 8))
-                node.name = title
-                node.zPosition = 0.1
-                node.fillColor = powered ? .systemOrange : .darkGray
-                node.strokeColor = .white
-                node.lineWidth = 2
-                circuitLayer.addChild(node)
-                let labelText: String
-                if component.kind == .repeater {
-                    let arrow: String
-                    switch component.direction {
-                    case .north: arrow = "↑"
-                    case .east: arrow = "→"
-                    case .south: arrow = "↓"
-                    case .west: arrow = "←"
-                    }
-                    labelText = "\(arrow) \(component.repeaterDelay.rawValue)t"
-                } else { labelText = title }
-                let label = SKLabelNode(text: labelText)
-                if component.kind == .repeater { label.name = "repeater-label:\(coordinate.x),\(coordinate.y)" }
-                label.fontName = "Menlo-Bold"
-                label.fontSize = 10
-                label.fontColor = .white
-                label.zPosition = 0.2
-                label.verticalAlignmentMode = .center
-                label.position = center
-                circuitLayer.addChild(label)
-            }
+        rebuildCircuit()
+        // Cancel effects for outputs removed from the model; power refreshes keep them.
+        for node in outputFlash.children {
+            guard let name = node.name,
+                  world.circuit.components.contains(where: { coordinate, component in
+                      component.kind == .output && name == "output-flash:\(coordinate.x),\(coordinate.y)"
+                  }) else { node.removeAllActions(); node.removeFromParent(); continue }
         }
+    }
+
+    private func rebuildCircuit() {
+        guard let world = renderedWorld else { return }
+        circuitRenderer.render(world.circuit, poweredTiles: renderedPower, occupancy: renderedOccupancy,
+            mapper: mapper, screen: screen, viewport: CGRect(origin: .zero, size: size), into: circuitLayer)
     }
 
     private func terrainColor(_ terrain: TerrainID) -> NSColor {
@@ -197,11 +160,18 @@ final class DesktopScene: SKScene {
     }
 
     func flashOutput(at coordinate: WorldCoordinate) {
-        outputFlash.removeAllActions()
-        outputFlash.path = CGPath(rect: mapper.sceneRect(forTile: coordinate, on: screen).insetBy(dx: 3, dy: 3), transform: nil)
-        outputFlash.alpha = 1
-        outputFlash.isHidden = false
-        outputFlash.run(.sequence([.fadeOut(withDuration: 0.5), .hide()]))
+        guard renderedWorld?.circuit.components[coordinate]?.kind == .output else { return }
+        let name = "output-flash:\(coordinate.x),\(coordinate.y)"
+        let flash = (outputFlash.childNode(withName: name) as? SKShapeNode) ?? SKShapeNode()
+        flash.name = name
+        flash.removeAllActions()
+        flash.path = CGPath(rect: mapper.sceneRect(forTile: coordinate, on: screen).insetBy(dx: 3, dy: 3), transform: nil)
+        flash.strokeColor = .white
+        flash.fillColor = NSColor.white.withAlphaComponent(0.5)
+        flash.lineWidth = 4
+        flash.alpha = 1
+        if flash.parent == nil { outputFlash.addChild(flash) }
+        flash.run(.sequence([.fadeOut(withDuration: 0.5), .removeFromParent()]))
     }
 
     private func rebuildChecker() {

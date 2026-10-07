@@ -27,7 +27,7 @@ final class WorldRendererTests: XCTestCase {
         XCTAssertNotEqual((layer.childNode(withName: "PRESS") as? SKShapeNode)?.fillColor, offColor)
         XCTAssertEqual(layer.children.count, 5)
         scene.flashOutput(at: output)
-        let flash = try XCTUnwrap(scene.childNode(withName: "output-flash") as? SKShapeNode)
+        let flash = try XCTUnwrap(scene.childNode(withName: "output-flash")?.childNode(withName: "output-flash:\(output.x),\(output.y)") as? SKShapeNode)
         XCTAssertEqual(flash.path?.boundingBoxOfPath, mapper.sceneRect(forTile: output, on: screen).insetBy(dx: 3, dy: 3))
         scene.updateWorld(World())
         XCTAssertTrue(layer.children.isEmpty)
@@ -49,9 +49,20 @@ final class WorldRendererTests: XCTestCase {
                 XCTAssertEqual((layer.childNode(withName: "repeater-label:2,2") as? SKLabelNode)?.text, "\(arrow) \(delay.rawValue)t")
                 let node = try XCTUnwrap(layer.childNode(withName: "REPEATER") as? SKShapeNode)
                 XCTAssertEqual(node.path?.boundingBoxOfPath, mapper.sceneRect(forTile: coordinate, on: screen).insetBy(dx: 8, dy: 8))
+                let icon = try XCTUnwrap(node.childNode(withName: "component-icon:2,2") as? SKSpriteNode)
+                let expectedRotation: CGFloat
+                switch direction {
+                case .east: expectedRotation = 0
+                case .north: expectedRotation = .pi / 2
+                case .west: expectedRotation = .pi
+                case .south: expectedRotation = -.pi / 2
+                }
+                XCTAssertEqual(icon.zRotation, expectedRotation, accuracy: 0.00001)
+                let offTexture = try XCTUnwrap(icon.texture)
                 let off = node.fillColor
                 scene.updateWorld(world, poweredTiles: [coordinate])
                 XCTAssertNotEqual((layer.childNode(withName: "REPEATER") as? SKShapeNode)?.fillColor, off)
+                XCTAssertFalse((layer.childNode(withName: "REPEATER")?.childNode(withName: "component-icon:2,2") as? SKSpriteNode)?.texture === offTexture)
                 scene.size = CGSize(width: 600, height: 450)
                 XCTAssertEqual(layer.children.count, 2)
                 XCTAssertEqual((layer.childNode(withName: "repeater-label:2,2") as? SKLabelNode)?.text, "\(arrow) \(delay.rawValue)t")

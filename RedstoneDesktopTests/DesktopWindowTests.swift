@@ -46,7 +46,8 @@ final class DesktopWindowTests: XCTestCase {
         for size in [CGSize(width: 800, height: 600), CGSize(width: 2560, height: 1440)] {
             scene.size = size
             XCTAssertEqual(scene.children.count, 9)
-            XCTAssertEqual(scene.children.filter { $0 is SKShapeNode }.count, 5)
+            XCTAssertEqual(scene.children.filter { $0 is SKShapeNode }.count, 4)
+            XCTAssertTrue(try XCTUnwrap(scene.childNode(withName: "output-flash")).children.isEmpty)
         }
     }
 
