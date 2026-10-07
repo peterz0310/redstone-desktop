@@ -37,9 +37,12 @@ Slice 11 replaces the fixed pulse with a pure, deterministic `CircuitSimulator`.
 Slice 12 adds directional repeaters with model-configured **1–4 redstone ticks** of delay (2/4/6/8 simulation ticks). They read only behind their arrow, restore positive incoming power to 15, and emit only forward. Both edges are delayed equally; aligned chains add their delays. Bounded input histories and the existing iterative dust solver preserve deterministic behavior in loops. The renderer shows arrow/delay and powered color. A third **PRESS (2, 7) → dust → REPEATER (5, 7), → 4t → dust → OUTPUT (7, 7)** row provides a visible delayed demo. It opens the fresh occupant when output power rises, using the existing action adapter. Debug build and all **101 tests** pass; the owner confirmed the Mac regression on 2026-10-07. Repeater placement, rotation, and delay controls in a general editor remain for later slices.
 
 
-Slice 13 extracts a snapshot-driven `CircuitRenderer` and adds original cached textures for every circuit component's off/on state. PRESS/DOWN and lever OFF/ON are now distinct; repeater images rotate with their arrow and retain delay labels. Dust follows actual cardinal ports, with no line into a repeater's sides. OUTPUT shows **EMPTY** (gray), **ITEM** (green), **MANY** (red), or **N/A** (purple), independently of power. Separate output flashes can coexist. Occupancy survives power refreshes and viewport resize. The renderer has no Finder-query or action-execution dependency. Texture scaling uses SpriteKit's documented [nearest filtering](https://developer.apple.com/documentation/spritekit/sktexture/filteringmode). Debug build and all **107 tests** pass; the Slice 13 visual-state MANUAL check awaits your confirmation.
+Slice 13 extracts a snapshot-driven `CircuitRenderer` and adds original cached textures for every circuit component's off/on state. PRESS/DOWN and lever OFF/ON are now distinct; repeater images rotate with their arrow and retain delay labels. Dust follows actual cardinal ports, with no line into a repeater's sides. OUTPUT shows **EMPTY** (gray), **ITEM** (green), **MANY** (red), or **N/A** (purple), independently of power. Separate output flashes can coexist. Occupancy survives power refreshes and viewport resize. The renderer has no Finder-query or action-execution dependency. Texture scaling uses SpriteKit's documented [nearest filtering](https://developer.apple.com/documentation/spritekit/sktexture/filteringmode). Debug build and all **107 tests** pass; the owner confirmed the Slice 13 visual-state MANUAL check on 2026-10-07.
 
 The three existing demo rows keep their positions. Future test circuits will extend to their **right**, rather than above them. After you confirm a slice, the confirmation and next implementation will be handled in one turn.
+
+
+Slice 14 adds pure terrain capabilities and one shared placement evaluator/transaction. Components cannot be placed on water, unspecified terrain, decorations, or an occupied circuit cell. Rejected attempts preserve the entire world, and accepted placements preserve existing terrain and unrelated components. **Developer Placement…** opens a small SwiftUI rule-testing form with component/test-tile selection, repeater configuration, preview feedback, placement, and patch-only reset. Its explicit terrain patch is to the right at x=10–15. Disable Desktop World to edit, then enable it to inspect/use the placed components. Configuration lasts across enable/disable during this app session; relaunch starts from the fixture because persistence comes later. Debug build and all **123 tests** pass; owner placement-form regression confirmation is pending. This is the roadmap's developer UI; the general canvas editor is Slice 15.
 
 ## Development
 
@@ -260,7 +263,7 @@ Please confirm these checks or copy the editor result/metadata for any failure. 
 
 ## Manual acceptance — Slice 13
 
-Build and 107 automated tests pass. The roadmap's **MANUAL: visual state tracks simulation correctly** remains unchecked until you confirm this revision. No new circuit is added; use the same three rows.
+The owner confirmed this visual walkthrough on 2026-10-07, reporting “Looks good!” The roadmap's **MANUAL: visual state tracks simulation correctly** is checked based on that Mac report, separate from the 107 passing automated tests. These instructions remain available for regression; use the same three rows.
 
 1. Quit the previous app with **Command-Q**, then launch the latest build:
 
@@ -276,3 +279,24 @@ Build and 107 automated tests pass. The roadmap's **MANUAL: visual state tracks 
 7. Confirm Finder selection/dragging and ordinary-window click rejection still work. Disable/re-enable: all circuits should return unpowered, output occupancy should reflect the last successful Finder snapshot, and no stale white flash should remain.
 
 Please report whether visual states follow the circuit correctly, or describe any unreadable labels, missing segments, stale badge, or unexpected opening. On confirmation, the next implementation is Slice 14 (Placement rules), with new demo circuits placed to the right if needed.
+
+
+## Developer placement walkthrough — Slice 14
+
+Debug build and 123 tests pass. The new form still needs your Mac confirmation. Slice 14 has no roadmap MANUAL checkbox.
+
+1. Quit the old app with **Command-Q**, then launch the latest build:
+
+   ```sh
+   open /Users/peterzielinski/git/redstone-desktop/build/Build/Products/Debug/RedstoneDesktop.app
+   ```
+
+2. Confirm **Slice 14 · Placement rules** in the footer. Leave Desktop World disabled and click **Developer Placement…**. This opens a separate scrollable window; placement itself does not require reading Finder.
+3. Select **Dust** and **grass (10, 3)**. The preview should say **Placement allowed**. Click **Place component**; the result should confirm placement and the patch contents should show `dust` on grass.
+4. On that same grass tile, choose **Lever** and click **Place component**. It should refuse because a component already exists. The contents should still show `dust`; nothing should be overwritten.
+5. Choose **Dust** and try **shallowWater (14, 3)**, then **deepWater (15, 3)**. Both should report that components cannot be placed on water, and stay empty. Try **tree (10, 5)**, **flower (11, 5)**, **rock (12, 5)**, and **reed (13, 5)**: each should report its blocking decoration and stay empty. **unspecified (14, 5)** should report no specified solid terrain.
+6. Enable Desktop World in the main editor. The terrain patch should appear to the **right** of the original circuits, with your red dust on grass (10, 3). Hover to check coordinates if needed. The three original circuits should stay in place and work as before. While enabled, the developer window's placement/reset buttons should be disabled.
+7. Disable the world again. Click **Reset test placements** in the developer window; the patch list should return to empty. Enable the world and confirm the placed dust is gone, while terrain/decorations and the original circuits remain.
+8. Optional: with the world disabled, place a repeater on a dry test tile and choose its direction/delay. Enable the world and check the matching arrow/delay label. Reset afterwards if desired.
+
+Changes are temporary for this app session. Please report whether placement/rejection/reset behave as described, and any problem opening or scrolling the developer window. On confirmation, the next slice is the basic canvas editor.

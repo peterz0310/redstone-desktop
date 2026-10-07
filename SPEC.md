@@ -2169,27 +2169,29 @@ Required tests:
 - [x] output trigger flash
 - [x] renderer remains action-free
 
-**Status: implemented.** Debug build and all 107 automated tests pass. Owner visual acceptance for this revision is pending; follow README.md.
+**Status: complete; owner-confirmed visual acceptance on 2026-10-07.** Debug build and all 107 automated tests pass. The owner reported “Looks good!” after the README.md visual walkthrough.
 
 ### Manual acceptance
 
-- [ ] MANUAL: visual state tracks simulation correctly.
+- [x] MANUAL: visual state tracks simulation correctly.
 
 ---
 
 ## Slice 14 — Placement rules
 
-- [ ] terrain capability definitions
-- [ ] centralized evaluator
-- [ ] failure reasons
-- [ ] unit tests
-- [ ] developer placement UI
+- [x] terrain capability definitions
+- [x] centralized evaluator
+- [x] failure reasons
+- [x] unit tests
+- [x] developer placement UI
 
 Acceptance:
 
-- [ ] dust cannot be placed on water.
-- [ ] blocked decoration rejects placement.
-- [ ] occupied circuit tile does not silently overwrite.
+- [x] dust cannot be placed on water.
+- [x] blocked decoration rejects placement.
+- [x] occupied circuit tile does not silently overwrite.
+
+**Status: implemented.** Debug application build and all 123 automated tests pass. Owner regression of the developer placement form is pending; instructions are in README.md. This slice has no roadmap MANUAL checkbox.
 
 ---
 
@@ -3056,6 +3058,34 @@ DesktopScene retains occupancy alongside world/power, so later power refreshes a
 Validation: Debug build succeeds and all 107 automated tests pass. New checks cover isolated/corner/tee/cross dust geometry, repeater side-port exclusion, texture reuse/filtering and off/on bitmap differences, committed button/lever states, all four output occupancy states while held powered, occupancy retention on resize, independent bounded output flashes, and removal cleanup. Existing repeater tests now also verify arrow-image rotation and texture switching. Fake Finder/action integration continues to pass. A generated native art contact sheet was inspected; this is texture inspection, not physical desktop validation.
 
 Consequences: all eight Slice 13 implementation tasks are complete. Its MANUAL visual-state checkbox remains unchecked until the owner confirms the current Mac walkthrough. Slice 14 and later remain unchecked. No new desktop test circuit is added; all three existing rows retain their positions, and future additions go to their right.
+
+---
+
+## 2026-10-07 — Owner confirms Slice 13 visual acceptance
+
+Context: after the current circuit-renderer Mac walkthrough, the owner reported “Looks good!”
+
+Decision: mark Slice 13's MANUAL visual-state checkbox complete based on this owner-reported Mac validation, separate from its 107 passing automated tests. Continue to the next slice in the same turn, as requested.
+
+Consequences: Slice 13 is complete. This report does not imply validation of the new Slice 14 placement UI.
+
+---
+
+## 2026-10-07 — Slice 14 terrain capabilities and validated placement
+
+Context: the renderer and simulation work, but no shared placement policy prevents components on water, decorations, or occupied cells. A small developer form is required before the general editor.
+
+Decision: add pure TerrainDefinition capabilities, PlacementRuleEvaluating/PlacementRules, typed PlacementResult/failure reasons, and a CircuitPlacement transaction. All four dry terrain IDs support dust and heavy components; both water IDs support neither. Missing explicit terrain rejects placement rather than guessing generated terrain. All existing decorations, including reeds, block placement and remain unchanged; clearing requires a deliberate future tool. Reject empty-as-placement, reserved cells, and existing non-empty circuit components, even if the proposed component is identical. Repeater direction/delay are already constrained by typed configuration and validated Codable decoding.
+
+Evaluate in deterministic order, then insert only when allowed. Rejected transactions preserve the complete World; successful transactions preserve terrain, decoration, and unrelated circuit data. Stored .empty identities are vacant. The centralized evaluator is reusable by the future editor/build tools; the developer UI's preview and actual placement use this same policy.
+
+DeveloperPlacementFixture supplies an explicit patch to the right of the original circuits: x=10–15 at y=3 for grass, dirt, stone, sand, shallow/deep water; tree/flower/rock/reed at x=10–13, y=5; unspecified terrain at (14, 5). It leaves all original circuit and tile coordinates unchanged. No procedural generation or additional prebuilt circuit is added.
+
+A separate scrollable SwiftUI Developer Placement window chooses a component and test tile, shows the policy result, and offers Place component / Reset test placements. Repeaters expose their typed orientation/delay configuration. Editing is locked while Desktop World is enabled, both in the UI and AppState methods, so active simulation and pending action reads cannot be changed by this form. With the world disabled, an accepted placement publishes the new world and creates a fresh unpowered simulator; enable/disable retains the placed configuration within this app session. Reset removes components only from test-patch coordinates. Nothing is saved to disk; persistence and the general canvas editor remain later slices.
+
+Validation: Debug build succeeds; all 123 automated tests pass. Pure World/Circuit sources pass standalone Swift 6 typechecking. Tests cover the terrain capability table and every component on dry/water/decorated cells, negative/extreme coordinates, occupied-cell rejection, identical-placement rejection, complete-world preservation on failure, preserved repeater configuration/unrelated data on success, vacant .empty cells, reserved cells, deterministic reasons, and rightward fixture integrity. App integration tests verify no Finder/file actions for placement, locked live edits/reset without interrupting a held circuit, patch-only reset, new-world simulation, fresh occupant opening by a placed circuit, and retention across enable/disable. The SwiftUI form is hosted by an automated test; physical Mac interaction remains owner validation.
+
+Consequences: all five Slice 14 tasks and three automated acceptance items are complete. Slice 14 has no roadmap MANUAL checkbox, so none is invented or inferred. README.md gives the exact developer-form regression checks; owner confirmation is pending. Slice 15 and later remain unchecked. No canvas editing, terrain generation, persistence I/O, resource packs, private APIs, or backend are added.
 
 ---
 

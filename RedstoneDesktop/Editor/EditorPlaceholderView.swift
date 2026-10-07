@@ -22,6 +22,9 @@ struct EditorPlaceholderView: View {
             Button("Finder Diagnostics…") {
                 openWindow(id: "finder-diagnostics")
             }
+            Button("Developer Placement…") {
+                openWindow(id: "developer-placement")
+            }
             Text("PRESS: (2, 3) → OUTPUT: (7, 3) · Input clicks: \(appState.observedPressCount)")
                 .font(.caption.monospaced())
             Text("LEVER: (2, 5) → OUTPUT: (7, 5) · Simulation: 20 Hz")
@@ -63,7 +66,7 @@ struct EditorPlaceholderView: View {
                 .font(.caption.monospaced())
             }
             Spacer()
-            Text("Slice 13 · Circuit renderer")
+            Text("Slice 14 · Placement rules")
                 .font(.caption)
                 .foregroundStyle(.secondary)
         }

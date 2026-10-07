@@ -8,7 +8,9 @@ final class AppState: ObservableObject {
     @Published private(set) var pointer: PointerSnapshot?
     @Published private(set) var lastClick: DesktopClickSnapshot?
     @Published private(set) var observedClickCount = 0
-    let desktopWorld = DemoCircuit.makeWorld()
+    @Published private(set) var desktopWorld = DeveloperPlacementFixture.makeWorld()
+    @Published private(set) var developerPlacementStatus = "Choose a component and test tile."
+    private let circuitPlacement = CircuitPlacement()
     let desktopCamera = CameraState(worldOrigin: WorldPoint(x: 0, y: 0), pointsPerTile: 64)
     let finderDiagnostics: FinderDiagnosticsModel
     let desktopItemTracker: DesktopItemTracker
@@ -59,6 +61,39 @@ final class AppState: ObservableObject {
             .sink { [weak self] _ in
                 MainActor.assumeIsolated { self?.shutdown() }
             }
+    }
+
+    func developerPlacementPreview(_ component: CircuitComponent, at coordinate: WorldCoordinate) -> PlacementResult {
+        guard !isDesktopWorldEnabled else { return .rejected(.reserved) }
+        return circuitPlacement.rules.canPlace(component: component, at: coordinate, in: desktopWorld)
+    }
+
+    @discardableResult
+    func placeDeveloperComponent(_ component: CircuitComponent, at coordinate: WorldCoordinate) -> PlacementResult {
+        guard !isDesktopWorldEnabled else {
+            developerPlacementStatus = "Disable Desktop World before editing."
+            return .rejected(.reserved)
+        }
+        var next = desktopWorld
+        let result = circuitPlacement.place(component, at: coordinate, in: &next)
+        if result.isAllowed {
+            desktopWorld = next
+            simulator = CircuitSimulator(world: next.circuit)
+            developerPlacementStatus = "Placed \(component.kind.rawValue) at (\(coordinate.x), \(coordinate.y)). Enable Desktop World to view it."
+        } else { developerPlacementStatus = result.message }
+        return result
+    }
+
+    func resetDeveloperPlacements() {
+        guard !isDesktopWorldEnabled else {
+            developerPlacementStatus = "Disable Desktop World before editing."
+            return
+        }
+        var next = desktopWorld
+        for target in DeveloperPlacementFixture.targets { next.circuit.components.removeValue(forKey: target.coordinate) }
+        desktopWorld = next
+        simulator = CircuitSimulator(world: next.circuit)
+        developerPlacementStatus = "Test placements reset; original circuits and terrain preserved."
     }
 
     /// Used by both disable and the app's termination notification.

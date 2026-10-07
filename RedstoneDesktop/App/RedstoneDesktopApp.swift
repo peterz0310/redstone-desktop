@@ -16,6 +16,10 @@ struct RedstoneDesktopApp: App {
                 }
             }
         }
+        Window("Developer Placement", id: "developer-placement") {
+            DeveloperPlacementView(appState: appState)
+        }
+        .defaultSize(width: 560, height: 660)
         Window("Finder Diagnostics", id: "finder-diagnostics") {
             FinderDiagnosticsView(appState: appState)
         }
