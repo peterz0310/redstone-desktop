@@ -240,6 +240,49 @@ final class MinimalCircuitIntegrationTests: XCTestCase {
     }
 
     @MainActor
+    func testDelayedDemoOpensFreshOccupantOnlyAfterDelayAndDisableClearsHistory() async {
+        let largeScreen = ScreenDescriptor(id: "large", frame: CGRect(x: 0, y: 0, width: 640, height: 640), backingScale: 1)
+        let provider = CircuitFixtureProvider(), opener = FixtureItemOpener()
+        func target(_ id: String) -> DesktopItem {
+            DesktopItem(id: id, url: URL(fileURLWithPath: "/tmp/\(id)"), displayName: id,
+                position: CGPoint(x: 480, y: 160), estimatedIconSize: nil, kind: .folder)
+        }
+        let state = AppState(screenProviding: { largeScreen },
+            clickEventMonitoring: FakeGlobalMouseEventMonitor(),
+            finderDiagnostics: FinderDiagnosticsModel(provider: provider),
+            desktopInteractionAssessment: { _ in DesktopInteractionAssessment(rejectionReason: nil, details: "Fixture desktop") },
+            tickScheduler: ManualCircuitTickScheduler(), itemOpener: opener,
+            finderReferenceProviding: { largeScreen })
+        defer { state.shutdown() }
+        provider.items = [target("old-delayed")]
+        await state.finderDiagnostics.readItems()
+        state.toggleDesktopWorld()
+        state.handleCircuitClick(DemoCircuit.repeaterButton)
+        await state.activationTask?.value
+        for _ in 0..<8 {
+            state.advanceCircuitTick()
+            XCTAssertEqual(state.simulator.power(at: DemoCircuit.repeaterOutput), .off)
+            XCTAssertNil(state.activationTask)
+        }
+        provider.items = [target("fresh-delayed")]
+        state.advanceCircuitTick()
+        await state.activationTask?.value
+        XCTAssertEqual(opener.urls, [target("fresh-delayed").url])
+        XCTAssertEqual(state.simulator.power(at: DemoCircuit.repeaterOutput), .full)
+        for _ in 0..<30 { state.advanceCircuitTick() }
+        XCTAssertEqual(opener.urls.count, 1)
+        XCTAssertTrue(state.simulator.poweredTiles.isEmpty)
+        state.handleCircuitClick(DemoCircuit.repeaterButton)
+        await state.activationTask?.value
+        state.advanceCircuitTick() // input history now contains a pending pulse
+        state.shutdown()
+        state.toggleDesktopWorld()
+        for _ in 0..<30 { state.advanceCircuitTick() }
+        XCTAssertEqual(opener.urls.count, 1)
+        XCTAssertTrue(state.simulator.poweredTiles.isEmpty)
+    }
+
+    @MainActor
     func testCircuitVisualsUseMapperAndRemainBounded() throws {
         let mapper = try CoordinateMapper(canvasFrame: screen.frame, camera: CameraState(worldOrigin: WorldPoint(x: 0, y: 0), pointsPerTile: 64))
         let scene = DesktopScene(screen: screen, mapper: mapper)
@@ -255,7 +298,7 @@ final class MinimalCircuitIntegrationTests: XCTestCase {
         scene.updateWorld(DemoCircuit.makeWorld(), poweredTiles: circuit.poweredTiles)
         XCTAssertNotEqual((layer.childNode(withName: "dust-path") as? SKShapeNode)?.strokeColor, offColor)
         for _ in 0..<10 { scene.updateWorld(DemoCircuit.makeWorld(), poweredTiles: circuit.poweredTiles); scene.flashOutput(at: DemoCircuit.output) }
-        XCTAssertEqual(layer.children.count, 16)
+        XCTAssertEqual(layer.children.count, 25)
         XCTAssertEqual(scene.children.count, 9)
         let flash = try XCTUnwrap(scene.childNode(withName: "output-flash") as? SKShapeNode)
         XCTAssertFalse(flash.isHidden)

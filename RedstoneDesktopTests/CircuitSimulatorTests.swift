@@ -122,7 +122,7 @@ final class CircuitSimulatorTests: XCTestCase {
         XCTAssertEqual(sim.power(at: cell(2)), .off)
     }
 
-    func testDisconnectedComponentsInvalidInputsAndDeferredRepeaters() {
+    func testDisconnectedComponentsInvalidInputsAndSidewaysRepeater() {
         let world = CircuitWorld(components: [cell(0): CircuitComponent(kind: .lever),
             cell(1): CircuitComponent(kind: .repeater), cell(2): CircuitComponent(kind: .output)])
         var sim = CircuitSimulator(world: world)

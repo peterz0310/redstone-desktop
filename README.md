@@ -33,6 +33,9 @@ Slice 10 adds pure Swift `World`, `Tile`, `TerrainID`, `DecorationID`, and `Circ
 
 Slice 11 replaces the fixed pulse with a pure, deterministic `CircuitSimulator`. Buttons and levers supply power 15, cardinal dust attenuates by one per dust-to-dust step, and outputs emit one event when power rises from zero. The entire network settles within each tick using a bounded queue; loops cannot retain power after sources turn off. A separate scheduler requests 20 ticks per second. The original button row remains at y=3, and a second **LEVER (2, 5) → four dust tiles → OUTPUT (7, 5)** row demonstrates continuous power. The editor displays button-row dust strengths. Output actions wait for busy reads and refresh Finder occupancy before opening; simulation and rendering never launch files. Disabling resets runtime state; world persistence comes later. Debug build and all **86 tests** pass. The owner confirmed the Mac regression on 2026-10-07; repeaters remain for Slice 12.
 
+
+Slice 12 adds directional repeaters with model-configured **1–4 redstone ticks** of delay (2/4/6/8 simulation ticks). They read only behind their arrow, restore positive incoming power to 15, and emit only forward. Both edges are delayed equally; aligned chains add their delays. Bounded input histories and the existing iterative dust solver preserve deterministic behavior in loops. The renderer shows arrow/delay and powered color. A third **PRESS (2, 7) → dust → REPEATER (5, 7), → 4t → dust → OUTPUT (7, 7)** row provides a visible delayed demo. It opens the fresh occupant when output power rises, using the existing action adapter. Debug build and all **101 tests** pass; owner regression confirmation is pending. Repeater placement, rotation, and delay controls in a general editor remain for later slices.
+
 ## Development
 
 Requirements: macOS 14 or newer, Xcode with Swift 6 support, and XcodeGen 2.44 or newer. This bootstrap was built and tested with Xcode 27.0 on macOS 27.0; the minimum deployment version has not been tested on an older Mac.
@@ -228,3 +231,23 @@ The owner confirmed this regression on 2026-10-07, reporting that it works as ex
 6. Confirm normal Finder selection/dragging still works and clicking an ordinary Finder/application window covering an input does not activate it. Disable and re-enable Desktop World: both rows should start unpowered, and the button-row dust values should return to zero.
 
 Please report whether these checks pass, and copy the editor's result/metadata if an input is rejected or an item fails to open. Long dust lines, cyclic networks, and arbitrary world fixtures are exercised by automated tests; there is no circuit authoring UI yet. Slice 12 adds repeater behavior next.
+
+
+## Manual regression check — Slice 12
+
+The build and 101 automated tests pass. This new revision still needs your Mac confirmation; Slice 12 has no roadmap MANUAL checkbox. Earlier walkthroughs describe earlier builds.
+
+1. Quit the previous Redstone Desktop app with **Command-Q**, then launch the latest build from Terminal:
+
+   ```sh
+   open /Users/peterzielinski/git/redstone-desktop/build/Build/Products/Debug/RedstoneDesktop.app
+   ```
+
+2. Confirm the footer says **Slice 12 · Repeater**. Enable Desktop World, open Finder Diagnostics, and click **Read Finder Items**. Leave polling stopped initially. Expose the third row, two rows above LEVER: PRESS (2, 7), repeater (5, 7), OUTPUT (7, 7). Keep PRESS and its neighboring tiles clear of Finder icons. Hover and use the editor's tile coordinates to identify the correct blocks.
+3. Start with the third OUTPUT empty. The repeater should show **→ 4t** on a gray block. Here `t` means a 100 ms redstone tick, so four ticks is nominally 0.4 seconds. Click this row's PRESS. Dust to its left should light first; the repeater should then turn orange, and dust/output to its right should light after the delay. The editor's repeater/output powers should become **15**. The result should report empty output.
+4. Watch the row turn off: its left side turns off first, then its repeater/right side after the same delay. Finder reads/main-thread activity can stretch visible wall-clock timing; the automated tests establish exact simulation-tick timing. Report a missing sequence or a long pause instead of trying to measure milliseconds manually.
+5. Put a harmless folder or document center on OUTPUT **(7, 7)**. Wait until the circuit is fully off, then press its button again. The item should open once after the delayed activation. Move it away or replace it; a later press should report empty or open the new occupant. Merely moving an item should not activate an output.
+6. Press this row's button with an empty output, then quickly disable Desktop World. Re-enable it and wait: all rows should remain off, with no delayed activation left over. The repeater arrow/delay label should return correctly.
+7. Confirm the original PRESS row at y=3 and continuous LEVER row at y=5 still behave as before, normal Finder selection/dragging works, and ordinary windows covering an input do not activate it.
+
+Please confirm these checks or copy the editor result/metadata for any failure. The demo uses one east-facing, four-tick repeater; all four directions/delays, chains, and feedback loops are covered by automated fixtures because there is no circuit authoring UI yet. Slice 13 (Circuit renderer) is next.

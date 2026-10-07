@@ -54,8 +54,8 @@ final class WorldModelTests: XCTestCase {
 
     func testFeasibilityFixtureIsModelDataAndPowerIsRuntimeState() {
         let world = DemoCircuit.makeWorld()
-        XCTAssertEqual(world.circuit.components.count, 12)
-        XCTAssertEqual(world.tiles.count, 12)
+        XCTAssertEqual(world.circuit.components.count, 18)
+        XCTAssertEqual(world.tiles.count, 18)
         XCTAssertEqual(world.circuit.components[DemoCircuit.button]?.kind, .button)
         XCTAssertEqual(world.circuit.components[DemoCircuit.output]?.kind, .output)
         var pulse = CircuitSimulator(world: world.circuit)

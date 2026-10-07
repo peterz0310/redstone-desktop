@@ -2138,13 +2138,15 @@ Required tests:
 
 ## Slice 12 — Repeater
 
-- [ ] orientation
-- [ ] rear input only
-- [ ] forward output only
-- [ ] power restoration to 15
-- [ ] 1–4 redstone-tick delays
-- [ ] exact timing tests
-- [ ] visual state
+- [x] orientation
+- [x] rear input only
+- [x] forward output only
+- [x] power restoration to 15
+- [x] 1–4 redstone-tick delays
+- [x] exact timing tests
+- [x] visual state
+
+**Status: implemented.** Debug application build and all 101 automated tests pass. Owner Mac regression confirmation is pending; README.md contains the walkthrough. Slice 12 has no roadmap MANUAL checkbox.
 
 ---
 
@@ -2998,6 +3000,26 @@ Context: after receiving the Slice 11 Mac walkthrough, the owner reported: “It
 Decision: record the Slice 11 regression as passed based on the owner's Mac report. This is owner-reported validation, separate from the 86 passing automated tests; no additional agent-performed physical checks are claimed.
 
 Consequences: Slice 11 is complete. It has no roadmap MANUAL checkbox, so none is invented or changed. Slice 12 (Repeater) is next and remains unchecked. The last application build and all 86 tests passed; this update changes documentation only.
+
+---
+
+## 2026-10-07 — Slice 12 directional delayed repeaters
+
+Context: the owner confirmed the Slice 11 regression and authorized Slice 12. Repeaters previously had identity/orientation but no simulation semantics.
+
+Decision: add RepeaterDelay configuration constrained to 1–4 redstone ticks, equivalent to 2/4/6/8 simulation ticks. Direction denotes the repeater's forward output; it reads only the opposite/rear tile. A positive valid rear signal becomes power 15 at the configured delay, regardless of its strength. Only the forward tile receives repeater power, including dust, an output, or the rear of a correctly aligned repeater. Side/front inputs and side/rear emission are rejected. Checked Direction adjacency remains domain geometry; all screen/world conversions still go through CoordinateMapper.
+
+Timing contract: a rear input sample observed on simulation tick T appears at the repeater output on tick T + delay. Both on/off transitions are delayed equally using a fixed-length Boolean history of 2–8 samples per repeater. Short pulses are preserved even if input has turned off before their due tick. Aligned chain delays add. This is a transport delay contract, without Minecraft parity, pulse stretching, locking, or update-order quirks.
+
+All repeater histories mature before dust is solved; rear input samples are collected from the completed power snapshot and committed together. Repeaters never read another repeater's partially updated history. The existing bounded dust queue remains, with at most one initial queue entry per powered source/repeater and 15 increases per dust tile. Delayed feedback can produce circuit feedback over later ticks, but never recursively propagates or performs unbounded work inside a tick. Histories contain at most eight samples per repeater. The immutable simulator world fixes delay configuration for its lifetime; future editor world changes must deliberately rebuild/reconcile runtime state.
+
+Model Codable encoding includes repeaterDelay. Earlier components without this key decode to one redstone tick; invalid present values, including null, are rejected. No persistence I/O or document migration system is added. The placeholder renderer shows a direction arrow and delay (for example “→ 4t”), gray when off and orange when powered. It consumes model/power only and remains action-free.
+
+Keep the original button and lever rows. Add a third demo row at y=7: button (2, 7), dust (3–4, 7), east-facing four-tick repeater (5, 7), dust (6, 7), output (7, 7). This demonstrates weaker rear dust at 14 restored to 15 after eight simulation ticks. Output events continue through the existing fresh-Finder-read and OpenItemAction path; disabling clears pending pulse histories and actions.
+
+Validation: Debug build succeeds and all 101 automated tests pass. Pure World/Circuit files typecheck independently with Swift 6. New tests cover all delays on both edges, 20-snapshot button pulse duration, one-tick pulses, all orientations, forbidden input/emission directions, power restoration and downstream attenuation, aligned/reversed chains, output non-relay, delayed feedback loops, dictionary insertion order, integer limits, and delay Codable validation/defaulting. Renderer tests verify arrow/delay labels, power colors, geometry, and retained model after resize. Fake Finder integration verifies delayed opening uses the fresh occupant and disable/re-enable clears a pending repeater pulse.
+
+Consequences: all seven Slice 12 implementation/test tasks are complete. Owner Mac regression confirmation is pending, and no MANUAL checkbox changes. Slice 13 and later remain unchecked. README.md provides the new-row check and regression instructions. No general editor, polished textures, terrain generation, resource packs, script execution, backend, or private macOS API is added.
 
 ---
 

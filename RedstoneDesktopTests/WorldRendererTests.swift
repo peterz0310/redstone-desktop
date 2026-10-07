@@ -36,6 +36,30 @@ final class WorldRendererTests: XCTestCase {
     }
 
     @MainActor
+    func testRepeaterShowsOrientationDelayAndSimulationPowerAcrossResize() throws {
+        let screen = ScreenDescriptor(id: "fixture", frame: CGRect(x: -640, y: -100, width: 640, height: 480), backingScale: 2)
+        let mapper = try CoordinateMapper(canvasFrame: screen.frame, camera: CameraState(worldOrigin: WorldPoint(x: 0, y: 0), pointsPerTile: 64))
+        let scene = DesktopScene(screen: screen, mapper: mapper)
+        let coordinate = WorldCoordinate(x: 2, y: 2)
+        let layer = try XCTUnwrap(scene.childNode(withName: "circuit"))
+        for (direction, arrow) in [(Direction.north, "↑"), (.east, "→"), (.south, "↓"), (.west, "←")] {
+            for delay in RepeaterDelay.allCases {
+                let world = World(circuit: CircuitWorld(components: [coordinate: CircuitComponent(kind: .repeater, direction: direction, repeaterDelay: delay)]))
+                scene.updateWorld(world)
+                XCTAssertEqual((layer.childNode(withName: "repeater-label:2,2") as? SKLabelNode)?.text, "\(arrow) \(delay.rawValue)t")
+                let node = try XCTUnwrap(layer.childNode(withName: "REPEATER") as? SKShapeNode)
+                XCTAssertEqual(node.path?.boundingBoxOfPath, mapper.sceneRect(forTile: coordinate, on: screen).insetBy(dx: 8, dy: 8))
+                let off = node.fillColor
+                scene.updateWorld(world, poweredTiles: [coordinate])
+                XCTAssertNotEqual((layer.childNode(withName: "REPEATER") as? SKShapeNode)?.fillColor, off)
+                scene.size = CGSize(width: 600, height: 450)
+                XCTAssertEqual(layer.children.count, 2)
+                XCTAssertEqual((layer.childNode(withName: "repeater-label:2,2") as? SKLabelNode)?.text, "\(arrow) \(delay.rawValue)t")
+            }
+        }
+    }
+
+    @MainActor
     func testVisibleModelTilesAreReevaluatedOnResizeWithoutNodeGrowth() throws {
         let screen = ScreenDescriptor(id: "fixture", frame: CGRect(x: 0, y: 0, width: 640, height: 480), backingScale: 1)
         let mapper = try CoordinateMapper(canvasFrame: screen.frame, camera: CameraState(worldOrigin: WorldPoint(x: 0, y: 0), pointsPerTile: 64))

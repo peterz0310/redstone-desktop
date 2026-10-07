@@ -161,7 +161,19 @@ final class DesktopScene: SKScene {
                 node.strokeColor = .white
                 node.lineWidth = 2
                 circuitLayer.addChild(node)
-                let label = SKLabelNode(text: title)
+                let labelText: String
+                if component.kind == .repeater {
+                    let arrow: String
+                    switch component.direction {
+                    case .north: arrow = "↑"
+                    case .east: arrow = "→"
+                    case .south: arrow = "↓"
+                    case .west: arrow = "←"
+                    }
+                    labelText = "\(arrow) \(component.repeaterDelay.rawValue)t"
+                } else { labelText = title }
+                let label = SKLabelNode(text: labelText)
+                if component.kind == .repeater { label.name = "repeater-label:\(coordinate.x),\(coordinate.y)" }
                 label.fontName = "Menlo-Bold"
                 label.fontSize = 10
                 label.fontColor = .white

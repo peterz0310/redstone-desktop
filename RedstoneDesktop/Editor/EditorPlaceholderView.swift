@@ -26,6 +26,10 @@ struct EditorPlaceholderView: View {
                 .font(.caption.monospaced())
             Text("LEVER: (2, 5) → OUTPUT: (7, 5) · Simulation: 20 Hz")
                 .font(.caption.monospaced())
+            Text("Delayed PRESS: (2, 7) → REPEATER: (5, 7), 4 ticks → OUTPUT: (7, 7)")
+                .font(.caption.monospaced())
+            Text("Repeater power: \(appState.simulator.power(at: DemoCircuit.repeater).rawValue) · Output power: \(appState.simulator.power(at: DemoCircuit.repeaterOutput).rawValue)")
+                .font(.caption.monospaced())
             Text("Button-row dust power: " + DemoCircuit.dust.map { String(appState.simulator.power(at: $0).rawValue) }.joined(separator: ", "))
                 .font(.caption.monospaced())
             Text(appState.lastActionResult)
@@ -57,7 +61,7 @@ struct EditorPlaceholderView: View {
                 .font(.caption.monospaced())
             }
             Spacer()
-            Text("Slice 11 · Circuit simulator")
+            Text("Slice 12 · Repeater")
                 .font(.caption)
                 .foregroundStyle(.secondary)
         }
