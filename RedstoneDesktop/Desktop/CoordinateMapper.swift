@@ -68,4 +68,12 @@ struct CoordinateMapper: Sendable {
         let rect = screenRect(forTile: coordinate)
         return CGRect(origin: scenePoint(fromScreen: rect.origin, on: screen), size: rect.size)
     }
+
+    /// Provisional Finder calibration: raw point is an icon center measured right/down
+    /// from the primary display's upper-left corner. No icon-size/menu-bar offset.
+    /// Must be checked visually before occupancy or actions use this hypothesis.
+    func provisionalFinderMapping(for item: DesktopItem, referenceScreen: ScreenDescriptor) -> FinderItemMapping {
+        let center = CGPoint(x: referenceScreen.frame.minX + item.position.x, y: referenceScreen.frame.maxY - item.position.y)
+        return FinderItemMapping(item: item, provisionalCenter: center, tile: tile(atScreen: center))
+    }
 }

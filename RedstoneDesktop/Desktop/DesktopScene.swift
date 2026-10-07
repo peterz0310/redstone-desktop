@@ -6,6 +6,7 @@ final class DesktopScene: SKScene {
     let mapper: CoordinateMapper
     private let highlight = SKShapeNode()
     private let clickFlash = SKShapeNode()
+    private let finderMarkers = SKNode()
     private(set) var highlightedTile: WorldCoordinate?
 
     init(screen: ScreenDescriptor, mapper: CoordinateMapper) {
@@ -25,6 +26,8 @@ final class DesktopScene: SKScene {
         clickFlash.strokeColor = .systemOrange
         clickFlash.zPosition = 2
         clickFlash.isHidden = true
+        finderMarkers.name = "finder-markers"
+        finderMarkers.zPosition = 3
         rebuildChecker()
     }
 
@@ -54,10 +57,30 @@ final class DesktopScene: SKScene {
         clickFlash.run(.sequence([.fadeOut(withDuration: 0.3), .hide()]))
     }
 
+    func updateFinderMarkers(_ mappings: [FinderItemMapping]) {
+        finderMarkers.removeAllChildren()
+        for mapping in mappings where screen.contains(mapping.provisionalCenter) {
+            let path = CGMutablePath()
+            path.addEllipse(in: CGRect(x: -32, y: -32, width: 64, height: 64))
+            path.move(to: CGPoint(x: -40, y: 0))
+            path.addLine(to: CGPoint(x: 40, y: 0))
+            path.move(to: CGPoint(x: 0, y: -40))
+            path.addLine(to: CGPoint(x: 0, y: 40))
+            let marker = SKShapeNode(path: path)
+            marker.name = mapping.id
+            marker.position = mapper.scenePoint(fromScreen: mapping.provisionalCenter, on: screen)
+            marker.strokeColor = .systemPink.withAlphaComponent(0.85)
+            marker.fillColor = .clear
+            marker.lineWidth = 1.5
+            finderMarkers.addChild(marker)
+        }
+    }
+
     private func rebuildChecker() {
         removeAllChildren()
         addChild(highlight)
         addChild(clickFlash)
+        addChild(finderMarkers)
         guard size.width > 0, size.height > 0,
               let first = mapper.tile(atScreen: screen.frame.origin),
               let last = mapper.tile(atScreen: CGPoint(x: screen.frame.minX + size.width, y: screen.frame.minY + size.height)) else { return }

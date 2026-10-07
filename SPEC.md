@@ -2027,12 +2027,12 @@ Do not build fancy terrain if Finder positions are not viable.
 
 ### Tasks
 
-- [ ] draw marker for every Finder position
-- [ ] implement provisional Finder→screen conversion
+- [x] draw marker for every Finder position
+- [x] implement provisional Finder→screen conversion
 - [ ] compare visually
 - [ ] document discovered semantics
-- [ ] add polling `DesktopItemTracker`
-- [ ] prevent concurrent poll pileup
+- [x] add polling `DesktopItemTracker`
+- [x] prevent concurrent poll pileup
 
 ### Manual acceptance
 
@@ -2856,6 +2856,16 @@ Decision: complete original pack + optional local import/custom packs.
 Context: exact Minecraft redstone contains many irrelevant 3D/edge-case behaviors.
 
 Decision: deterministic familiar 2D system.
+
+## 2026-10-07 — Provisional Finder calibration, pending visual evidence
+
+Context: the owner confirmed Slice 6 can read Finder items and raw desktop positions. Finder's scripting dictionary describes `desktop position` but does not establish icon-center semantics or the coordinate origin.
+
+Decision: Slice 7 tests the hypothesis that the raw point is an icon center in logical points from the primary display's upper-left. `CoordinateMapper` alone flips Y using the primary frame's `maxY`; no menu-bar or icon-size offset is applied. Diagnostics show raw position, mapped screen/assumed center, and world tile. Pink markers and explicit 2 Hz polling make the hypothesis reviewable.
+
+Reason: establish the coordinate contract with visible evidence before implementing occupancy. The primary display reference comes from the documented first `NSScreen.screens` entry, independently of the active renderer screen.
+
+Consequences: this is not a discovered/verified Finder semantic yet. “compare visually”, “document discovered semantics”, and all MANUAL checkboxes remain unchecked. A mismatch must stop this slice and be recorded here before proposing the smallest mapping adjustment. Polling is serialized with explicit reads, publishes meaningful item differences only, and pauses on errors; slow main-thread AppleScript behavior must also be reported.
 
 ---
 

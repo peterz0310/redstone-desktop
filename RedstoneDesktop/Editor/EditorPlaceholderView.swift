@@ -14,7 +14,7 @@ struct EditorPlaceholderView: View {
             Divider()
             Text("Editor placeholder")
                 .font(.headline)
-            Text("Test desktop clicks with the checker, or open Finder Diagnostics to read real desktop item positions.")
+            Text("Enable the checker, then use Finder Diagnostics to read items and check pink markers behind real icon centers.")
                 .fixedSize(horizontal: false, vertical: true)
             Button(appState.isDesktopWorldEnabled ? "Disable Desktop World" : "Enable Desktop World") {
                 appState.toggleDesktopWorld()
@@ -43,7 +43,7 @@ struct EditorPlaceholderView: View {
                 .font(.caption.monospaced())
             }
             Spacer()
-            Text("Slice 6 · Finder automation spike")
+            Text("Slice 7 · Finder coordinate calibration")
                 .font(.caption)
                 .foregroundStyle(.secondary)
         }

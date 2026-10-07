@@ -9,19 +9,34 @@ final class AppState: ObservableObject {
     @Published private(set) var lastClick: DesktopClickSnapshot?
     @Published private(set) var observedClickCount = 0
     let desktopCamera = CameraState(worldOrigin: WorldPoint(x: 0, y: 0), pointsPerTile: 64)
-    let finderDiagnostics = FinderDiagnosticsModel()
+    let finderDiagnostics: FinderDiagnosticsModel
+    let desktopItemTracker: DesktopItemTracker
+    @Published private(set) var finderMappings: [FinderItemMapping] = []
     private var desktopController: DesktopWindowController?
     private var pointerMonitor: PointerMonitor?
     private var clickMonitor: DesktopClickMonitor?
     private var terminationObserver: AnyCancellable?
     private let screenProviding: () -> ScreenDescriptor?
     private let clickEventMonitoring: any GlobalMouseEventMonitoring
+    private var finderItemsObserver: AnyCancellable?
+    private var finderReferenceScreen: ScreenDescriptor?
+    private let finderReferenceProviding: () -> ScreenDescriptor?
 
     init(screenProviding: @escaping () -> ScreenDescriptor? = {
         NSScreen.main.map { ScreenDescriptor(screen: $0) }
-    }, clickEventMonitoring: any GlobalMouseEventMonitoring = AppKitGlobalMouseEventMonitor()) {
+    }, clickEventMonitoring: any GlobalMouseEventMonitoring = AppKitGlobalMouseEventMonitor(),
+       finderDiagnostics: FinderDiagnosticsModel = FinderDiagnosticsModel(),
+       finderReferenceProviding: @escaping () -> ScreenDescriptor? = {
+           NSScreen.screens.first.map { ScreenDescriptor(screen: $0) }
+       }) {
         self.screenProviding = screenProviding
         self.clickEventMonitoring = clickEventMonitoring
+        self.finderDiagnostics = finderDiagnostics
+        self.finderReferenceProviding = finderReferenceProviding
+        desktopItemTracker = DesktopItemTracker(diagnostics: finderDiagnostics)
+        finderItemsObserver = finderDiagnostics.$items.sink { [weak self] items in
+            MainActor.assumeIsolated { self?.updateFinderMappings(items) }
+        }
         terminationObserver = NotificationCenter.default.publisher(for: NSApplication.willTerminateNotification)
             .sink { [weak self] _ in
                 MainActor.assumeIsolated { self?.shutdown() }
@@ -30,6 +45,9 @@ final class AppState: ObservableObject {
 
     /// Used by both disable and the app's termination notification.
     func shutdown() {
+        desktopItemTracker.stop()
+        finderMappings = []
+        finderReferenceScreen = nil
         clickMonitor?.stop()
         clickMonitor = nil
         pointerMonitor?.stop()
@@ -60,6 +78,8 @@ final class AppState: ObservableObject {
                     controller?.scene.updateHighlight(snapshot.tile)
                 }
                 desktopController = controller
+                finderReferenceScreen = finderReferenceProviding()
+                updateFinderMappings(finderDiagnostics.items)
                 pointerMonitor = monitor
                 let clicks = DesktopClickMonitor(screen: screen, mapper: mapper, eventMonitoring: clickEventMonitoring) { [weak self, weak controller] snapshot in
                     guard let self else { return }
@@ -78,5 +98,13 @@ final class AppState: ObservableObject {
                 desktopStatus = "Display geometry cannot be mapped. Desktop checker remains disabled."
             }
         }
+    }
+
+    private func updateFinderMappings(_ items: [DesktopItem]) {
+        guard let controller = desktopController, let reference = finderReferenceScreen else { return }
+        let mappings = items.map { controller.scene.mapper.provisionalFinderMapping(for: $0, referenceScreen: reference) }
+        guard mappings != finderMappings else { return }
+        finderMappings = mappings
+        controller.scene.updateFinderMarkers(mappings)
     }
 }

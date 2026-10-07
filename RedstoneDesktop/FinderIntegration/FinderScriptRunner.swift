@@ -5,7 +5,7 @@ protocol FinderScriptRunning {
     func queryDesktopItems() throws -> NSAppleEventDescriptor
 }
 
-/// NSAppleScript must run on the main thread. This spike performs explicit reads only.
+/// NSAppleScript must run on the main thread. The diagnostic model serializes reads.
 @MainActor
 struct FinderScriptRunner: FinderScriptRunning {
     static let desktopQuery = """

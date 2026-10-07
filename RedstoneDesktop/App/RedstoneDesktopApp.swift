@@ -17,8 +17,8 @@ struct RedstoneDesktopApp: App {
             }
         }
         Window("Finder Diagnostics", id: "finder-diagnostics") {
-            FinderDiagnosticsView(model: appState.finderDiagnostics)
+            FinderDiagnosticsView(appState: appState)
         }
-        .defaultSize(width: 900, height: 500)
+        .defaultSize(width: 1200, height: 550)
     }
 }

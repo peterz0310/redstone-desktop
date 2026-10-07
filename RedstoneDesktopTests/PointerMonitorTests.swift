@@ -59,11 +59,11 @@ final class PointerMonitorTests: XCTestCase {
         XCTAssertEqual(highlight.path?.boundingBoxOfPath, mapper.sceneRect(forTile: tile, on: screen).insetBy(dx: 1, dy: 1))
         scene.updateHighlight(tile)
         scene.size = CGSize(width: 800, height: 600)
-        XCTAssertEqual(scene.children.count, 4)
+        XCTAssertEqual(scene.children.count, 5)
         XCTAssertFalse(highlight.isHidden)
         scene.updateHighlight(nil)
         XCTAssertNil(scene.highlightedTile)
         XCTAssertTrue(highlight.isHidden)
-        XCTAssertEqual(scene.children.count, 4)
+        XCTAssertEqual(scene.children.count, 5)
     }
 }
