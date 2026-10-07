@@ -19,7 +19,7 @@ final class AppState: ObservableObject {
     private let openItemAction: OpenItemAction
     private var circuitTimer: Timer?
     private(set) var activationTask: Task<Void, Never>?
-    private let desktopInteractionRejection: (CGPoint) -> String?
+    private let desktopInteractionRejection: (MouseEventIdentity) -> String?
     private var desktopSession = UUID()
     private var desktopController: DesktopWindowController?
     private var pointerMonitor: PointerMonitor?
@@ -35,7 +35,7 @@ final class AppState: ObservableObject {
         NSScreen.main.map { ScreenDescriptor(screen: $0) }
     }, clickEventMonitoring: any GlobalMouseEventMonitoring = AppKitGlobalMouseEventMonitor(),
        finderDiagnostics: FinderDiagnosticsModel = FinderDiagnosticsModel(),
-       desktopInteractionRejection: @escaping (CGPoint) -> String? = { DesktopInteractionGate.rejectionReason($0) },
+       desktopInteractionRejection: @escaping (MouseEventIdentity) -> String? = { DesktopInteractionGate.rejectionReason($0) },
        itemOpener: any ItemOpening = WorkspaceItemOpener(),
        finderReferenceProviding: @escaping () -> ScreenDescriptor? = {
            NSScreen.screens.first.map { ScreenDescriptor(screen: $0) }
@@ -108,7 +108,7 @@ final class AppState: ObservableObject {
                     self.lastClick = snapshot
                     self.observedClickCount += 1
                     controller?.scene.flashTile(snapshot.tile)
-                    self.handleCircuitClick(snapshot.tile, atScreen: snapshot.screenPoint)
+                    self.handleCircuitClick(snapshot.tile, identity: snapshot.identity)
                 }
                 clickMonitor = clicks
                 controller.enable()
@@ -147,12 +147,10 @@ final class AppState: ObservableObject {
         if changedPower { desktopController?.scene.updateTestCircuit(next) }
     }
 
-    func handleCircuitClick(_ tile: WorldCoordinate, atScreen point: CGPoint? = nil) {
-        guard isDesktopWorldEnabled, tile == FixedTestCircuit.button, let controller = desktopController else { return }
-        let rect = controller.scene.mapper.screenRect(forTile: tile)
-        let clickPoint = point ?? CGPoint(x: rect.midX, y: rect.midY)
+    func handleCircuitClick(_ tile: WorldCoordinate, identity: MouseEventIdentity = MouseEventIdentity()) {
+        guard isDesktopWorldEnabled, tile == FixedTestCircuit.button, desktopController != nil else { return }
         observedPressCount += 1
-        if let reason = desktopInteractionRejection(clickPoint) {
+        if let reason = desktopInteractionRejection(identity) {
             lastActionResult = "PRESS click received; not activated: \(reason)"
             return
         }

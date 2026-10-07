@@ -2068,7 +2068,7 @@ This alignment must be trustworthy before further UI investment.
 
 Prove the central concept before building the engine.
 
-**Status: feasibility blocked on 2026-10-07.** The owner reports PRESS never powers the wire. Live public window metadata includes a full-display Dock window, contradicting the bounds-based interaction gate assumption. Do not advance to Slice 10; see the decision log below.
+**Status: replacement gate awaiting manual validation on 2026-10-07.** The owner confirmed the previous gate rejected PRESS because of a full-display Dock window. Captured event recipient identity now replaces rectangle-based hit inference. Gate A remains open; do not advance to Slice 10 until the owner verifies activation and opening. See the decision log below.
 
 ### Tasks
 
@@ -2918,6 +2918,18 @@ Decision: stop Slice 9 at Gate A. Restore the clicking-button task to unchecked;
 Smallest proposed architecture adjustment: forward the captured mouse event's public recipient/window identity through DesktopClickMonitor. Determine whether Finder's desktop received that event, rather than treating every reported rectangle as a hit region. Public NSEvent windowNumber and CGEvent recipient/window fields are candidates; verify their real global-monitor values on this Mac before relying on them. Continue rejecting Finder folder-window and other application-window clicks. If that metadata is insufficient, document it and choose the smallest public-API alternative instead of adding owner-name heuristics.
 
 Validation: the diagnostic revision builds and all 60 automated tests pass. These establish pulse/action behavior with fakes and rejection feedback, not a working physical desktop click. The next owner check should report the PRESS counter, last observed tile, and rejection result. No successful end-to-end action is claimed until Gate A is revalidated.
+
+---
+
+## 2026-10-07 — Replace bounds inference with captured recipient identity
+
+Context: the owner confirmed PRESS was counted at (2, 3) and explicitly reported the Dock layer-20 rejection message. This confirms the gate failure; the amber click flash is diagnostic feedback, not a circuit pulse. Clicking the checkerboard is correct because it is click-through.
+
+Decision: carry the captured mouse event's windowNumber, handling-window ID, and target-process ID through DesktopClickMonitor. Query metadata for only that recipient window. Accept Finder ownership at CGWindowLevelForKey(.desktopIconWindow); reject ordinary Finder/application windows and missing or conflicting identity. The public handling-window field is preferred when present; NSEvent.windowNumber is the fallback. A nonzero event target PID must agree with the window owner PID. There are no Dock-name or layer-20 exceptions. Remove the unused Quartz rectangle conversion added for the superseded gate.
+
+Evidence and limits: a read-only live query found Finder desktop window 107 at layer -2147483603, equal to the SDK's public desktopIconWindow level. Two command-line listener attempts received no events even though the owner clicked; they do not verify the real global-monitor recipient fields. The new app captures them directly and explains missing recipient identity in its rejection result. If those fields are absent or contradict the model on a real click, stop and document that observation before another adjustment.
+
+Validation: build succeeds and all 63 tests pass. Tests cover native event-field extraction from an unposted fixture, identity forwarding with mapped tiles, desktop acceptance, ordinary-window rejection, missing/conflicting identity, and existing circuit/action behavior. No new manual check is marked complete. The clicking-button task remains unchecked pending the owner's retest; Gate A and Slice 9 remain incomplete.
 
 ---
 

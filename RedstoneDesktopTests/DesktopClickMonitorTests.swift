@@ -8,9 +8,12 @@ final class FakeGlobalMouseEventMonitor: GlobalMouseEventMonitoring {
     var callbacks: [@MainActor (CGPoint) -> Void] = []
     var removedTokens: [UUID] = []
     var shouldFail = false
+    var identity = MouseEventIdentity()
 
-    func addLeftMouseDownMonitor(handler: @escaping @MainActor (CGPoint) -> Void) -> Any? {
-        callbacks.append(handler)
+    func addLeftMouseDownMonitor(handler: @escaping @MainActor (ObservedMouseDown) -> Void) -> Any? {
+        callbacks.append { [weak self] point in
+            handler(ObservedMouseDown(screenPoint: point, identity: self?.identity ?? MouseEventIdentity()))
+        }
         return shouldFail ? nil : UUID()
     }
 
@@ -108,6 +111,33 @@ final class DesktopClickMonitorTests: XCTestCase {
         XCTAssertNil(state.pointer)
         XCTAssertNil(state.lastClick)
         XCTAssertEqual(events.removedTokens.count, 2)
+    }
+
+    @MainActor
+    func testCapturedRecipientIdentityIsForwardedWithMappedClick() throws {
+        let events = FakeGlobalMouseEventMonitor()
+        events.identity = MouseEventIdentity(windowNumber: 107, handlingWindowID: 107, targetProcessID: 123)
+        var clicks: [DesktopClickSnapshot] = []
+        let monitor = DesktopClickMonitor(screen: testScreen, mapper: try CoordinateMapper(canvasFrame: testScreen.frame, camera: camera), eventMonitoring: events) { clicks.append($0) }
+        defer { monitor.stop() }
+        XCTAssertTrue(monitor.start())
+        events.callbacks[0](CGPoint(x: -1216, y: -100))
+        XCTAssertEqual(clicks.first?.identity, events.identity)
+        XCTAssertEqual(clicks.first?.tile, WorldCoordinate(x: 1, y: 1))
+    }
+
+    @MainActor
+    func testNativeAdapterReadsPublicRecipientFieldsFromEvent() throws {
+        // Constructed fixture only; this event is never posted to the desktop.
+        let cg = try XCTUnwrap(CGEvent(mouseEventSource: nil, mouseType: .leftMouseDown,
+                                       mouseCursorPosition: CGPoint(x: 100, y: 200), mouseButton: .left))
+        cg.setIntegerValueField(.mouseEventWindowUnderMousePointerThatCanHandleThisEvent, value: 107)
+        cg.setIntegerValueField(.eventTargetUnixProcessID, value: 123)
+        let event = try XCTUnwrap(NSEvent(cgEvent: cg))
+        let observation = ObservedMouseDown(event: event)
+        XCTAssertEqual(observation.identity.handlingWindowID, 107)
+        XCTAssertEqual(observation.identity.targetProcessID, 123)
+        XCTAssertEqual(observation.screenPoint, CoordinateMapper.screenPoint(for: event))
     }
 
     @MainActor

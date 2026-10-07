@@ -1,18 +1,42 @@
 import AppKit
 
+struct MouseEventIdentity: Equatable, Sendable {
+    var windowNumber: Int = 0
+    var handlingWindowID: Int64 = 0
+    var targetProcessID: Int64 = 0
+}
+
+struct ObservedMouseDown: Equatable, Sendable {
+    let screenPoint: CGPoint
+    var identity = MouseEventIdentity()
+
+    @MainActor
+    init(event: NSEvent) {
+        screenPoint = CoordinateMapper.screenPoint(for: event)
+        identity = MouseEventIdentity(windowNumber: event.windowNumber,
+            handlingWindowID: event.cgEvent?.getIntegerValueField(.mouseEventWindowUnderMousePointerThatCanHandleThisEvent) ?? 0,
+            targetProcessID: event.cgEvent?.getIntegerValueField(.eventTargetUnixProcessID) ?? 0)
+    }
+
+    init(screenPoint: CGPoint, identity: MouseEventIdentity = MouseEventIdentity()) {
+        self.screenPoint = screenPoint
+        self.identity = identity
+    }
+}
+
 @MainActor
 protocol GlobalMouseEventMonitoring {
-    func addLeftMouseDownMonitor(handler: @escaping @MainActor (CGPoint) -> Void) -> Any?
+    func addLeftMouseDownMonitor(handler: @escaping @MainActor (ObservedMouseDown) -> Void) -> Any?
     func removeMonitor(_ token: Any)
 }
 
 @MainActor
 struct AppKitGlobalMouseEventMonitor: GlobalMouseEventMonitoring {
-    func addLeftMouseDownMonitor(handler: @escaping @MainActor (CGPoint) -> Void) -> Any? {
+    func addLeftMouseDownMonitor(handler: @escaping @MainActor (ObservedMouseDown) -> Void) -> Any? {
         NSEvent.addGlobalMonitorForEvents(matching: .leftMouseDown) { event in
             // Apple's global-monitor callbacks are delivered on the main thread.
             MainActor.assumeIsolated {
-                handler(CoordinateMapper.screenPoint(for: event))
+                handler(ObservedMouseDown(event: event))
             }
         }
     }
@@ -36,6 +60,7 @@ extension CoordinateMapper {
 struct DesktopClickSnapshot: Equatable, Sendable {
     let screenPoint: CGPoint
     let tile: WorldCoordinate
+    var identity = MouseEventIdentity()
 }
 
 @MainActor
@@ -66,10 +91,11 @@ final class DesktopClickMonitor {
         guard token == nil else { return true }
         let id = UUID()
         registrationID = id
-        token = eventMonitoring.addLeftMouseDownMonitor { [weak self] point in
+        token = eventMonitoring.addLeftMouseDownMonitor { [weak self] observation in
+            let point = observation.screenPoint
             guard let self, self.registrationID == id,
                   self.screen.contains(point), let tile = self.mapper.tile(atScreen: point) else { return }
-            self.onClick(DesktopClickSnapshot(screenPoint: point, tile: tile))
+            self.onClick(DesktopClickSnapshot(screenPoint: point, tile: tile, identity: observation.identity))
         }
         if token == nil { registrationID = nil }
         return isRunning

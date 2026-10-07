@@ -22,11 +22,11 @@ Slice 8 groups icon centers into world tiles using a pure `DesktopOccupancyResol
 
 Manual acceptance through Slice 8 is complete based on the owner's confirmations on 2026-10-07. The roadmap records those reports separately from automated validation. Future manual checks will be checked off as the owner confirms them.
 
-**Slice 9 is currently blocked:** the owner reports no wire activation. A read-only window metadata query found a full-display Dock window that the rectangle-based gate can mistake for click ownership. The diagnostic build now shows a PRESS counter and explicit rejection reasons. A working physical button-to-open path is not yet proven; do not proceed to Slice 10. The proposed replacement uses captured event recipient/window identity, subject to real-Mac verification, instead of blanket rectangle hit testing.
+**Slice 9 is awaiting a new manual check:** the owner confirmed that a full-display Dock window caused the previous gate to reject PRESS. The replacement now checks the captured event's recipient window rather than unrelated window rectangles. Its build and 63 tests pass, but real desktop activation and opening remain unverified. Do not proceed to Slice 10 until Gate A passes.
 
 Slice 9 adds a fixed **PRESS (2, 3) → four dust tiles → OUTPUT (7, 3)** circuit. When the interaction gate accepts a PRESS click, it refreshes Finder positions, then starts a 20-tick pulse at 20 Hz. Dust turns yellow, the button/output turn orange, and the output flashes white. A separate `OpenItemAction` uses [NSWorkspace.open](https://developer.apple.com/documentation/appkit/nsworkspace/open(_:)) to request normal macOS opening of exactly one current occupant. The editor reports the request result; acceptance by macOS does not prove the target application's UI opened correctly.
 
-Each rising pulse requests one open. Pressing again while powered extends the pulse without another activation. Empty, ambiguous, and unavailable outputs open nothing. An initial explicit Finder read is required. A busy Finder read asks you to retry rather than queueing presses. The world remains click-through. Normal component clicks require Finder to be frontmost and no ordinary window to cover the click point; this uses public Core Graphics window metadata, not screenshots. A conservative one-tile margin around PRESS protects nearby Finder icon/label interaction because center-only scripting data does not establish exact hit regions. Keep PRESS and its neighboring tiles clear. Disabling the desktop invalidates pending activation reads and stops the pulse timer. This slice adds neither script execution nor a general circuit engine.
+Each rising pulse requests one open. Pressing again while powered extends the pulse without another activation. Empty, ambiguous, and unavailable outputs open nothing. An initial explicit Finder read is required. A busy Finder read asks you to retry rather than queueing presses. The world remains click-through. Normal component clicks require the captured recipient to be Finder's desktop window at the public desktop-icon level. The monitor carries NSEvent.windowNumber plus public CGEvent handling-window and target-process fields. The gate queries only that window's metadata, checks its owner, and rejects ordinary Finder/application windows. Missing or conflicting identity produces a diagnostic message rather than guessing. Unrelated Dock windows do not participate in this decision. No screenshots are used. A conservative one-tile margin around PRESS protects nearby Finder icon/label interaction because center-only scripting data does not establish exact hit regions. Keep PRESS and its neighboring tiles clear. Disabling the desktop invalidates pending activation reads and stops the pulse timer. This slice adds neither script execution nor a general circuit engine.
 
 ## Development
 
@@ -177,12 +177,13 @@ The owner confirmed Slice 8 with “It works!” on 2026-10-07. Its boundary-tra
 
 Report any wrong target, unexpected repeated opening, window click activating a hidden button, or delayed/missing pulse. Slice 9's five MANUAL acceptance items remain unchecked until you confirm them; Gate A must pass before Slice 10.
 
-### Slice 9 blocked-click diagnostic check
+### Slice 9 recipient-gate validation
 
-Quit and reopen the latest app using the launch command above, then enable the desktop. Read Finder items, leave polling stopped, expose PRESS, and click blank desktop before clicking PRESS. Return to the editor and report:
+Clicking the checkerboard is clicking the real Finder desktop: the overlay is click-through. Quit the old app and reopen the latest build before testing. Enable Desktop World, read Finder items, and leave polling stopped initially. Expose PRESS and keep its neighboring tiles clear of icons.
 
-- **Press clicks** count: does it increase?
-- **Last tile**: does it say **(2, 3)**?
-- The complete action/rejection text, particularly any **Dock** or **Finder is not active** message.
+1. Click blank checkerboard, then PRESS at tile (2, 3). Even with OUTPUT empty, the path should light for one second and the result should say the output is empty.
+2. Put a harmless folder/document center on OUTPUT (7, 3), wait for the path to turn off, then press again. Confirm that item opens. Move it away and replace it to validate the remaining Slice 9 manual checks.
+3. Confirm clicking inside a Finder folder window or another app window covering PRESS does not activate the circuit.
+4. If PRESS is still rejected, report the full message and the Press clicks count. Missing-recipient feedback includes event-window, handling-window, and target-PID values so the actual app's global monitor can be diagnosed directly.
 
-The counter means the global event was mapped to PRESS; it does not mean activation was accepted. A Dock-bounds rejection confirms the known gate problem. This build adds diagnostic feedback and intentionally does not bypass that gate. The feasibility slice remains stopped pending the documented architecture adjustment.
+The separate command-line probe did not receive the owner's clicks and provides no recipient-field evidence. Validation must use the app's actual monitor. Do not infer working desktop activation from the fixture tests.
