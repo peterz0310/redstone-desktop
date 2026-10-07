@@ -1,0 +1,8 @@
+.DS_Store
+.build/
+build/
+DerivedData/
+*.xcresult
+*.xcuserstate
+xcuserdata/
+RedstoneDesktop.xcodeproj/

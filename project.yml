@@ -1,0 +1,42 @@
+name: RedstoneDesktop
+options:
+  minimumXcodeGenVersion: 2.44.0
+  deploymentTarget:
+    macOS: "14.0"
+settings:
+  base:
+    SWIFT_VERSION: "6.0"
+    MARKETING_VERSION: "0.1.0"
+    CURRENT_PROJECT_VERSION: 1
+    GENERATE_INFOPLIST_FILE: YES
+targets:
+  RedstoneDesktop:
+    type: application
+    platform: macOS
+    sources:
+      - RedstoneDesktop
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: org.redstonedesktop.RedstoneDesktop
+        INFOPLIST_KEY_CFBundleDisplayName: Redstone Desktop
+        INFOPLIST_KEY_LSApplicationCategoryType: public.app-category.utilities
+        ENABLE_APP_SANDBOX: NO
+  RedstoneDesktopTests:
+    type: bundle.unit-test
+    platform: macOS
+    sources:
+      - RedstoneDesktopTests
+    dependencies:
+      - target: RedstoneDesktop
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: org.redstonedesktop.RedstoneDesktopTests
+schemes:
+  RedstoneDesktop:
+    build:
+      targets:
+        RedstoneDesktop: all
+        RedstoneDesktopTests: [test]
+    test:
+      targets:
+        - RedstoneDesktopTests
