@@ -27,14 +27,29 @@ final class WorldAutosaver {
         }
     }
 
-    func flush() {
+    /// Commit a proposed selection without leaving a failed selection queued for autosave.
+    func commit(_ document: WorldLibraryDocument) -> Bool {
+        guard flush() else { return false }
+        do {
+            try store.save(document)
+            report("Saved.")
+            return true
+        } catch {
+            report("Activation save failed: \(error.localizedDescription) Current desktop preserved; retry Activate on Desktop.")
+            return false
+        }
+    }
+
+    @discardableResult
+    func flush() -> Bool {
         task?.cancel()
         task = nil
-        guard let pending else { return }
+        guard let pending else { return true }
         do {
             try store.save(pending)
             self.pending = nil
             report("Saved.")
-        } catch { report("Save failed: \(error.localizedDescription) Changes remain in memory; use Save Now to retry.") }
+            return true
+        } catch { report("Save failed: \(error.localizedDescription) Changes remain in memory; use Save Now to retry."); return false }
     }
 }

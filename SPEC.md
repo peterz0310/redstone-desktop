@@ -23,7 +23,7 @@ The intended workflow is:
 
 The project is an experiment first and a polished application second.
 
-Current implementation: Slices 0–19 are complete with owner-confirmed Mac acceptance where required. **Slice 19A is implemented; owner migration/world-list validation is pending.** The app now stores an atomic library.json with independent fixed-seed worlds and migrated/default area records; world.json is retained as a legacy backup. New worlds can be created/edited while desktop rendering is disabled; selecting one does not assign it to the desktop. Named-area browsing and new-world desktop activation remain **Slice 19B**, then Slice 20. New tasks remain unchecked until implemented. Completed slice descriptions and dated decision entries are historical evidence; Sections 3.8, 7.1, 25 and 29 define the new target behavior.
+Current implementation: Slices 0–19A are complete with owner-confirmed Mac acceptance where required. **Slice 19B is implemented; its four owner Mac checks are pending.** The atomic library stores independent fixed-seed worlds, named camera bookmarks and one active area. The editor can browse/edit inactive worlds while another runs; Activate on Desktop commits the selected saved camera before switching. Startup remains disabled. Finder ghosts remain **Slice 20**. Completed slice descriptions and dated decision entries are historical evidence; Sections 3.8, 7.1, 25 and 29 define current behavior.
 
 The most important early question is not whether attractive terrain or redstone can be made. Those are comparatively straightforward. The first major feasibility gate is:
 
@@ -2339,11 +2339,11 @@ Give each world its own permanent seed, coordinate-keyed circuit and save identi
 
 ### Manual acceptance
 
-- [ ] MANUAL: existing saved circuit, terrain, lever settings and desktop camera survive migration and restart.
-- [ ] MANUAL: create worlds with seeds 42 and 2026, author different components, switch and reopen; each restores its own build without copying.
-- [ ] MANUAL: selecting a world does not activate it; the original desktop selection still works after explicit enable.
+- [x] MANUAL: existing saved circuit, terrain, lever settings and desktop camera survive migration and restart.
+- [x] MANUAL: create worlds with seeds 42 and 2026, author different components, switch and reopen; each restores its own build without copying.
+- [x] MANUAL: selecting a world does not activate it; the original desktop selection still works after explicit enable.
 
-**Status: implemented; owner Mac validation pending.** Debug build and all 194 automated tests pass. Foundation-only World/Circuit/Persistence code also type-checks independently of AppKit/SpriteKit. All three MANUAL items remain unchecked until owner confirmation. README.md has the current controls, save/recovery guidance and walkthrough. Named-area UI and new-world desktop activation remain Slice 19B.
+**Status: complete; owner Mac validation confirmed.** Debug build and all 194 automated tests pass. Foundation-only World/Circuit/Persistence code also type-checks independently of AppKit/SpriteKit. The owner confirmed all three walkthrough checks on 2026-10-07 with “Yes it works!”; these MANUAL checkboxes are checked from that report. README.md has the current controls, save/recovery guidance and walkthrough. Named-area UI and new-world desktop activation remain Slice 19B.
 
 ---
 
@@ -2355,26 +2355,26 @@ Browse a list of built areas across worlds and explicitly choose one for the des
 
 ### Tasks
 
-- [ ] Saved-area list grouped by world, Save Area and rename with stable IDs; display seeds and active badge.
-- [ ] Save proposed camera as a new bookmark; selecting/browsing an area never changes its stored camera or desktop assignment.
-- [ ] Separate editor selection from activeAreaID; Show Desktop Area and startup selection restore.
-- [ ] Replace Use This Area with Save Area / Activate on Desktop; activate saved camera, never an unsaved browsing draft.
-- [ ] Allow inactive-world editing while live active-world configuration stays locked in both UI and domain mutation methods.
-- [ ] Scope editor power/occupancy and viewport outlines by world identity; no active overlay on an unrelated world.
-- [ ] Preflight and save-before-switch with clear failure status; invalidate old input/actions by world ID/session, rebuild mapping, reset transient state and refresh Finder.
-- [ ] One full active-world simulator, paused inactive worlds and visibility-gated output actions; no circuit clipping or deferred offscreen launches.
-- [ ] No-op activation of the same world/camera; enabled-state preservation and saved-lever resume semantics.
-- [ ] Tests for overlapping bookmarks, browsing/live isolation, inactive edits, activation failures/stale completions/offscreen outputs and restart selection; build/run full suite.
-- [ ] Update README with exact Mac checks and recovery/navigation instructions.
+- [x] Saved-area list grouped by world, Save Area and rename with stable IDs; display seeds and active badge.
+- [x] Save proposed camera as a new bookmark; selecting/browsing an area never changes its stored camera or desktop assignment.
+- [x] Separate editor selection from activeAreaID; Show Desktop Area and startup selection restore.
+- [x] Replace Use This Area with Save Area / Activate on Desktop; activate saved camera, never an unsaved browsing draft.
+- [x] Allow inactive-world editing while live active-world configuration stays locked in both UI and domain mutation methods.
+- [x] Scope editor power/occupancy and viewport outlines by world identity; no active overlay on an unrelated world.
+- [x] Preflight and save-before-switch with clear failure status; invalidate old input/actions by world ID/session, rebuild mapping, reset transient state and refresh Finder.
+- [x] One full active-world simulator, paused inactive worlds and visibility-gated output actions; no circuit clipping or deferred offscreen launches.
+- [x] No-op activation of the same world/camera; enabled-state preservation and saved-lever resume semantics.
+- [x] Tests for overlapping bookmarks, browsing/live isolation, inactive edits, activation failures/stale completions/offscreen outputs and restart selection; build/run full suite.
+- [x] Update README with exact Mac checks and recovery/navigation instructions.
 
 ### Automated acceptance
 
-- [ ] Overlapping areas share a world circuit, while areas of another world never show/copy those components.
-- [ ] Browse/save/rename/edit inactive world while desktop runs changes no live mapper/simulator/action target.
-- [ ] Successful activation uses the selected saved world/camera; invalid/save-failed activation leaves the old runtime intact.
-- [ ] Late callbacks/actions from an old world/session never open a coincident-coordinate target after switching.
-- [ ] Offscreen circuit components continue transmitting, but offscreen outputs and inactive worlds dispatch no desktop action.
-- [ ] Active area ID and all worlds/areas survive restart; desktop starts disabled and no action occurs until explicit enable.
+- [x] Overlapping areas share a world circuit, while areas of another world never show/copy those components.
+- [x] Browse/save/rename/edit inactive world while desktop runs changes no live mapper/simulator/action target.
+- [x] Successful activation uses the selected saved world/camera; invalid/save-failed activation leaves the old runtime intact.
+- [x] Late callbacks/actions from an old world/session never open a coincident-coordinate target after switching.
+- [x] Offscreen circuit components continue transmitting, but offscreen outputs and inactive worlds dispatch no desktop action.
+- [x] Active area ID and all worlds/areas survive restart; desktop starts disabled and no action occurs until explicit enable.
 
 ### Manual acceptance
 
@@ -2383,7 +2383,7 @@ Browse a list of built areas across worlds and explicitly choose one for the des
 - [ ] MANUAL: Activate on Desktop switches terrain/circuit/camera to the saved area, and the selected active area survives quit/reopen.
 - [ ] MANUAL: a harmless Finder occupant opens only from the active area's visible output; switching cancels the previous world's pending pulse/action.
 
-**Status: planned; not implemented.** Complete and validate 19A before starting this slice. Finder ghosts follow in Slice 20.
+**Status: implemented; owner Mac validation pending.** Debug build and all 205 automated tests pass; Foundation-only World/Circuit/Persistence type-check also passes. Its four MANUAL checkboxes remain unchecked. README.md contains the exact launch, bookmark, switching, cancellation and restart checks. Finder ghosts follow in Slice 20 after owner confirmation.
 
 ---
 
@@ -3415,3 +3415,18 @@ Validation: final Debug build and all 194 tests pass, plus standalone Swift-6 ty
 Implementation observations: an early compile exposed Swift's initialization-order rule; initial identity/world values now use local constants before property access. The first application-hosted test run initialized normal app startup and created the owner's migrated library.json. That was a test-isolation issue, not evidence of a macOS API contradiction or manual UI acceptance. The legacy world.json was not rewritten; a read-only semantic comparison verified identity, seed, all components/levers and camera preservation despite dictionary JSON ordering differences. AppStartup now detects XCTest/injection and constructs an isolated no-store fixture with automatic Finder disabled. A dedicated test verifies that behavior; SHA-256 comparisons verified both owner save files remained byte-for-byte unchanged during the final build/test run.
 
 Consequences: all Slice 19A implementation/automated tasks are complete; its three MANUAL items remain pending the owner's Mac walkthrough. Slice 19B and later remain unchecked. Original terrain generation fingerprints, Finder/API mapping, simulation/action boundaries, assets and backend scope are unchanged. Normal app startup uses the library adapter; LegacyWorldDocument/WorldStore remain isolated migration/fixture adapters, never the normal save path. README.md distinguishes current versus planned controls and retains dated validation history.
+
+
+## 2026-10-07 — Slice 19A owner confirmation and Slice 19B saved areas
+
+Context: the owner reported “Yes it works!” after the Slice 19A migration/world-library walkthrough. Record its three MANUAL checks as owner-confirmed and proceed directly to the next roadmap slice, per the owner's requested workflow.
+
+Decision: implement Slice 19B with saved area selection grouped by world, seed/active labels, stable-ID rename and Save Area / Activate on Desktop. Bookmarks hold cameras only; shared world components stay at their coordinates. Editor selection, pan and zoom remain temporary. Show Desktop Area selects the actual active bookmark. Existing seeds remain fixed and fresh worlds remain empty. Inactive-world edits are allowed while running; the enabled active world's mutation methods and UI controls remain locked.
+
+Activation preflights restored configuration, camera and physical display, flushes pending configuration and commits the proposed active ID atomically before stopping the old runtime. Failed proposed selections are never retained for later autosave. Matching world/camera activation saves the bookmark ID without resetting the runtime. A different view cancels old input/actions, releases the task slot immediately, starts a new world/session identity and rebuilds the mapper/simulator with durable levers. Old task cleanup cannot clear the new session's task slot. A post-commit rendering/display failure leaves the new saved selection disabled with an error. Production activation restarts the serialized automatic Finder tracker.
+
+The active world's complete finite circuit continues simulating offscreen; output actions are gated by mapped center inside the physical canvas at enqueue and execution. Offscreen rising edges are dropped. Inactive worlds show stored lever labels without active power/occupancy. Renderer receives snapshots only and executes no actions.
+
+Evidence: Debug build and all 205 tests pass. SavedAreaTests adds 11 checks covering shared bookmarks, saved-camera versus pan, restart-disabled selection, held live isolation under inactive editing, pending/selection write failure, same-view runtime no-op, old-world input and old-view output completion cancellation, offscreen wire transmission/output suppression, inactive lever labels and display failure before/after commit. Earlier seed browser/library tests now exercise the replacement controls. Foundation-only domain/persistence type-check and git diff --check pass. Owner save-file hashes remained unchanged across the final automated build/test runs; app test startup remains isolated from production persistence/Finder.
+
+Consequences: Slice 19B implementation/automated tasks are complete; its four MANUAL checks remain pending. No new demo circuits, Finder ghosts, resource packs, private APIs, backend, generated-terrain changes or deletion/copying workflows were introduced. README.md distinguishes historical Slice 19A restrictions from current behavior and provides the exact Mac walkthrough.

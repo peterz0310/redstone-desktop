@@ -7,6 +7,7 @@ final class EditorCanvasRenderer {
     private var lastWorld: World?
     private var lastOccupancy: DesktopOccupancySnapshot?
     private var lastPower: Set<WorldCoordinate> = []
+    private var lastLevers: Set<WorldCoordinate> = []
     private let terrainRenderer = TerrainChunkRenderer()
     private let ghostRenderer = CircuitRenderer()
 
@@ -21,10 +22,12 @@ final class EditorCanvasRenderer {
         guard let scene else { return nil }
         let world = editor.browsingWorld(appState)
         let power: Set<WorldCoordinate> = editor.isPreviewing(appState) ? [] : appState.editorPoweredTiles
-        if lastWorld != world || lastPower != power {
-            scene.updateWorld(world, poweredTiles: power)
+        let levers: Set<WorldCoordinate> = editor.isPreviewing(appState) ? [] : appState.editorLeverPositions
+        if lastWorld != world || lastPower != power || lastLevers != levers {
+            scene.updateWorld(world, poweredTiles: power, leverPositions: levers)
             lastWorld = world
             lastPower = power
+            lastLevers = levers
         }
         // Use already-resolved world occupancy; browsing never moves its targets or queries Finder.
         let occupancy = editor.isPreviewing(appState) ? DesktopOccupancySnapshot.unavailable("New world preview") : appState.editorOccupancy
@@ -62,7 +65,7 @@ final class EditorCanvasRenderer {
                     occupancy: .unavailable("Editor preview"), mapper: mapper, screen: scene.screen,
                     viewport: CGRect(origin: .zero, size: size), into: ghost)
                 preview.addChild(ghost)
-                preview.addChild(outline(tile, color: (result.isAllowed && !editor.isPreviewing(appState) && !appState.isDesktopWorldEnabled) ? .systemGreen : .systemRed, mapper: mapper, scene: scene))
+                preview.addChild(outline(tile, color: (result.isAllowed && !editor.isPreviewing(appState) && !appState.isEditorConfigurationLocked) ? .systemGreen : .systemRed, mapper: mapper, scene: scene))
             } else {
                 preview.addChild(outline(tile, color: editor.tool == .erase ? .systemOrange : .white, mapper: mapper, scene: scene))
             }

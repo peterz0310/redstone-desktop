@@ -17,7 +17,7 @@ struct DeveloperPlacementView: View {
             VStack(alignment: .leading, spacing: 16) {
                 Text("Developer Placement")
                     .font(.title)
-                Text("Edits affect the selected editor world and autosave. The migrated world retains its developer patch to the right of the original circuits; procedural worlds use their own terrain. Disable Desktop World to edit.")
+                Text("Edits affect the selected editor world and autosave. The migrated world retains its developer patch to the right of the original circuits; procedural worlds use their own terrain. Disable Desktop World to edit its active world; inactive worlds remain editable.")
                     .fixedSize(horizontal: false, vertical: true)
                 Form {
                     Picker("Component", selection: $kind) {
@@ -40,14 +40,14 @@ struct DeveloperPlacementView: View {
                     }
                 }
                 let result = appState.developerPlacementPreview(component, at: coordinate)
-                Text(appState.isDesktopWorldEnabled ? "Disable Desktop World before editing." : result.message)
+                Text(appState.isEditorConfigurationLocked ? "Disable Desktop World before editing." : result.message)
                     .foregroundStyle(result.isAllowed ? Color.green : Color.orange)
                 HStack {
                     Button("Place component") { appState.placeDeveloperComponent(component, at: coordinate) }
                     Button("Reset test placements") { appState.resetDeveloperPlacements() }
                         .disabled(appState.selectedDocument.terrainProfile != .legacyFixtureV1)
                 }
-                .disabled(appState.isDesktopWorldEnabled)
+                .disabled(appState.isEditorConfigurationLocked)
                 Text(appState.developerPlacementStatus)
                     .textSelection(.enabled)
                 Divider()

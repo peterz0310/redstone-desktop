@@ -18,6 +18,11 @@ final class SeedBrowserTests: XCTestCase {
     }
 
     @MainActor
+    private func apply(_ camera: CameraState, to state: AppState) -> Bool {
+        state.saveArea(name: "Test Area", camera: camera) && state.activateSelectedArea()
+    }
+
+    @MainActor
     func testSeedParsingSupportsFullUnsignedRangeAndRejectsInvalidDrafts() {
         let editor = EditorSession()
         for text in ["0", "42", "18446744073709551615", " 2026 "] {
@@ -74,7 +79,8 @@ final class SeedBrowserTests: XCTestCase {
         let proposed = editor.proposedDesktopCamera(state)
         XCTAssertEqual(proposed.worldOrigin, WorldPoint(x: 40, y: -20))
         XCTAssertEqual(proposed.pointsPerTile, 64)
-        XCTAssertTrue(editor.useThisArea(state))
+        XCTAssertTrue(editor.saveArea(state))
+        XCTAssertTrue(editor.activateArea(state))
         XCTAssertEqual(state.desktopCamera, proposed)
         XCTAssertEqual(state.desktopWorld.generation?.seed, 2026)
         XCTAssertEqual(state.desktopWorld.circuit, circuit)
@@ -99,8 +105,7 @@ final class SeedBrowserTests: XCTestCase {
         XCTAssertTrue(state.placeCircuitComponent(CircuitComponent(kind: .output), at: coordinate).isAllowed)
         let before = state.desktopWorld, camera = state.desktopCamera
         editor.seedText = "42"; editor.previewSeed()
-        XCTAssertFalse(state.useDesktopArea(camera: camera, generation: candidate.settings))
-        XCTAssertFalse(editor.useThisArea(state))
+        XCTAssertFalse(editor.activateArea(state))
         XCTAssertEqual(state.desktopWorld, before)
         XCTAssertEqual(state.desktopCamera, camera)
         XCTAssertTrue(editor.isPreviewing(state))
@@ -115,7 +120,7 @@ final class SeedBrowserTests: XCTestCase {
         state.toggleDesktopWorld()
         XCTAssertTrue(state.isDesktopWorldEnabled)
         let camera = CameraState(worldOrigin: WorldPoint(x: 50, y: -30), pointsPerTile: 64)
-        XCTAssertTrue(state.useDesktopArea(camera: camera, generation: WorldGenerationSettings(seed: 2026)))
+        XCTAssertTrue(apply(camera, to: state))
         XCTAssertTrue(state.isDesktopWorldEnabled)
         XCTAssertEqual(state.desktopCamera, camera)
         if let pointer = state.pointer, let worldPoint = pointer.worldPoint {
@@ -143,7 +148,7 @@ final class SeedBrowserTests: XCTestCase {
         await state.finderDiagnostics.readItems()
         state.toggleDesktopWorld()
         XCTAssertEqual(state.desktopOccupancy.state(at: WorldCoordinate(x: 7, y: 3)), .occupied(provider.item))
-        XCTAssertTrue(state.useDesktopArea(camera: CameraState(worldOrigin: WorldPoint(x: 10, y: -5), pointsPerTile: 64), generation: WorldGenerationSettings(seed: 2026)))
+        XCTAssertTrue(apply(CameraState(worldOrigin: WorldPoint(x: 10, y: -5), pointsPerTile: 64), to: state))
         XCTAssertEqual(state.desktopOccupancy.state(at: WorldCoordinate(x: 7, y: 3)), .empty)
         XCTAssertEqual(state.desktopOccupancy.state(at: WorldCoordinate(x: 17, y: -2)), .occupied(provider.item))
     }
@@ -167,12 +172,12 @@ final class SeedBrowserTests: XCTestCase {
     @MainActor
     func testMissingDisplayAndInvalidCameraRefuseAreaWithoutChanges() {
         let state = AppState(screenProviding: { nil }), before = state.desktopWorld
-        XCTAssertFalse(state.useDesktopArea(camera: state.desktopCamera, generation: WorldGenerationSettings(seed: 2026)))
+        XCTAssertFalse(state.activateSelectedArea())
         XCTAssertEqual(state.desktopWorld, before)
         let valid = self.state()
         defer { valid.shutdown() }
-        XCTAssertFalse(valid.useDesktopArea(camera: CameraState(worldOrigin: WorldPoint(x: .nan, y: 0), pointsPerTile: 64), generation: WorldGenerationSettings(seed: 2026)))
-        XCTAssertFalse(valid.useDesktopArea(camera: valid.desktopCamera, generation: WorldGenerationSettings(generationVersion: 99, seed: 42)))
+        XCTAssertFalse(valid.saveArea(name: "Invalid", camera: CameraState(worldOrigin: WorldPoint(x: .nan, y: 0), pointsPerTile: 64)))
+        XCTAssertFalse(valid.createWorld(name: "Unsupported", generation: WorldGenerationSettings(generationVersion: 99, seed: 42)))
     }
 }
 

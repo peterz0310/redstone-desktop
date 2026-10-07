@@ -69,14 +69,28 @@ final class EditorSession: ObservableObject {
         status = "Seed preview cancelled."
     }
 
+    @Published var areaName = "New Area"
+
     @discardableResult
-    func useThisArea(_ appState: AppState) -> Bool {
-        guard !isPreviewing(appState) else { status = "Create or cancel the new-world preview before choosing a desktop area."; return false }
-        guard appState.useDesktopArea(camera: proposedDesktopCamera(appState), generation: appState.selectedDocument.generation) else {
-            status = appState.areaStatus
-            return false
-        }
+    func saveArea(_ appState: AppState) -> Bool {
+        guard !isPreviewing(appState) else { status = "Create or cancel the preview before saving an area."; return false }
+        let result = appState.saveArea(name: areaName, camera: proposedDesktopCamera(appState))
         status = appState.areaStatus
+        return result
+    }
+
+    @discardableResult
+    func activateArea(_ appState: AppState) -> Bool {
+        guard !isPreviewing(appState) else { status = "Create or cancel the preview before activating an area."; return false }
+        let result = appState.activateSelectedArea()
+        status = appState.areaStatus
+        return result
+    }
+
+    @discardableResult
+    func selectArea(_ id: UUID, appState: AppState) -> Bool {
+        guard appState.selectArea(id) else { return false }
+        syncSelectedWorld(appState)
         return true
     }
 
@@ -108,9 +122,7 @@ final class EditorSession: ObservableObject {
     }
 
     func showDesktopArea(_ appState: AppState) {
-        if !appState.isEditingActiveWorld {
-            guard appState.selectWorld(appState.activeWorldID) else { status = appState.libraryStatus; return }
-        }
+        guard appState.selectArea(appState.library.activeAreaID) else { return }
         syncSelectedWorld(appState)
         camera = CameraState(worldOrigin: appState.desktopCamera.worldOrigin, pointsPerTile: camera.pointsPerTile)
     }

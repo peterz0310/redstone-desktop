@@ -4,17 +4,17 @@ An experimental native macOS app exploring a block world beneath real Finder des
 
 ## Current build and next steps
 
-**Implemented: Slices 0–19A; Slice 19A Mac acceptance is pending.** The app has a fixed-seed world library, pan/zoom editor, circuit authoring, chunked terrain and a click-through live desktop with automatic Finder tracking. The final Slice 19A Debug build and all **194 automated tests** pass. Pure world/circuit/persistence code also type-checks without AppKit/SpriteKit. Builds/tests do not establish manual acceptance.
+**Implemented: Slices 0–19B; Slice 19B Mac acceptance is pending.** The app has independent fixed-seed worlds, named camera bookmarks, circuit authoring and a click-through desktop with automatic Finder tracking. The Debug build and all **205 automated tests** pass. Pure world/circuit/persistence code also type-checks without AppKit/SpriteKit. Manual behavior still needs your Mac walkthrough below.
 
-The current footer is **Slice 19A · World library**. Configuration now saves to `~/Library/Application Support/RedstoneDesktop/library.json`. Your earlier world.json is preserved as a backup; its world identity, chosen seed, components, levers, terrain patches and camera migrate into the first saved world/Desktop area. New worlds have empty circuits and procedural terrain. Existing world seeds are fixed; Preview/Random explore a candidate for **Create World**.
+The current footer is **Slice 19B · Named areas**. Configuration saves to `~/Library/Application Support/RedstoneDesktop/library.json`; your earlier world.json stays a legacy backup. The **Saved areas** selector groups bookmarks by world and shows each seed and the active badge. **Save Area** saves a new view; **Activate on Desktop** uses its saved camera. Panning after selecting a bookmark does not change what Activate targets.
 
-Selecting a saved world chooses what you edit, independently of the desktop assignment. In this interim slice, disable Desktop World to create/select/rename/edit worlds. **Enable Desktop World still runs the assigned original world**, even if another world is selected in the editor. **Use This Area** can move only that assigned world's camera; it cannot change a seed or activate another world.
+You can browse/create/edit an inactive world while the desktop runs another. The active world's circuit configuration stays locked until you disable it. **Show desktop area** returns to the actual active bookmark. Startup restores that selection with Desktop World disabled. Saved ON levers can activate visible outputs when you enable or switch views; activating an identical world/camera keeps the current circuit running.
 
-**Next: confirm Slice 19A's walkthrough below, then implement Slice 19B — Named areas and explicit desktop activation.** Slice 20 Finder ghosts follows. Each slice receives tests, build, a full test run and exact Mac checks. New manual checkboxes stay pending until you confirm them.
+Your “Yes it works!” confirms Slice 19A's three manual checks. **Next: validate Slice 19B below, then Slice 20 — Finder ghosts in editor.** Its four new manual checkboxes remain pending until your report.
 
 ## Adopted plan: worlds and saved areas
 
-This plan is approved in [SPEC.md](SPEC.md). **Slice 19A implements independent worlds and save migration. Named-area browsing, inactive-world editing while another runs, and new-world desktop activation remain Slice 19B.**
+This plan is approved in [SPEC.md](SPEC.md). **Slice 19A implemented independent worlds and save migration; Slice 19B adds named areas, inactive-world editing and explicit activation.**
 
 | Concept | Meaning |
 | --- | --- |
@@ -23,9 +23,9 @@ This plan is approved in [SPEC.md](SPEC.md). **Slice 19A implements independent 
 | Editor selection | The world/area you are browsing or editing |
 | Active desktop area | The one saved area assigned to your desktop; it runs only while Desktop World is enabled |
 
-For example, save **Morning shortcuts** and **Project launcher** in your seed-42 world, and **Experiments** in your seed-2026 world. Components stay where you built them. Overlapping areas in one world share the same components. Two independently created worlds with the same seed share terrain generation but have separate builds; reopen them through the world list.
+For example, save **Morning shortcuts** and **Project launcher** in your seed-42 world, and **Experiments** in your seed-2026 world. Components stay where you built them. Overlapping areas in one world share the same components. Two independently created worlds with the same seed share terrain generation but have separate builds; reopen them through Saved areas.
 
-The planned flow after Slice 19B is:
+The current flow is:
 
 1. Preview a seed and choose **Create World…** to save a new empty world. This selects it for editing without activating it.
 2. Build, pan and explore. **Save Area…** gives the proposed view a name without changing your live desktop.
@@ -37,13 +37,13 @@ Inactive worlds remain paused. The active world's whole circuit simulates, inclu
 
 Real Finder files stay on your actual desktop. They are neither copied into worlds nor repositioned when you switch; their occupancy is recalculated against the active area's camera. Future editor ghosts will show a projection against the selected area's proposed camera.
 
-Slice 19A migrates your current world into `~/Library/Application Support/RedstoneDesktop/library.json`, retaining your existing identity, chosen seed, circuit, levers, terrain patches and camera as the first **Desktop** area. The old world.json stays untouched as a backup. New worlds get empty procedural terrain and a default **Home** area rather than your existing demo circuits/grass patches. A valid library takes precedence over the backup; failed/corrupt restoration preserves saved data and blocks writes. Until 19B, new-world browsing/editing requires the desktop disabled and does not activate those worlds.
+Slice 19A migrates your current world into `~/Library/Application Support/RedstoneDesktop/library.json`, retaining your existing identity, chosen seed, circuit, levers, terrain patches and camera as the first **Desktop** area. The old world.json stays untouched as a backup. New worlds get empty procedural terrain and a default **Home** area rather than your existing demo circuits/grass patches. A valid library takes precedence over the backup; failed/corrupt restoration preserves saved data and blocks writes. Selecting a new world never activates it; use Activate on Desktop to assign its saved area.
 
 No deletion, copying circuits between worlds, terrain regeneration or thumbnails are required in these two slices. Their detailed tasks, migration rules and acceptance checks are in SPEC.md Sections 3.8, 7.1, 25, 29 and the roadmap.
 
 ## Implemented slice history
 
-The entries below describe behavior/evidence at each slice's implementation. Use **Current build and next steps** above and the **Slice 19A walkthrough** below for today's app. Manual Finder reads became automatic in Slice 18; Slice 19A replaced the earlier seed-replacement behavior with independent fixed-seed worlds.
+The entries below describe behavior/evidence at each slice's implementation. Use **Current build and next steps** above and the **Slice 19B walkthrough** below for today's app. Manual Finder reads became automatic in Slice 18; Slice 19A replaced the earlier seed-replacement behavior with independent fixed-seed worlds.
 
 Slices 0–1 provide a SwiftUI editor placeholder and tested domain primitives for coordinates, camera, directions, power, and component identity. Domain files use only the Swift standard library and do not depend on AppKit or SpriteKit.
 
@@ -274,7 +274,7 @@ The owner confirmed this regression check on 2026-10-07: the demo works as befor
 4. Click PRESS with OUTPUT empty: the path should light for about one second and nothing should open. Put a harmless folder/document center on OUTPUT, then press after the path turns off: the item should open. Move it away or replace it and confirm the corresponding result still changes.
 5. Confirm Finder selection/dragging still works and disabling/re-enabling removes/restores the world with an unpowered circuit. Report any changed click behavior, missing wire segments, or misplaced components.
 
-These were the Slice 10 checks. For the current build, use the Slice 19A walkthrough below.
+These were the Slice 10 checks. For the current build, use the Slice 19B walkthrough below.
 
 
 ## Manual regression check — Slice 11
@@ -354,12 +354,12 @@ Debug build and 123 tests passed for this revision. The owner confirmed the walk
 7. Disable the world again. Click **Reset test placements** in the developer window; the patch list should return to empty. Enable the world and confirm the placed dust is gone, while terrain/decorations and the original circuits remain.
 8. Optional: with the world disabled, place a repeater on a dry test tile and choose its direction/delay. Enable the world and check the matching arrow/delay label. Reset afterwards if desired.
 
-Changes are temporary for this app session. This describes the Slice 14 build; the current editor is described in the Slice 19A walkthrough below.
+Changes are temporary for this app session. This describes the Slice 14 build; the current editor is described in the Slice 19B walkthrough below.
 
 
 ## Basic editor walkthrough — Slice 15
 
-This revision built and passed all 135 tests. The owner confirmed the walkthrough on 2026-10-07 with “It works! Thats neat.” The corresponding Slice 15 MANUAL checkbox is checked based on that Mac report. These describe the Slice 15 build; the current footer is Slice 19A.
+This revision built and passed all 135 tests. The owner confirmed the walkthrough on 2026-10-07 with “It works! Thats neat.” The corresponding Slice 15 MANUAL checkbox is checked based on that Mac report. These describe the Slice 15 build; the current footer is Slice 19B.
 
 1. Quit the old app with **Command-Q**, then launch this build:
 
@@ -437,7 +437,7 @@ open build/terrain-preview.svg
 
 This creates a comparison image outside the source/bundle: seed **42** on the left, seed **2026** on the right. Both cover x/y **−64…63**. Colors indicate terrain; dark dots indicate decorations; faint lines mark 32-tile chunk boundaries. The seeds should have different land/water layouts, and the faint chunk lines should not create artificial breaks in terrain. Re-running produces identical output. These previews are developer data plots, not an interactive seed browser or polished terrain art.
 
-The generator's fixed snapshot, chunk consistency, negative-coordinate and seed-diversity checks are automated. Slice 18 subsequently connected this generator to the renderer; Slice 19A now adds independent saved worlds; Slice 19B is next after manual acceptance.
+The generator's fixed snapshot, chunk consistency, negative-coordinate and seed-diversity checks are automated. Slice 18 subsequently connected this generator to the renderer; Slice 19A now adds independent saved worlds; Slice 19B adds saved-area activation; its Mac acceptance is pending.
 
 
 ## Chunked terrain and automatic Finder walkthrough — Slice 18
@@ -479,12 +479,12 @@ Your save remains at `~/Library/Application Support/RedstoneDesktop/world.json`.
 8. Wait for **Saved.**, quit and reopen. Confirm the seed field restores the chosen seed. Click **Show desktop area** to browse to the saved desktop origin, then enable Desktop World and confirm it shows the same terrain/location.
 9. To return the desktop to its original location, click **Reset view**, then **Use This Area**. Reset view alone changes only browsing; applying sets desktop origin back to (0, 0). To restore the original surrounding terrain too, preview seed **2026** before applying. Your original circuits and right-hand construction area should be visible again.
 
-The owner confirmed this earlier walkthrough on 2026-10-07; Slice 19’s MANUAL checkbox is complete. It described the single-world prototype. **Slice 19A below supersedes seed replacement:** existing worlds keep their seeds, and new seeds become independent empty worlds. Use This Area now changes only the assigned world's camera. Named-area browsing/desktop activation remain Slice 19B.
+The owner confirmed this earlier walkthrough on 2026-10-07; Slice 19’s MANUAL checkbox is complete. It described the single-world prototype. **Slice 19A below supersedes seed replacement:** existing worlds keep their seeds, and new seeds become independent empty worlds. Slice 19B replaces Use This Area with Save Area / Activate on Desktop.
 
 
 ## World library and migration walkthrough — Slice 19A
 
-This revision builds and passes **194 automated tests**. Its three Mac acceptance checkboxes are still pending. The initial application test host performed migration before test isolation was fixed; your original world.json remains intact, and the final build/test run left both owner save files unchanged. Your first normal launch should therefore report **Library restored**, rather than migrating again.
+This revision builds and passes **194 automated tests**. The owner confirmed its three Mac acceptance checks on 2026-10-07 with “Yes it works!” This is a historical walkthrough; use Slice 19B below for the current controls. The initial application test host performed migration before test isolation was fixed; your original world.json remains intact, and the final build/test run left both owner save files unchanged. Your first normal launch should therefore report **Library restored**, rather than migrating again.
 
 1. Quit the old app with **Command-Q** before opening this build. In Terminal run:
 
@@ -500,7 +500,7 @@ This revision builds and passes **194 automated tests**. Its three Mac acceptanc
 7. Disable again, click **Show desktop area** to select the assigned world, and optionally pan then **Use This Area** to move its camera within its fixed seed. Seed entry/Preview no longer replaces that world's terrain. To return the assigned camera to origin zero, cancel any preview, **Show desktop area → Reset view → Use This Area**; do this only if you want to change your saved location.
 8. Wait for **Saved.**, then quit/reopen. Desktop World should start disabled, your original assigned world/camera should be selected, and every newly created world, renamed label, component and repeater setting should still be available through Saved worlds. You can also make a small edit and quit immediately to verify quit-time flushing.
 
-Please confirm: your existing build/camera survived, worlds 42 and 2026 keep independent edits after restart, and selecting a world never activates it. Slice 19B begins after that report; no new area-list/activation controls are promised in this build.
+Owner-confirmed: the existing build/camera survived, worlds 42 and 2026 retained independent edits after restart, and selecting a world did not activate it. The corresponding SPEC.md manual checkboxes are complete.
 
 ### Save location and recovery for Slice 19A
 
@@ -513,3 +513,22 @@ The live save is now:
 The previous `world.json` stays untouched as a legacy backup. A present library takes precedence; the app does not import the backup again or fall back when the library is damaged. Normal edits save the entire library atomically after 0.75 seconds; **Save Now** retries failed writes. If saving fails, changes remain in memory, so resolve/retry before quitting if you want to keep those edits.
 
 If loading fails, the footer explains the error and saving is disabled to preserve your files. Quit and use Finder **Go → Go to Folder…** to open the directory above. Copy the whole directory somewhere safe before attempting recovery. Moving a damaged library.json aside allows the preserved world.json to be imported again on the next launch, restoring only that older backup; newer worlds/edits remain in the moved library for repair. If no library exists and the error concerns world.json, preserve/move that legacy file instead. Do not delete either file to perform acceptance tests; corruption and migration failure have automated coverage.
+
+
+## Named areas and desktop switching walkthrough — Slice 19B
+
+This revision built and passed **205 automated tests**. The following four acceptance groups need your Mac report; automated fake Finder/display tests do not establish real desktop behavior. No new demo circuits were added.
+
+1. **Launch the new build.** Quit the old app with **Command-Q**. In Terminal run:
+
+   ```sh
+   open /Users/peterzielinski/git/redstone-desktop/build/Build/Products/Debug/RedstoneDesktop.app
+   ```
+
+   Confirm **Slice 19B · Named areas** in the footer and Desktop World disabled. Saved areas should contain your migrated Desktop bookmark and each new world's Home bookmark. The menu groups areas by world and shows seeds; **Active** identifies the assigned desktop bookmark.
+2. **Save and browse areas.** Select your original world's Desktop area. Give **New area name** a label such as **Original circuits**, then click **Save Area**. This selects the new bookmark without activating it. Pan a little to the right using Pan/drag left, name another view **Right workshop**, then Save Area again. Select either through Saved areas; the view returns to its saved origin, keeping your editor zoom. Components remain at the same coordinates, so overlapping views show the same build. Select a seed-42/2026 world, save **Experiments**, and confirm it shows that world's separate components. Try **Rename Area** and **Rename World**; names change without moving builds. Do not use a preview until you click Create World or Cancel Preview.
+3. **Browse/edit while live.** Use Show desktop area, then Enable Desktop World. Select Experiments in another world. Place/erase a component or configure a repeater on dry, undecorated terrain, and save another bookmark. The actual desktop should continue showing/running its previous world and camera. The blue active outline should be absent in the inactive map, whose output occupancy is unavailable; orange still shows its proposed view. Select an area in the running active world: component tools and inspector edits should be locked, while Select/Pan/Zoom/Save Area remain available. Disable Desktop World to edit that world.
+4. **Activate the saved target.** Select Experiments, pan away from its bookmarked origin, and read the **Target:** label. Click Activate on Desktop: it should use the saved origin shown there, rather than the new pan. Save Area first if you want the panned view instead. Switching while enabled keeps the new world running; switching while disabled prepares it without enabling. Choose Show desktop area to return to the active bookmark. Save Now, quit and reopen: the active world/area/camera and all bookmarks/builds should restore, with Desktop World disabled. A failure shows a status message; preflight/save failure preserves the previous live desktop. If rendering fails after a successful commit, the target stays saved but the desktop is disabled. Resolve the display/save issue, then retry.
+5. **Check visible actions and cancellation.** Select your original world bookmark containing the demo circuit, activate it and enable. With an empty OUTPUT, press PRESS: the wire should light and nothing should open. Put only a harmless folder on the visible OUTPUT and move other Finder items away from PRESS; press again and check that folder opens once. Trigger a pulse and immediately activate an area in another world before the output fires: the previous pulse should stop and must not open a target after switching. Also try a bookmark in the original world with OUTPUT outside the visible desktop: its circuit still simulates, but no file should open from the hidden output. You may see a launch that already happened before a switch; it cannot be undone. Saved ON levers resume on enable/different-view activation and can create a new visible output activation; turn them off if you want quiet switching. Re-activating the same world/camera, including a duplicate bookmark, should not restart a held lever circuit or reopen its output.
+
+Please report whether bookmark/build sharing, inactive editing/live isolation, saved-target activation/restart, and visible-output/cancellation behavior pass. Finder ghosts inside the editor remain Slice 20; current desktop markers continue as before. Save/recovery instructions above still apply to the complete library; failed activation never leaves a proposed active selection queued for a later Save Now.

@@ -238,7 +238,7 @@ final class WorldLibraryTests: XCTestCase {
     }
 
     @MainActor
-    func testLiveDesktopKeepsOriginalWorldAndLocksSwitchCreateRenameAndEdit() throws {
+    func testLiveDesktopKeepsOriginalWorldWhileInactiveWorldCanBeEdited() throws {
         let screen = ScreenDescriptor(id: "test", frame: CGRect(x: 0, y: 0, width: 1280, height: 800), backingScale: 1)
         let provider = LibraryItemProvider(), events = FakeGlobalMouseEventMonitor(), opener = FixtureItemOpener()
         let app = AppState(screenProviding: { screen }, clickEventMonitoring: events,
@@ -251,11 +251,12 @@ final class WorldLibraryTests: XCTestCase {
         XCTAssertTrue(app.isDesktopWorldEnabled)
         XCTAssertEqual(app.simulator.world, original.circuit)
         XCTAssertEqual(app.activeWorldID, active); XCTAssertEqual(app.selectedWorldID, selected)
-        XCTAssertFalse(app.selectWorld(active))
-        XCTAssertFalse(app.createWorld(name: "Other", generation: WorldGenerationSettings(seed: 2026)))
-        XCTAssertFalse(app.renameSelectedWorld("Renamed"))
-        XCTAssertFalse(app.placeCircuitComponent(CircuitComponent(kind: .dust), at: try sharedDryCell([42])).isAllowed)
-        XCTAssertFalse(app.useDesktopArea(camera: app.desktopCamera, generation: app.selectedDocument.generation))
+        XCTAssertTrue(app.renameSelectedWorld("Renamed"))
+        XCTAssertTrue(app.placeCircuitComponent(CircuitComponent(kind: .dust), at: try sharedDryCell([42])).isAllowed)
+        XCTAssertTrue(app.selectWorld(active))
+        XCTAssertFalse(app.renameSelectedWorld("Locked"))
+        XCTAssertFalse(app.placeCircuitComponent(CircuitComponent(kind: .dust), at: WorldCoordinate(x: 10, y: 7)).isAllowed)
+        XCTAssertTrue(app.createWorld(name: "Other", generation: WorldGenerationSettings(seed: 2026)))
         XCTAssertTrue(app.editorPoweredTiles.isEmpty)
         XCTAssertEqual(app.editorOccupancy.state(at: DemoCircuit.output), .unavailable("This world is not active on the desktop."))
         XCTAssertEqual(provider.calls, 0); XCTAssertTrue(opener.urls.isEmpty)
@@ -272,8 +273,7 @@ final class WorldLibraryTests: XCTestCase {
         editor.tool = .dust
         editor.click(at: CGPoint(x: 420, y: 300), size: CGSize(width: 800, height: 600), appState: app)
         XCTAssertEqual(app.library, original)
-        XCTAssertFalse(editor.useThisArea(app))
-        XCTAssertFalse(app.useDesktopArea(camera: app.desktopCamera, generation: WorldGenerationSettings(seed: 42)))
+        XCTAssertFalse(editor.activateArea(app))
         editor.newWorldName = "Same seed, new build"
         XCTAssertTrue(editor.createWorld(app))
         XCTAssertNotEqual(app.selectedWorldID, app.activeWorldID)

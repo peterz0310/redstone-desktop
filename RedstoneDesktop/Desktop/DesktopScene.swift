@@ -17,6 +17,7 @@ final class DesktopScene: SKScene {
     private let finderMarkers = SKNode()
     private var renderedWorld: World?
     private var renderedPower: Set<WorldCoordinate> = []
+    private var renderedLevers: Set<WorldCoordinate>?
     private(set) var highlightedTile: WorldCoordinate?
 
     init(screen: ScreenDescriptor, mapper: CoordinateMapper, terrainRenderer: TerrainChunkRenderer = TerrainChunkRenderer()) {
@@ -56,7 +57,7 @@ final class DesktopScene: SKScene {
 
     override func didChangeSize(_ oldSize: CGSize) {
         rebuildChecker()
-        if let world = renderedWorld { updateWorld(world, poweredTiles: renderedPower) }
+        if let world = renderedWorld { updateWorld(world, poweredTiles: renderedPower, leverPositions: renderedLevers) }
     }
 
     func updateHighlight(_ coordinate: WorldCoordinate?) {
@@ -112,9 +113,10 @@ final class DesktopScene: SKScene {
         }
     }
 
-    func updateWorld(_ world: World, poweredTiles: Set<WorldCoordinate> = []) {
+    func updateWorld(_ world: World, poweredTiles: Set<WorldCoordinate> = [], leverPositions: Set<WorldCoordinate>? = nil) {
         renderedWorld = world
         renderedPower = poweredTiles
+        renderedLevers = leverPositions
         if world.generation == nil { tileLayer.removeAllChildren() }
         circuitLayer.removeAllChildren()
         let viewport = CGRect(origin: .zero, size: size)
@@ -151,7 +153,7 @@ final class DesktopScene: SKScene {
     private func rebuildCircuit() {
         guard let world = renderedWorld else { return }
         circuitRenderer.render(world.circuit, poweredTiles: renderedPower, occupancy: renderedOccupancy,
-            mapper: mapper, screen: screen, viewport: CGRect(origin: .zero, size: size), into: circuitLayer)
+            mapper: mapper, screen: screen, viewport: CGRect(origin: .zero, size: size), into: circuitLayer, leverPositions: renderedLevers)
     }
 
     private func terrainColor(_ terrain: TerrainID) -> NSColor {

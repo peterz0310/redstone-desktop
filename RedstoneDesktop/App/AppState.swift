@@ -16,12 +16,16 @@ final class AppState: ObservableObject {
     @Published private(set) var persistenceStatus = "Persistence is disabled for this session."
     @Published private(set) var library: WorldLibraryDocument
     @Published private(set) var selectedWorldID: UUID
+    @Published private(set) var selectedAreaID: UUID
     @Published private(set) var editorWorld: World
     @Published private(set) var libraryStatus = "Select a saved world, or preview a seed to create one."
     var selectedDocument: WorldDocument { library.world(id: selectedWorldID)! }
     var activeWorldID: UUID { library.activeArea!.worldID }
     var activeWorldName: String { library.world(id: activeWorldID)!.name }
-    var selectedAreaCamera: CameraState { library.areas.first { $0.worldID == selectedWorldID }!.camera }
+    var selectedArea: SavedArea { library.areas.first { $0.id == selectedAreaID }! }
+    var selectedAreaCamera: CameraState { selectedArea.camera }
+    var isEditorConfigurationLocked: Bool { isDesktopWorldEnabled && isEditingActiveWorld }
+    var editorLeverPositions: Set<WorldCoordinate> { selectedDocument.activeLevers }
     var isEditingActiveWorld: Bool { selectedWorldID == activeWorldID }
     var editorOccupancy: DesktopOccupancySnapshot {
         isEditingActiveWorld ? desktopOccupancy : .unavailable("This world is not active on the desktop.")
@@ -32,6 +36,7 @@ final class AppState: ObservableObject {
     }
     private var savedLevers: Set<WorldCoordinate> = []
     private var autosaver: WorldAutosaver?
+    private var persistenceBlocked = false
     var canSaveWorld: Bool { autosaver != nil }
     let finderDiagnostics: FinderDiagnosticsModel
     let desktopItemTracker: DesktopItemTracker
@@ -78,6 +83,7 @@ final class AppState: ObservableObject {
         let initialID = initial.activeArea!.worldID
         let initialWorld = try! initial.world(id: initialID)!.restoredWorld()
         selectedWorldID = initialID
+        selectedAreaID = initial.activeAreaID
         editorWorld = initialWorld
         desktopWorld = initialWorld
         self.automaticallyRefreshFinder = automaticallyRefreshFinder
@@ -104,6 +110,7 @@ final class AppState: ObservableObject {
                     persistenceStatus = "New library saved. Desktop World starts disabled."
                 }
                 selectedWorldID = activeWorldID
+                selectedAreaID = library.activeAreaID
                 desktopCamera = library.activeArea!.camera
                 desktopWorld = try library.world(id: activeWorldID)!.restoredWorld()
                 editorWorld = desktopWorld
@@ -111,6 +118,7 @@ final class AppState: ObservableObject {
                 simulator = CircuitSimulator(world: desktopWorld.circuit)
                 autosaver = WorldAutosaver(store: libraryStore, delay: autosaveDelay) { [weak self] in self?.persistenceStatus = $0 }
             } catch {
+                persistenceBlocked = true
                 persistenceStatus = "Could not restore library: \(error.localizedDescription) Saved files preserved; autosave disabled. Repair or move library.json (or legacy world.json if no library exists) before reopening."
             }
         }
@@ -121,16 +129,17 @@ final class AppState: ObservableObject {
     }
 
     var desktopScreen: ScreenDescriptor? { desktopController?.scene.screen ?? screenProviding() }
-    @Published private(set) var areaStatus = "Use This Area moves only the currently assigned desktop world. New-world activation arrives in Slice 19B."
+    @Published private(set) var areaStatus = "Save Area bookmarks the proposed view. Activate on Desktop uses the selected saved view."
 
     @discardableResult
     func selectWorld(_ id: UUID) -> Bool {
-        guard !isDesktopWorldEnabled, let document = library.world(id: id),
+        guard let document = library.world(id: id),
               let world = try? document.restoredWorld() else {
-            libraryStatus = "Disable Desktop World before switching editor worlds."
+            libraryStatus = "The selected world is unavailable."
             return false
         }
         selectedWorldID = id
+        selectedAreaID = library.areas.first { $0.worldID == id }!.id
         editorWorld = world
         libraryStatus = "Editing \(document.name). Desktop assignment remains \(activeWorldName)."
         return true
@@ -138,7 +147,6 @@ final class AppState: ObservableObject {
 
     @discardableResult
     func createWorld(name: String, generation: WorldGenerationSettings) -> Bool {
-        guard !isDesktopWorldEnabled else { libraryStatus = "Disable Desktop World before creating a world."; return false }
         let document = WorldDocument(name: name, generation: generation)
         guard let world = try? document.restoredWorld() else { libraryStatus = "Enter a nonempty name and a supported seed."; return false }
         var next = library
@@ -147,16 +155,17 @@ final class AppState: ObservableObject {
         guard (try? next.validate()) != nil else { return false }
         library = next
         selectedWorldID = document.id
+        selectedAreaID = next.areas.last!.id
         editorWorld = world
         autosaver?.schedule(library)
-        libraryStatus = "Created \(document.name) with seed \(generation.seed). It is not activated; desktop switching arrives in Slice 19B."
+        libraryStatus = "Created \(document.name) with seed \(generation.seed). It is not activated."
         return true
     }
 
     @discardableResult
     func renameSelectedWorld(_ name: String) -> Bool {
         let name = name.trimmingCharacters(in: .whitespacesAndNewlines)
-        guard !isDesktopWorldEnabled, !name.isEmpty,
+        guard !isEditorConfigurationLocked, !name.isEmpty,
               let index = library.worlds.firstIndex(where: { $0.id == selectedWorldID }) else {
             libraryStatus = "Disable Desktop World and enter a nonempty world name."
             return false
@@ -168,33 +177,72 @@ final class AppState: ObservableObject {
     }
 
     @discardableResult
-    func useDesktopArea(camera: CameraState, generation: WorldGenerationSettings) -> Bool {
-        guard isEditingActiveWorld, generation == selectedDocument.generation else {
-            areaStatus = "Seeds are fixed per world. Select the assigned desktop world to move its camera; activate other worlds in Slice 19B."
-            return false
-        }
-        guard let screen = desktopScreen,
-              let mapper = try? CoordinateMapper(canvasFrame: screen.frame, camera: camera),
-              mapper.tile(atScreen: screen.frame.origin) != nil,
-              mapper.tile(atScreen: CGPoint(x: screen.frame.maxX, y: screen.frame.maxY)) != nil,
-              !mapper.visibleChunks(on: screen, viewport: CGRect(origin: .zero, size: screen.frame.size)).isEmpty,
-              (16...128).contains(camera.pointsPerTile),
-              (try? WorldGenerator(settings: generation)) != nil else {
-            areaStatus = "The chosen area or display is unavailable. Nothing changed."
-            return false
-        }
-        let running = isDesktopWorldEnabled
-        if running { shutdown() }
-        desktopCamera = camera
-        if let index = library.areas.firstIndex(where: { $0.id == library.activeAreaID }) { library.areas[index].camera = camera }
-        autosaver?.schedule(library)
-        if running { toggleDesktopWorld() }
-        areaStatus = "Desktop area applied. Seed \(generation.seed); origin (\(camera.worldOrigin.x), \(camera.worldOrigin.y))."
+    func selectArea(_ id: UUID) -> Bool {
+        guard let area = library.areas.first(where: { $0.id == id }), selectWorld(area.worldID) else { return false }
+        selectedAreaID = id
+        libraryStatus = "Browsing \(selectedDocument.name) / \(area.name). Desktop assignment is unchanged."
         return true
     }
 
+    @discardableResult
+    func saveArea(name: String, camera: CameraState) -> Bool {
+        let area = SavedArea(name: name.trimmingCharacters(in: .whitespacesAndNewlines), worldID: selectedWorldID, camera: camera)
+        guard (try? area.validate()) != nil else { areaStatus = "Enter an area name and a valid camera."; return false }
+        library.areas.append(area)
+        selectedAreaID = area.id
+        autosaver?.schedule(library)
+        areaStatus = "Saved \(area.name). Desktop assignment is unchanged."
+        return true
+    }
+
+    @discardableResult
+    func renameSelectedArea(_ name: String) -> Bool {
+        let name = name.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !name.isEmpty, let index = library.areas.firstIndex(where: { $0.id == selectedAreaID }) else { return false }
+        library.areas[index].name = name
+        autosaver?.schedule(library)
+        areaStatus = "Area renamed; its saved camera is unchanged."
+        return true
+    }
+
+    @discardableResult
+    func activateSelectedArea() -> Bool {
+        let area = selectedArea
+        guard !persistenceBlocked, let world = try? selectedDocument.restoredWorld(),
+              (try? area.validate()) != nil, let screen = screenProviding(),
+              let mapper = try? CoordinateMapper(canvasFrame: screen.frame, camera: area.camera),
+              mapper.tile(atScreen: screen.frame.origin) != nil,
+              mapper.tile(atScreen: CGPoint(x: screen.frame.maxX, y: screen.frame.maxY)) != nil,
+              !mapper.visibleChunks(on: screen, viewport: CGRect(origin: .zero, size: screen.frame.size)).isEmpty else {
+            areaStatus = "Activation unavailable: check the display, saved camera and library recovery status. Current desktop preserved."
+            return false
+        }
+        var next = library
+        next.activeAreaID = area.id
+        guard (try? next.validate()) != nil, autosaver?.commit(next) ?? true else {
+            areaStatus = "Activation could not be saved. Current desktop preserved; use Save Now, then retry Activate on Desktop."
+            return false
+        }
+        let sameView = area.worldID == activeWorldID && area.camera == desktopCamera
+        let running = isDesktopWorldEnabled
+        // Save succeeds before cancelling the old runtime; shutdown has no pending selection to flush.
+        if !sameView { shutdown() }
+        library = next
+        if !sameView {
+            desktopCamera = area.camera
+            desktopWorld = world
+            savedLevers = selectedDocument.activeLevers
+            simulator = CircuitSimulator(world: world.circuit)
+            if running { toggleDesktopWorld() }
+        }
+        areaStatus = running && !isDesktopWorldEnabled
+            ? "Area saved, but rendering could not start. Desktop World is disabled. \(desktopStatus)"
+            : "Desktop assigned to \(selectedDocument.name) / \(area.name), saved origin (\(area.camera.worldOrigin.x), \(area.camera.worldOrigin.y))."
+        return !running || isDesktopWorldEnabled
+    }
+
     func developerPlacementPreview(_ component: CircuitComponent, at coordinate: WorldCoordinate) -> PlacementResult {
-        guard !isDesktopWorldEnabled else { return .rejected(.reserved) }
+        guard !isEditorConfigurationLocked else { return .rejected(.reserved) }
         return circuitPlacement.rules.canPlace(component: component, at: coordinate, in: editorWorld)
     }
 
@@ -205,7 +253,7 @@ final class AppState: ObservableObject {
 
     @discardableResult
     func placeCircuitComponent(_ component: CircuitComponent, at coordinate: WorldCoordinate) -> PlacementResult {
-        guard !isDesktopWorldEnabled else {
+        guard !isEditorConfigurationLocked else {
             developerPlacementStatus = "Disable Desktop World before editing."
             return .rejected(.reserved)
         }
@@ -214,14 +262,14 @@ final class AppState: ObservableObject {
         if result.isAllowed {
             editorWorld = next
             worldDidChange()
-            developerPlacementStatus = "Placed \(component.kind.rawValue) at (\(coordinate.x), \(coordinate.y)). Saved in the selected world. Only the assigned world can run until Slice 19B."
+            developerPlacementStatus = "Placed \(component.kind.rawValue) at (\(coordinate.x), \(coordinate.y)). Saved in the selected world. Activate a saved area to run it."
         } else { developerPlacementStatus = result.message }
         return result
     }
 
     @discardableResult
     func eraseCircuitComponent(at coordinate: WorldCoordinate) -> Bool {
-        guard !isDesktopWorldEnabled else {
+        guard !isEditorConfigurationLocked else {
             developerPlacementStatus = "Disable Desktop World before editing."
             return false
         }
@@ -239,7 +287,7 @@ final class AppState: ObservableObject {
 
     @discardableResult
     func configureRepeater(at coordinate: WorldCoordinate, direction: Direction, delay: RepeaterDelay) -> Bool {
-        guard !isDesktopWorldEnabled else {
+        guard !isEditorConfigurationLocked else {
             developerPlacementStatus = "Disable Desktop World before editing."
             return false
         }
@@ -262,7 +310,7 @@ final class AppState: ObservableObject {
             developerPlacementStatus = "This procedural world has no developer test patch. Use Erase for its components."
             return
         }
-        guard !isDesktopWorldEnabled else {
+        guard !isEditorConfigurationLocked else {
             developerPlacementStatus = "Disable Desktop World before editing."
             return
         }
@@ -298,6 +346,7 @@ final class AppState: ObservableObject {
         saveWorldNow()
         desktopSession = UUID()
         activationTask?.cancel()
+        activationTask = nil
         tickScheduler.stop()
         pendingOutputs = []
         lastPressMetadata = ""
@@ -384,12 +433,19 @@ final class AppState: ObservableObject {
         if next != simulator { simulator = next }
         if changedPower { desktopController?.scene.updateWorld(desktopWorld, poweredTiles: next.poweredTiles) }
         for case let .outputActivated(coordinate) in events {
+            guard outputIsVisible(coordinate) else { continue }
             desktopController?.scene.flashOutput(at: coordinate)
             // Bound pending I/O independently of simulation, rather than accumulating requests.
             if pendingOutputs.count < 32 { pendingOutputs.append(coordinate) }
             else { lastActionResult = "Output action queue is full; activation skipped." }
         }
         drainOutputActions()
+    }
+
+    private func outputIsVisible(_ coordinate: WorldCoordinate) -> Bool {
+        guard let mapper = desktopController?.scene.mapper else { return false }
+        let rect = mapper.screenRect(forTile: coordinate)
+        return mapper.canvasFrame.contains(CGPoint(x: rect.midX, y: rect.midY))
     }
 
     private func drainOutputActions() {
@@ -402,16 +458,18 @@ final class AppState: ObservableObject {
         }
         let coordinate = pendingOutputs.removeFirst()
         let session = desktopSession
+        let worldID = activeWorldID
         activationTask = Task { @MainActor [weak self] in
             guard let self else { return }
-            defer { self.activationTask = nil }
+            defer { if self.desktopSession == session { self.activationTask = nil } }
             let succeeded = await self.finderDiagnostics.readItems()
-            guard !Task.isCancelled, self.desktopSession == session, self.isDesktopWorldEnabled else { return }
+            guard !Task.isCancelled, self.desktopSession == session, self.activeWorldID == worldID, self.isDesktopWorldEnabled else { return }
             guard succeeded else {
                 self.pendingOutputs = []
                 self.lastActionResult = "Finder could not be refreshed; nothing opened."
                 return
             }
+            guard self.outputIsVisible(coordinate) else { return }
             self.lastActionResult = self.openItemAction.perform(occupancy: self.desktopOccupancy.state(at: coordinate))
         }
     }
@@ -440,11 +498,12 @@ final class AppState: ObservableObject {
         }
         lastActionResult = "\(inputTitle) click received; refreshing Finder items…"
         let session = desktopSession
+        let worldID = activeWorldID
         activationTask = Task { @MainActor [weak self] in
             guard let self else { return }
-            defer { self.activationTask = nil }
+            defer { if self.desktopSession == session { self.activationTask = nil } }
             let succeeded = await self.finderDiagnostics.readItems()
-            guard !Task.isCancelled, self.desktopSession == session,
+            guard !Task.isCancelled, self.desktopSession == session, self.activeWorldID == worldID,
                   self.isDesktopWorldEnabled, let controller = self.desktopController else { return }
             guard succeeded else {
                 self.lastActionResult = "Finder could not be refreshed; nothing opened."

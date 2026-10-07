@@ -6,7 +6,7 @@ final class CircuitRenderer {
     let textures = CircuitTextures()
 
     func render(_ world: CircuitWorld, poweredTiles: Set<WorldCoordinate>, occupancy: DesktopOccupancySnapshot,
-                mapper: CoordinateMapper, screen: ScreenDescriptor, viewport: CGRect, into layer: SKNode) {
+                mapper: CoordinateMapper, screen: ScreenDescriptor, viewport: CGRect, into layer: SKNode, leverPositions: Set<WorldCoordinate>? = nil) {
         layer.removeAllChildren()
         for (coordinate, component) in world.components.sorted(by: { ($0.key.y, $0.key.x) < ($1.key.y, $1.key.x) }) {
             let rect = mapper.sceneRect(forTile: coordinate, on: screen)
@@ -68,7 +68,7 @@ final class CircuitRenderer {
             let labelText: String
             switch component.kind {
             case .button: labelText = powered ? "DOWN" : "PRESS"
-            case .lever: labelText = powered ? "ON" : "OFF"
+            case .lever: labelText = (leverPositions?.contains(coordinate) ?? powered) ? "ON" : "OFF"
             case .repeater:
                 let arrow: String
                 switch component.direction {
