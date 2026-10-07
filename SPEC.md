@@ -1945,18 +1945,18 @@ If layering is wrong, investigate before proceeding.
 
 ### Tasks
 
-- [ ] `ScreenDescriptor`
-- [ ] screen → world
-- [ ] world → screen
-- [ ] world point → tile
-- [ ] negative screen origins
-- [ ] unit tests
+- [x] `ScreenDescriptor`
+- [x] screen → world
+- [x] world → screen
+- [x] world point → tile
+- [x] negative screen origins
+- [x] unit tests
 - [ ] optional debug coordinate labels
 
 ### Acceptance
 
-- [ ] round-trip tests pass.
-- [ ] boundary tests pass.
+- [x] round-trip tests pass.
+- [x] boundary tests pass.
 
 ---
 

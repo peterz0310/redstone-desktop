@@ -6,7 +6,9 @@ An experimental native macOS app exploring a block world beneath real Finder des
 
 Slices 0–1 provide a SwiftUI editor placeholder and tested domain primitives for coordinates, camera, directions, power, and component identity. Domain files use only the Swift standard library and do not depend on AppKit or SpriteKit.
 
-Slice 2 adds an optional SpriteKit checkerboard in a borderless, click-through AppKit window on the main display. It starts disabled. The editor button or Window → Enable/Disable Desktop World controls it. Finder access, coordinate mapping, simulation, and actions are not implemented yet. The app does not request privacy permissions at this stage. Actual layering and Finder usability await the owner's manual checks.
+Slice 2 adds an optional SpriteKit checkerboard in a borderless, click-through AppKit window on the main display. It starts disabled. The editor button or Window → Enable/Disable Desktop World controls it. The owner confirmed the Slice 2 manual checks on 2026-10-07; MANUAL checkboxes remain unchecked under the spec's agent rules.
+
+Slice 3 adds a tested `CoordinateMapper` and `ScreenDescriptor`. Coordinates use logical points, with the camera origin at the canvas's lower-left corner. Negative positions floor to tiles; backing scale does not affect occupancy. Finder access, simulation, and actions are not implemented yet. The app does not request privacy permissions at this stage.
 
 ## Development
 
