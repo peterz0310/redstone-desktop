@@ -29,22 +29,22 @@ final class EditorSession: ObservableObject {
     @Published var hoveredTile: WorldCoordinate?
     @Published private(set) var status = "Select a tool. Drag with Pan; use +/− or scroll to zoom."
     @Published var seedText = "2026"
+    @Published var newWorldName = "New World"
     @Published private(set) var previewGeneration: WorldGenerationSettings?
     @Published var terrainMetrics = TerrainRenderMetrics()
     var viewport = CGSize(width: 800, height: 600)
 
     func isPreviewing(_ appState: AppState) -> Bool {
-        previewGeneration != nil && previewGeneration != appState.desktopWorld.generation
+        previewGeneration != nil
     }
 
     func browsingWorld(_ appState: AppState) -> World {
-        var world = appState.desktopWorld
-        if let previewGeneration { world.generation = previewGeneration }
-        return world
+        if let previewGeneration { return World(generation: previewGeneration) }
+        return appState.editorWorld
     }
 
     func proposedDesktopCamera(_ appState: AppState) -> CameraState {
-        CameraState(worldOrigin: camera.worldOrigin, pointsPerTile: appState.desktopCamera.pointsPerTile)
+        CameraState(worldOrigin: camera.worldOrigin, pointsPerTile: appState.selectedAreaCamera.pointsPerTile)
     }
 
     @discardableResult
@@ -57,7 +57,7 @@ final class EditorSession: ObservableObject {
         previewGeneration = WorldGenerationSettings(seed: seed)
         seedText = String(seed)
         hoveredTile = nil
-        status = "Previewing seed \(seed). Use This Area applies it; Cancel Preview keeps the current seed."
+        status = "Previewing an empty world with seed \(seed). Create World saves it; existing worlds keep their seeds."
         return true
     }
 
@@ -65,27 +65,54 @@ final class EditorSession: ObservableObject {
 
     func cancelPreview(_ appState: AppState) {
         previewGeneration = nil
-        seedText = String(appState.desktopWorld.generation?.seed ?? 2026)
+        seedText = String(appState.selectedDocument.generation.seed)
         status = "Seed preview cancelled."
     }
 
     @discardableResult
     func useThisArea(_ appState: AppState) -> Bool {
-        guard previewSeed() else { return false }
-        let generation = previewGeneration ?? appState.desktopWorld.generation ?? WorldGenerationSettings(seed: 2026)
-        guard appState.useDesktopArea(camera: proposedDesktopCamera(appState), generation: generation) else {
+        guard !isPreviewing(appState) else { status = "Create or cancel the new-world preview before choosing a desktop area."; return false }
+        guard appState.useDesktopArea(camera: proposedDesktopCamera(appState), generation: appState.selectedDocument.generation) else {
             status = appState.areaStatus
             return false
         }
-        previewGeneration = nil
-        seedText = String(generation.seed)
         status = appState.areaStatus
         return true
     }
 
-    func showDesktopArea(_ appState: AppState) {
-        camera = CameraState(worldOrigin: appState.desktopCamera.worldOrigin, pointsPerTile: camera.pointsPerTile)
+    @discardableResult
+    func createWorld(_ appState: AppState) -> Bool {
+        guard previewSeed(), let generation = previewGeneration else { return false }
+        guard appState.createWorld(name: newWorldName, generation: generation) else {
+            status = appState.libraryStatus
+            return false
+        }
+        syncSelectedWorld(appState)
+        status = appState.libraryStatus
+        return true
+    }
+
+    @discardableResult
+    func selectWorld(_ id: UUID, appState: AppState) -> Bool {
+        guard appState.selectWorld(id) else { status = appState.libraryStatus; return false }
+        syncSelectedWorld(appState)
+        return true
+    }
+
+    func syncSelectedWorld(_ appState: AppState) {
+        previewGeneration = nil
+        seedText = String(appState.selectedDocument.generation.seed)
+        camera = CameraState(worldOrigin: appState.selectedAreaCamera.worldOrigin, pointsPerTile: camera.pointsPerTile)
         hoveredTile = nil
+        selectedTile = nil
+    }
+
+    func showDesktopArea(_ appState: AppState) {
+        if !appState.isEditingActiveWorld {
+            guard appState.selectWorld(appState.activeWorldID) else { status = appState.libraryStatus; return }
+        }
+        syncSelectedWorld(appState)
+        camera = CameraState(worldOrigin: appState.desktopCamera.worldOrigin, pointsPerTile: camera.pointsPerTile)
     }
 
     var proposedComponent: CircuitComponent? {
@@ -105,12 +132,12 @@ final class EditorSession: ObservableObject {
         guard tool != .pan, let mapper = mapper(size: size), mapper.canvasFrame.contains(point),
               let tile = mapper.tile(atScreen: point) else { return }
         if tool.editsWorld && isPreviewing(appState) {
-            status = "Apply or cancel the seed preview before editing the circuit."
+            status = "Create the new world or cancel its preview before editing the circuit."
             return
         }
         selectedTile = tile
         if tool == .select {
-            if let component = appState.desktopWorld.circuit.components[tile], component.kind == .repeater {
+            if let component = browsingWorld(appState).circuit.components[tile], component.kind == .repeater {
                 direction = component.direction
                 delay = component.repeaterDelay
             }

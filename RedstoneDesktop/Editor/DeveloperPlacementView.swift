@@ -17,7 +17,7 @@ struct DeveloperPlacementView: View {
             VStack(alignment: .leading, spacing: 16) {
                 Text("Developer Placement")
                     .font(.title)
-                Text("Disable Desktop World to place components, then enable it to view the result. The test patch is to the right of the original circuits. Changes last for this app session.")
+                Text("Edits affect the selected editor world and autosave. The migrated world retains its developer patch to the right of the original circuits; procedural worlds use their own terrain. Disable Desktop World to edit.")
                     .fixedSize(horizontal: false, vertical: true)
                 Form {
                     Picker("Component", selection: $kind) {
@@ -27,7 +27,7 @@ struct DeveloperPlacementView: View {
                     }
                     Picker("Test tile", selection: $coordinate) {
                         ForEach(DeveloperPlacementFixture.targets) { target in
-                            Text("\(target.name) (\(target.coordinate.x), \(target.coordinate.y))").tag(target.coordinate)
+                            Text("\(appState.editorWorld.tile(at: target.coordinate)?.terrain.rawValue ?? "unspecified") (\(target.coordinate.x), \(target.coordinate.y))").tag(target.coordinate)
                         }
                     }
                     if kind == .repeater {
@@ -45,6 +45,7 @@ struct DeveloperPlacementView: View {
                 HStack {
                     Button("Place component") { appState.placeDeveloperComponent(component, at: coordinate) }
                     Button("Reset test placements") { appState.resetDeveloperPlacements() }
+                        .disabled(appState.selectedDocument.terrainProfile != .legacyFixtureV1)
                 }
                 .disabled(appState.isDesktopWorldEnabled)
                 Text(appState.developerPlacementStatus)
@@ -55,9 +56,9 @@ struct DeveloperPlacementView: View {
                 VStack(alignment: .leading, spacing: 6) {
                     ForEach(DeveloperPlacementFixture.targets) { target in
                         HStack {
-                            Text("\(target.name) (\(target.coordinate.x), \(target.coordinate.y))")
+                            Text("\(appState.editorWorld.tile(at: target.coordinate)?.terrain.rawValue ?? "unspecified") (\(target.coordinate.x), \(target.coordinate.y))")
                             Spacer()
-                            Text(appState.desktopWorld.circuit.components[target.coordinate]?.kind.rawValue ?? "empty")
+                            Text(appState.editorWorld.circuit.components[target.coordinate]?.kind.rawValue ?? "empty")
                                 .foregroundStyle(.secondary)
                         }
                         .font(.caption.monospaced())

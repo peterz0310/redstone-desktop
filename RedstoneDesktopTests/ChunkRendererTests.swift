@@ -108,7 +108,7 @@ final class ChunkRendererTests: XCTestCase {
 
     @MainActor
     func testEditorSharesTerrainCacheAcrossSceneRecreationWithoutChangingDesktopCamera() throws {
-        let state = AppState(worldStore: RendererMemoryStore())
+        let state = AppState(libraryStore: RendererMemoryStore())
         defer { state.shutdown() }
         let editor = EditorSession(), renderer = EditorCanvasRenderer(), size = CGSize(width: 640, height: 640)
         let first = try XCTUnwrap(renderer.update(appState: state, editor: editor, size: size))
@@ -138,7 +138,7 @@ final class ChunkRendererTests: XCTestCase {
     }
 }
 
-private struct RendererMemoryStore: WorldStoring {
-    func load() throws -> WorldDocument? { nil }
-    func save(_ document: WorldDocument) throws {}
+private struct RendererMemoryStore: WorldLibraryStoring {
+    func load() throws -> WorldLibraryDocument? { try WorldLibraryDocument(legacy: LegacyWorldDocument()) }
+    func save(_ document: WorldLibraryDocument) throws {}
 }

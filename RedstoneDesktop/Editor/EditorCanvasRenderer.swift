@@ -20,22 +20,24 @@ final class EditorCanvasRenderer {
         }
         guard let scene else { return nil }
         let world = editor.browsingWorld(appState)
-        let power = appState.simulator.poweredTiles
+        let power: Set<WorldCoordinate> = editor.isPreviewing(appState) ? [] : appState.editorPoweredTiles
         if lastWorld != world || lastPower != power {
             scene.updateWorld(world, poweredTiles: power)
             lastWorld = world
             lastPower = power
         }
         // Use already-resolved world occupancy; browsing never moves its targets or queries Finder.
-        if lastOccupancy != appState.desktopOccupancy {
-            scene.updateOccupancy(appState.desktopOccupancy)
-            lastOccupancy = appState.desktopOccupancy
+        let occupancy = editor.isPreviewing(appState) ? DesktopOccupancySnapshot.unavailable("New world preview") : appState.editorOccupancy
+        if lastOccupancy != occupancy {
+            scene.updateOccupancy(occupancy)
+            lastOccupancy = occupancy
         }
         let areas = overlay("editor-desktop-viewport", in: scene)
         areas.removeAllChildren()
         if let display = appState.desktopScreen {
             for (name, camera, color) in [("current-desktop", appState.desktopCamera, NSColor.systemBlue),
                                           ("chosen-desktop", editor.proposedDesktopCamera(appState), NSColor.systemOrange)] {
+                if name == "current-desktop" && (!appState.isEditingActiveWorld || editor.isPreviewing(appState)) { continue }
                 if let rect = mapper.desktopViewportRect(camera: camera, displaySize: display.frame.size, on: scene.screen) {
                     let node = SKShapeNode(rect: rect)
                     node.name = name; node.strokeColor = color; node.fillColor = .clear; node.lineWidth = 3

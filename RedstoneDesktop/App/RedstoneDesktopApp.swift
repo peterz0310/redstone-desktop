@@ -2,7 +2,7 @@ import SwiftUI
 
 @main
 struct RedstoneDesktopApp: App {
-    @StateObject private var appState = AppState(worldStore: WorldStore.applicationDefault(), automaticallyRefreshFinder: true)
+    @StateObject private var appState = AppStartup.makeState()
 
     var body: some Scene {
         WindowGroup("Redstone Desktop") {
@@ -28,5 +28,16 @@ struct RedstoneDesktopApp: App {
             FinderDiagnosticsView(appState: appState)
         }
         .defaultSize(width: 1200, height: 550)
+    }
+}
+
+/// Xcode's application test host must never migrate/save the owner's real library.
+@MainActor
+enum AppStartup {
+    static func makeState() -> AppState {
+        let environment = ProcessInfo.processInfo.environment
+        let testing = NSClassFromString("XCTestCase") != nil
+            || environment.keys.contains { $0.hasPrefix("XCTest") || $0 == "XCInjectBundleInto" }
+        return AppState(libraryStore: testing ? nil : WorldLibraryStore.applicationDefault(), automaticallyRefreshFinder: !testing)
     }
 }

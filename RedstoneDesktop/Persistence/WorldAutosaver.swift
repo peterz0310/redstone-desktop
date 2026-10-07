@@ -3,19 +3,19 @@ import Foundation
 /// One pending snapshot; retries retain the newest failed save. Quit flushes synchronously.
 @MainActor
 final class WorldAutosaver {
-    private let store: any WorldStoring
+    private let store: any WorldLibraryStoring
     private let delay: Duration
     private let report: (String) -> Void
     private var task: Task<Void, Never>?
-    private(set) var pending: WorldDocument?
+    private(set) var pending: WorldLibraryDocument?
 
-    init(store: any WorldStoring, delay: Duration = .milliseconds(750), report: @escaping (String) -> Void) {
+    init(store: any WorldLibraryStoring, delay: Duration = .milliseconds(750), report: @escaping (String) -> Void) {
         self.store = store
         self.delay = delay
         self.report = report
     }
 
-    func schedule(_ document: WorldDocument) {
+    func schedule(_ document: WorldLibraryDocument) {
         pending = document
         task?.cancel()
         report("Unsaved changes…")

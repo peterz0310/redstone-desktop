@@ -14,7 +14,22 @@ final class AppState: ObservableObject {
     private let circuitPlacement = CircuitPlacement()
     @Published private(set) var desktopCamera = CameraState(worldOrigin: WorldPoint(x: 0, y: 0), pointsPerTile: 64)
     @Published private(set) var persistenceStatus = "Persistence is disabled for this session."
-    private var document = WorldDocument()
+    @Published private(set) var library: WorldLibraryDocument
+    @Published private(set) var selectedWorldID: UUID
+    @Published private(set) var editorWorld: World
+    @Published private(set) var libraryStatus = "Select a saved world, or preview a seed to create one."
+    var selectedDocument: WorldDocument { library.world(id: selectedWorldID)! }
+    var activeWorldID: UUID { library.activeArea!.worldID }
+    var activeWorldName: String { library.world(id: activeWorldID)!.name }
+    var selectedAreaCamera: CameraState { library.areas.first { $0.worldID == selectedWorldID }!.camera }
+    var isEditingActiveWorld: Bool { selectedWorldID == activeWorldID }
+    var editorOccupancy: DesktopOccupancySnapshot {
+        isEditingActiveWorld ? desktopOccupancy : .unavailable("This world is not active on the desktop.")
+    }
+    var editorPoweredTiles: Set<WorldCoordinate> { isEditingActiveWorld ? simulator.poweredTiles : [] }
+    func editorPower(at coordinate: WorldCoordinate) -> PowerLevel {
+        isEditingActiveWorld ? simulator.power(at: coordinate) : .off
+    }
     private var savedLevers: Set<WorldCoordinate> = []
     private var autosaver: WorldAutosaver?
     var canSaveWorld: Bool { autosaver != nil }
@@ -49,12 +64,22 @@ final class AppState: ObservableObject {
        desktopInteractionAssessment: @escaping (MouseEventIdentity) -> DesktopInteractionAssessment = { DesktopInteractionGate.assess($0) },
        tickScheduler: any CircuitTickScheduling = CircuitTickScheduler(),
        itemOpener: any ItemOpening = WorkspaceItemOpener(),
-       worldStore: (any WorldStoring)? = nil,
+       libraryStore: (any WorldLibraryStoring)? = nil,
        automaticallyRefreshFinder: Bool = false,
        autosaveDelay: Duration = .milliseconds(750),
        finderReferenceProviding: @escaping () -> ScreenDescriptor? = {
            NSScreen.screens.first.map { ScreenDescriptor(screen: $0) }
        }) {
+        // No-store construction is an isolated prototype fixture for integration tests.
+        // Normal app startup injects a library store and creates procedural worlds when absent.
+        let initial = libraryStore == nil
+            ? try! WorldLibraryDocument(legacy: LegacyWorldDocument()) : WorldLibraryDocument()
+        library = initial
+        let initialID = initial.activeArea!.worldID
+        let initialWorld = try! initial.world(id: initialID)!.restoredWorld()
+        selectedWorldID = initialID
+        editorWorld = initialWorld
+        desktopWorld = initialWorld
         self.automaticallyRefreshFinder = automaticallyRefreshFinder
         self.tickScheduler = tickScheduler
         self.desktopInteractionAssessment = desktopInteractionAssessment
@@ -68,22 +93,25 @@ final class AppState: ObservableObject {
             MainActor.assumeIsolated { self?.updateFinderState(items, error: error, hasRead: hasRead) }
         }
         simulator = CircuitSimulator(world: desktopWorld.circuit)
-        if let worldStore {
+        if let libraryStore {
             do {
-                if let restored = try worldStore.load() {
-                    desktopWorld = try restored.restoredWorld()
-                    desktopCamera = restored.camera
-                    document = restored
-                    savedLevers = restored.activeLevers
-                    persistenceStatus = "World restored. Desktop World starts disabled."
+                if let restored = try libraryStore.load() {
+                    try restored.validate()
+                    library = restored
+                    persistenceStatus = "Library restored. Desktop World starts disabled."
                 } else {
-                    desktopWorld = try document.restoredWorld()
-                    persistenceStatus = "New world. Edits will autosave."
+                    try libraryStore.save(library)
+                    persistenceStatus = "New library saved. Desktop World starts disabled."
                 }
+                selectedWorldID = activeWorldID
+                desktopCamera = library.activeArea!.camera
+                desktopWorld = try library.world(id: activeWorldID)!.restoredWorld()
+                editorWorld = desktopWorld
+                savedLevers = library.world(id: activeWorldID)!.activeLevers
                 simulator = CircuitSimulator(world: desktopWorld.circuit)
-                autosaver = WorldAutosaver(store: worldStore, delay: autosaveDelay) { [weak self] in self?.persistenceStatus = $0 }
+                autosaver = WorldAutosaver(store: libraryStore, delay: autosaveDelay) { [weak self] in self?.persistenceStatus = $0 }
             } catch {
-                persistenceStatus = "Could not restore world: \(error.localizedDescription) Saved file preserved; autosave disabled. Repair or move the file before reopening."
+                persistenceStatus = "Could not restore library: \(error.localizedDescription) Saved files preserved; autosave disabled. Repair or move library.json (or legacy world.json if no library exists) before reopening."
             }
         }
         terminationObserver = NotificationCenter.default.publisher(for: NSApplication.willTerminateNotification)
@@ -93,19 +121,58 @@ final class AppState: ObservableObject {
     }
 
     var desktopScreen: ScreenDescriptor? { desktopController?.scene.screen ?? screenProviding() }
-    @Published private(set) var areaStatus = "Preview a seed and pan to choose an area, then use it on the desktop."
+    @Published private(set) var areaStatus = "Use This Area moves only the currently assigned desktop world. New-world activation arrives in Slice 19B."
 
-    func invalidCircuitTiles(for generation: WorldGenerationSettings) -> [WorldCoordinate] {
-        var proposed = desktopWorld
-        proposed.generation = generation
-        proposed.circuit = CircuitWorld()
-        return desktopWorld.circuit.components.keys.filter {
-            !circuitPlacement.rules.canPlace(component: desktopWorld.circuit.components[$0]!, at: $0, in: proposed).isAllowed
-        }.sorted { ($0.y, $0.x) < ($1.y, $1.x) }
+    @discardableResult
+    func selectWorld(_ id: UUID) -> Bool {
+        guard !isDesktopWorldEnabled, let document = library.world(id: id),
+              let world = try? document.restoredWorld() else {
+            libraryStatus = "Disable Desktop World before switching editor worlds."
+            return false
+        }
+        selectedWorldID = id
+        editorWorld = world
+        libraryStatus = "Editing \(document.name). Desktop assignment remains \(activeWorldName)."
+        return true
+    }
+
+    @discardableResult
+    func createWorld(name: String, generation: WorldGenerationSettings) -> Bool {
+        guard !isDesktopWorldEnabled else { libraryStatus = "Disable Desktop World before creating a world."; return false }
+        let document = WorldDocument(name: name, generation: generation)
+        guard let world = try? document.restoredWorld() else { libraryStatus = "Enter a nonempty name and a supported seed."; return false }
+        var next = library
+        next.worlds.append(document)
+        next.areas.append(SavedArea(name: "Home", worldID: document.id, camera: SavedArea.homeCamera))
+        guard (try? next.validate()) != nil else { return false }
+        library = next
+        selectedWorldID = document.id
+        editorWorld = world
+        autosaver?.schedule(library)
+        libraryStatus = "Created \(document.name) with seed \(generation.seed). It is not activated; desktop switching arrives in Slice 19B."
+        return true
+    }
+
+    @discardableResult
+    func renameSelectedWorld(_ name: String) -> Bool {
+        let name = name.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !isDesktopWorldEnabled, !name.isEmpty,
+              let index = library.worlds.firstIndex(where: { $0.id == selectedWorldID }) else {
+            libraryStatus = "Disable Desktop World and enter a nonempty world name."
+            return false
+        }
+        library.worlds[index].name = name
+        autosaver?.schedule(library)
+        libraryStatus = "World renamed."
+        return true
     }
 
     @discardableResult
     func useDesktopArea(camera: CameraState, generation: WorldGenerationSettings) -> Bool {
+        guard isEditingActiveWorld, generation == selectedDocument.generation else {
+            areaStatus = "Seeds are fixed per world. Select the assigned desktop world to move its camera; activate other worlds in Slice 19B."
+            return false
+        }
         guard let screen = desktopScreen,
               let mapper = try? CoordinateMapper(canvasFrame: screen.frame, camera: camera),
               mapper.tile(atScreen: screen.frame.origin) != nil,
@@ -116,19 +183,11 @@ final class AppState: ObservableObject {
             areaStatus = "The chosen area or display is unavailable. Nothing changed."
             return false
         }
-        let invalid = invalidCircuitTiles(for: generation)
-        guard invalid.isEmpty else {
-            areaStatus = "Cannot apply this seed: \(invalid.count) existing circuit tile(s) would be invalid. Choose another seed or cancel the preview."
-            return false
-        }
         let running = isDesktopWorldEnabled
         if running { shutdown() }
         desktopCamera = camera
-        var next = desktopWorld
-        next.generation = generation
-        desktopWorld = next
-        simulator = CircuitSimulator(world: next.circuit)
-        worldDidChange()
+        if let index = library.areas.firstIndex(where: { $0.id == library.activeAreaID }) { library.areas[index].camera = camera }
+        autosaver?.schedule(library)
         if running { toggleDesktopWorld() }
         areaStatus = "Desktop area applied. Seed \(generation.seed); origin (\(camera.worldOrigin.x), \(camera.worldOrigin.y))."
         return true
@@ -136,7 +195,7 @@ final class AppState: ObservableObject {
 
     func developerPlacementPreview(_ component: CircuitComponent, at coordinate: WorldCoordinate) -> PlacementResult {
         guard !isDesktopWorldEnabled else { return .rejected(.reserved) }
-        return circuitPlacement.rules.canPlace(component: component, at: coordinate, in: desktopWorld)
+        return circuitPlacement.rules.canPlace(component: component, at: coordinate, in: editorWorld)
     }
 
     @discardableResult
@@ -150,13 +209,12 @@ final class AppState: ObservableObject {
             developerPlacementStatus = "Disable Desktop World before editing."
             return .rejected(.reserved)
         }
-        var next = desktopWorld
+        var next = editorWorld
         let result = circuitPlacement.place(component, at: coordinate, in: &next)
         if result.isAllowed {
-            desktopWorld = next
-            simulator = CircuitSimulator(world: next.circuit)
+            editorWorld = next
             worldDidChange()
-            developerPlacementStatus = "Placed \(component.kind.rawValue) at (\(coordinate.x), \(coordinate.y)). Enable Desktop World to view it."
+            developerPlacementStatus = "Placed \(component.kind.rawValue) at (\(coordinate.x), \(coordinate.y)). Saved in the selected world. Only the assigned world can run until Slice 19B."
         } else { developerPlacementStatus = result.message }
         return result
     }
@@ -167,14 +225,13 @@ final class AppState: ObservableObject {
             developerPlacementStatus = "Disable Desktop World before editing."
             return false
         }
-        guard desktopWorld.circuit.components[coordinate] != nil else {
+        guard editorWorld.circuit.components[coordinate] != nil else {
             developerPlacementStatus = "No component at (\(coordinate.x), \(coordinate.y))."
             return false
         }
-        var next = desktopWorld
+        var next = editorWorld
         next.circuit.components.removeValue(forKey: coordinate)
-        desktopWorld = next
-        simulator = CircuitSimulator(world: next.circuit)
+        editorWorld = next
         worldDidChange()
         developerPlacementStatus = "Erased component at (\(coordinate.x), \(coordinate.y)); terrain preserved."
         return true
@@ -186,41 +243,52 @@ final class AppState: ObservableObject {
             developerPlacementStatus = "Disable Desktop World before editing."
             return false
         }
-        guard var component = desktopWorld.circuit.components[coordinate], component.kind == .repeater else {
+        guard var component = editorWorld.circuit.components[coordinate], component.kind == .repeater else {
             developerPlacementStatus = "Select a repeater to change its direction or delay."
             return false
         }
         component.direction = direction
         component.repeaterDelay = delay
-        var next = desktopWorld
+        var next = editorWorld
         next.circuit.components[coordinate] = component
-        desktopWorld = next
-        simulator = CircuitSimulator(world: next.circuit)
+        editorWorld = next
         worldDidChange()
         developerPlacementStatus = "Repeater updated at (\(coordinate.x), \(coordinate.y))."
         return true
     }
 
     func resetDeveloperPlacements() {
+        guard selectedDocument.terrainProfile == .legacyFixtureV1 else {
+            developerPlacementStatus = "This procedural world has no developer test patch. Use Erase for its components."
+            return
+        }
         guard !isDesktopWorldEnabled else {
             developerPlacementStatus = "Disable Desktop World before editing."
             return
         }
-        var next = desktopWorld
+        var next = editorWorld
         for target in DeveloperPlacementFixture.targets { next.circuit.components.removeValue(forKey: target.coordinate) }
-        desktopWorld = next
-        simulator = CircuitSimulator(world: next.circuit)
+        editorWorld = next
         worldDidChange()
         developerPlacementStatus = "Test placements reset; original circuits and terrain preserved."
     }
 
     private func worldDidChange() {
-        savedLevers = savedLevers.filter { desktopWorld.circuit.components[$0]?.kind == .lever }
-        if let generation = desktopWorld.generation { document.generation = generation }
-        document.camera = desktopCamera
-        document.circuit = desktopWorld.circuit
-        document.activeLevers = savedLevers
-        autosaver?.schedule(document)
+        guard let index = library.worlds.firstIndex(where: { $0.id == selectedWorldID }) else { return }
+        library.worlds[index].circuit = editorWorld.circuit
+        library.worlds[index].activeLevers = library.worlds[index].activeLevers.filter { editorWorld.circuit.components[$0]?.kind == .lever }
+        if isEditingActiveWorld {
+            desktopWorld = editorWorld
+            savedLevers = library.worlds[index].activeLevers
+            simulator = CircuitSimulator(world: desktopWorld.circuit)
+        }
+        autosaver?.schedule(library)
+    }
+
+    private func desktopLeversDidChange() {
+        guard let index = library.worlds.firstIndex(where: { $0.id == activeWorldID }) else { return }
+        library.worlds[index].activeLevers = savedLevers
+        autosaver?.schedule(library)
     }
 
     func saveWorldNow() { autosaver?.flush() }
@@ -396,7 +464,7 @@ final class AppState: ObservableObject {
             } else {
                 self.simulator.toggleLever(at: tile)
                 self.savedLevers = self.simulator.activeLevers
-                self.worldDidChange()
+                self.desktopLeversDidChange()
                 self.lastActionResult = self.simulator.activeLevers.contains(tile)
                     ? "Lever on; power updates on the next tick." : "Lever off; power updates on the next tick."
             }

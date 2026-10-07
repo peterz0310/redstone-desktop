@@ -1,8 +1,8 @@
 import Foundation
 
 protocol WorldStoring {
-    func load() throws -> WorldDocument?
-    func save(_ document: WorldDocument) throws
+    func load() throws -> LegacyWorldDocument?
+    func save(_ document: LegacyWorldDocument) throws
 }
 
 enum WorldStoreError: LocalizedError {
@@ -16,7 +16,7 @@ enum WorldStoreError: LocalizedError {
     }
 }
 
-/// Foundation file adapter. Atomic replacement never writes JSON in place.
+/// Legacy format-1/2 adapter used only for migration and fixture tests. Atomic replacement never writes JSON in place.
 struct WorldStore: WorldStoring {
     let fileURL: URL
     static func applicationDefault() -> WorldStore {
@@ -25,17 +25,17 @@ struct WorldStore: WorldStoring {
             .appendingPathComponent("world.json"))
     }
 
-    func load() throws -> WorldDocument? {
+    func load() throws -> LegacyWorldDocument? {
         let data: Data
         do { data = try Data(contentsOf: fileURL) }
         catch let error as NSError where error.domain == NSCocoaErrorDomain && error.code == NSFileReadNoSuchFileError { return nil }
         guard data.count <= 2_000_000 else { throw WorldStoreError.invalidDocument("World document is too large.") }
-        let document = try JSONDecoder().decode(WorldDocument.self, from: data)
+        let document = try JSONDecoder().decode(LegacyWorldDocument.self, from: data)
         _ = try document.restoredWorld()
         return document
     }
 
-    func save(_ document: WorldDocument) throws {
+    func save(_ document: LegacyWorldDocument) throws {
         _ = try document.restoredWorld()
         let encoder = JSONEncoder()
         encoder.outputFormatting = [.prettyPrinted, .sortedKeys]

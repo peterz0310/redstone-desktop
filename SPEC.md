@@ -23,7 +23,7 @@ The intended workflow is:
 
 The project is an experiment first and a polished application second.
 
-Current implementation: Slices 0–19 are complete, with owner-confirmed Mac acceptance where required. The app still stores one world in format-2 `world.json`; changing its seed retains its circuit. The adopted target below adds independent worlds and saved areas in **Slice 19A**, then area browsing/activation in **Slice 19B**, before Slice 20. New tasks remain unchecked until implemented. Completed slice descriptions and dated decision entries are historical evidence; Sections 3.8, 7.1, 25 and 29 define the new target behavior.
+Current implementation: Slices 0–19 are complete with owner-confirmed Mac acceptance where required. **Slice 19A is implemented; owner migration/world-list validation is pending.** The app now stores an atomic library.json with independent fixed-seed worlds and migrated/default area records; world.json is retained as a legacy backup. New worlds can be created/edited while desktop rendering is disabled; selecting one does not assign it to the desktop. Named-area browsing and new-world desktop activation remain **Slice 19B**, then Slice 20. New tasks remain unchecked until implemented. Completed slice descriptions and dated decision entries are historical evidence; Sections 3.8, 7.1, 25 and 29 define the new target behavior.
 
 The most important early question is not whether attractive terrain or redstone can be made. Those are comparatively straightforward. The first major feasibility gate is:
 
@@ -1582,7 +1582,7 @@ Aim initially for comfortably under ~5% CPU while static, but profile rather tha
 
 # 29. Persistence
 
-The current Slice 19 app stores a format-2 WorldDocument at `~/Library/Application Support/RedstoneDesktop/world.json`. Slice 19A migrates to a single atomic **library.json** in that directory. One file holds world records, area records and active selection, avoiding a partially committed cross-file world/index update. Keep Codable JSON, Foundation storage, debounce autosave and explicit Save Now; no database or backend.
+Slice 19A stores a single atomic **library.json** at `~/Library/Application Support/RedstoneDesktop/`. It migrates the earlier Slice 19 format-1/2 world.json without rewriting the source. One file holds world records, area records and active selection, avoiding a partially committed cross-file world/index update. Keep Codable JSON, Foundation storage, debounce autosave and explicit Save Now; no database or backend.
 
 ## 29.1 Target durable model
 
@@ -2318,24 +2318,24 @@ Give each world its own permanent seed, coordinate-keyed circuit and save identi
 
 ### Tasks
 
-- [ ] Foundation-only library/world-format-3/saved-area models and reference validation.
-- [ ] Atomic library.json store, whole-library debounce/Save Now/quit flush and bounded damaged-data handling.
-- [ ] Idempotent format-1/2 world.json migration retaining original source bytes, identity, terrain profile, circuit, levers and camera in the first area.
-- [ ] Empty procedural fresh worlds and default Home areas; no inherited demo/user components.
-- [ ] SwiftUI world list, names/seed display, create/rename/select world while Desktop World disabled.
-- [ ] Preview/Random/Create World with an empty candidate; existing world seeds fixed; remove seed replacement of existing builds.
-- [ ] Route all editor/developer mutations and saves to the selected world; browsing never selects the active desktop world implicitly.
-- [ ] Interim desktop lifecycle continues using the saved active world/area; scope Use This Area to it and document the temporary restriction.
-- [ ] Update tests for world ownership, seed independence, migration/failure preservation, references and multi-world autosave; build and run the full suite.
-- [ ] Update README with exact current controls, new save/recovery path and Mac walkthrough.
+- [x] Foundation-only library/world-format-3/saved-area models and reference validation.
+- [x] Atomic library.json store, whole-library debounce/Save Now/quit flush and bounded damaged-data handling.
+- [x] Idempotent format-1/2 world.json migration retaining original source bytes, identity, terrain profile, circuit, levers and camera in the first area.
+- [x] Empty procedural fresh worlds and default Home areas; no inherited demo/user components.
+- [x] SwiftUI world list, names/seed display, create/rename/select world while Desktop World disabled.
+- [x] Preview/Random/Create World with an empty candidate; existing world seeds fixed; remove seed replacement of existing builds.
+- [x] Route all editor/developer mutations and saves to the selected world; browsing never selects the active desktop world implicitly.
+- [x] Interim desktop lifecycle continues using the saved active world/area; scope Use This Area to it and document the temporary restriction.
+- [x] Update tests for world ownership, seed independence, migration/failure preservation, references and multi-world autosave; build and run the full suite.
+- [x] Update README with exact current controls, new save/recovery path and Mac walkthrough.
 
 ### Automated acceptance
 
-- [ ] Seed-42 and seed-2026 worlds retain independent circuit edits at identical coordinates; duplicate-seed worlds remain independent too.
-- [ ] Legacy restoration/migration preserves every configuration value and source file, and a second launch does not duplicate records.
-- [ ] Corrupt/unsupported library or legacy input cannot be overwritten; failed saves retain pending edits for retry.
-- [ ] World creation/selection/seed preview causes no Finder read, simulation, desktop reassignment or action.
-- [ ] Edits in multiple worlds survive one coalesced whole-library save and restore.
+- [x] Seed-42 and seed-2026 worlds retain independent circuit edits at identical coordinates; duplicate-seed worlds remain independent too.
+- [x] Legacy restoration/migration preserves every configuration value and source file, and a second launch does not duplicate records.
+- [x] Corrupt/unsupported library or legacy input cannot be overwritten; failed saves retain pending edits for retry.
+- [x] World creation/selection/seed preview causes no Finder read, simulation, desktop reassignment or action.
+- [x] Edits in multiple worlds survive one coalesced whole-library save and restore.
 
 ### Manual acceptance
 
@@ -2343,7 +2343,7 @@ Give each world its own permanent seed, coordinate-keyed circuit and save identi
 - [ ] MANUAL: create worlds with seeds 42 and 2026, author different components, switch and reopen; each restores its own build without copying.
 - [ ] MANUAL: selecting a world does not activate it; the original desktop selection still works after explicit enable.
 
-**Status: planned; not implemented.** This is the next slice. Named-area UI and switching the active desktop to new worlds wait for 19B.
+**Status: implemented; owner Mac validation pending.** Debug build and all 194 automated tests pass. Foundation-only World/Circuit/Persistence code also type-checks independently of AppKit/SpriteKit. All three MANUAL items remain unchecked until owner confirmation. README.md has the current controls, save/recovery guidance and walkthrough. Named-area UI and new-world desktop activation remain Slice 19B.
 
 ---
 
@@ -3396,3 +3396,22 @@ Worlds own circuits and immutable generation settings; seeds are not save identi
 Resolve the earlier offscreen question by simulating the full active-world circuit without clipping wires, but dispatching actions only from outputs whose mapped centers are inside the active desktop canvas. Switching saves/preflights first, invalidates old world/session work, resets transient state and refreshes Finder. Same-world/same-camera activation is a no-op; enabled state is preserved on other successful switches. Saved ON levers can cause a fresh rising edge on explicit enable/different-area activation. Restoration never enables the desktop automatically.
 
 Consequences: this turn changes SPEC.md and README.md only. New roadmap tasks and MANUAL checks remain unchecked. No source code, owner data, generation fingerprints, APIs or assets change. The next implementation is Slice 19A; no new application build/test or physical Mac result is claimed for this documentation update.
+
+
+## 2026-10-07 — Slice 19A independent world library and migration
+
+Context: the owner approved the documentation plan and requested continuing. Implement only Slice 19A; no Slice 19B named-area UI or new-world desktop reassignment is added.
+
+Decision: add Foundation-only format-3 WorldDocument with immutable generation/profile, SavedArea and format-1 WorldLibraryDocument. Worlds own coordinate-keyed circuits/ON lever positions; areas hold camera bookmarks. Validate unique IDs, every world/area/active reference, at least one area per world, trimmed nonempty names, camera bounds, generator/profile versions and component placement/lever membership. New worlds use procedural terrain, empty circuits and Home areas. Preserve legacy fixture overrides/unspecified tiles only in migrated worlds.
+
+WorldLibraryStore reads/writes the complete atomic library.json with the existing 2 MB bound. A present library is authoritative, including on parse/read/version/size errors; never fall back to or overwrite a backup. Missing library migrates supported format-1/2 world.json, preserving UUID/name, generation, every component, durable lever position and camera in its first Desktop area. Save migration before returning success; never change the source bytes. A second launch reuses the stored library/IDs. Missing both files saves a new empty procedural library. Errors block autosave for the session; failed later writes retain the newest complete snapshot for retry. Autosave coalesces edits across worlds and flushes on Save Now/disable/quit.
+
+AppState keeps selected editorWorld/selectedWorldID separate from desktopWorld/active area. Create/rename/select and all component/developer mutations require Desktop World disabled for this interim slice. Edits update only the selected document; active configuration/simulator synchronize only when that selected world is the assigned world. Enabling always runs the assigned world, regardless of editor selection. Inactive-world rendering receives no active-world power/occupancy or blue viewport outline. Procedural-world developer reset is refused rather than deleting arbitrary coordinate-matching user builds.
+
+SwiftUI provides Saved worlds (names, fixed seeds and Desktop badge), Rename, new seed Preview/Random/Cancel, new-world name and Create World. Seed previews use empty procedural World copies, including when the seed equals the existing map. Canvas edits pause for any preview; Create World reparses the current draft and selects a new independent UUID/Home area. Existing seeds cannot be replaced. Session world selection clears tile/hover state and browses to the selected default area's origin. Use This Area remains only for the assigned world's camera, using its fixed seed; it refuses previews/other worlds. Show desktop area selects the assigned world while disabled; no new activation behavior is implied.
+
+Validation: final Debug build and all 194 tests pass, plus standalone Swift-6 typechecking of World/Circuit/Persistence. Sixteen new library tests cover empty procedural/format-3 round trips, both legacy migrations/source preservation/idempotence, authoritative-library precedence, migration write failure at the size bound, invalid IDs/references/names/versions/cameras/profiles/levers, oversized read/write preservation, empty fresh installation without Finder, independent seed-42/2026 and duplicate-seed edits at coincident coordinates with whole-library autosave/restart, rename/erase/repeater/developer routing, live mutation/switch locks and original runtime selection, empty same-seed preview/fixed-seed refusal, selection/outline/occupancy isolation and SwiftUI hosting, damaged-library write blocking, failed multi-world retry and isolated test-host startup. Existing persistence/cache/seed tests are updated for the adopted model; other regression checks remain green.
+
+Implementation observations: an early compile exposed Swift's initialization-order rule; initial identity/world values now use local constants before property access. The first application-hosted test run initialized normal app startup and created the owner's migrated library.json. That was a test-isolation issue, not evidence of a macOS API contradiction or manual UI acceptance. The legacy world.json was not rewritten; a read-only semantic comparison verified identity, seed, all components/levers and camera preservation despite dictionary JSON ordering differences. AppStartup now detects XCTest/injection and constructs an isolated no-store fixture with automatic Finder disabled. A dedicated test verifies that behavior; SHA-256 comparisons verified both owner save files remained byte-for-byte unchanged during the final build/test run.
+
+Consequences: all Slice 19A implementation/automated tasks are complete; its three MANUAL items remain pending the owner's Mac walkthrough. Slice 19B and later remain unchecked. Original terrain generation fingerprints, Finder/API mapping, simulation/action boundaries, assets and backend scope are unchanged. Normal app startup uses the library adapter; LegacyWorldDocument/WorldStore remain isolated migration/fixture adapters, never the normal save path. README.md distinguishes current versus planned controls and retains dated validation history.

@@ -3,10 +3,10 @@ import SpriteKit
 import XCTest
 @testable import RedstoneDesktop
 
-private final class SeedBrowserStore: WorldStoring {
-    var document: WorldDocument?
-    func load() throws -> WorldDocument? { document }
-    func save(_ document: WorldDocument) throws { self.document = document }
+private final class SeedBrowserStore: WorldLibraryStoring {
+    var document: WorldLibraryDocument? = try! WorldLibraryDocument(legacy: LegacyWorldDocument())
+    func load() throws -> WorldLibraryDocument? { document }
+    func save(_ document: WorldLibraryDocument) throws { self.document = document }
 }
 
 final class SeedBrowserTests: XCTestCase {
@@ -14,7 +14,7 @@ final class SeedBrowserTests: XCTestCase {
     private func state(_ store: SeedBrowserStore = SeedBrowserStore()) -> AppState {
         let screen = ScreenDescriptor(id: "test", frame: CGRect(x: -640, y: -200, width: 1280, height: 800), backingScale: 2)
         return AppState(screenProviding: { screen }, clickEventMonitoring: FakeGlobalMouseEventMonitor(),
-            tickScheduler: ManualCircuitTickScheduler(), worldStore: store, finderReferenceProviding: { screen })
+            tickScheduler: ManualCircuitTickScheduler(), libraryStore: store, finderReferenceProviding: { screen })
     }
 
     @MainActor
@@ -39,7 +39,7 @@ final class SeedBrowserTests: XCTestCase {
     func testBrowsingPreviewPanZoomAndCancelDoNotChangeWorldCameraOrSave() throws {
         let store = SeedBrowserStore(), state = state(store), editor = EditorSession()
         defer { state.shutdown() }
-        let world = state.desktopWorld, camera = state.desktopCamera
+        let world = state.desktopWorld, camera = state.desktopCamera, saved = store.document
         editor.seedText = "42"; XCTAssertTrue(editor.previewSeed())
         editor.pan(by: CGSize(width: 500, height: -300), size: CGSize(width: 800, height: 600))
         editor.zoom(by: 0.5)
@@ -47,14 +47,14 @@ final class SeedBrowserTests: XCTestCase {
         XCTAssertEqual(state.desktopWorld, world)
         XCTAssertEqual(state.desktopCamera, camera)
         state.saveWorldNow()
-        XCTAssertNil(store.document)
+        XCTAssertEqual(store.document, saved)
         editor.cancelPreview(state)
         XCTAssertEqual(editor.browsingWorld(state), world)
         XCTAssertFalse(editor.isPreviewing(state))
     }
 
     @MainActor
-    func testSeedPreviewBlocksCanvasEditingUntilAppliedOrCancelled() throws {
+    func testSeedPreviewBlocksCanvasEditingUntilCreatedOrCancelled() throws {
         let state = state(), editor = EditorSession(), size = CGSize(width: 800, height: 600)
         defer { state.shutdown() }
         editor.seedText = "42"; editor.previewSeed(); editor.tool = .dust
@@ -66,28 +66,28 @@ final class SeedBrowserTests: XCTestCase {
     }
 
     @MainActor
-    func testUseAreaSavesSeedAndCameraPreservesCircuitAndRestoresOnReopen() throws {
+    func testUseAreaSavesCameraWithFixedSeedAndRestoresOnReopen() throws {
         let store = SeedBrowserStore(), state = state(store), editor = EditorSession()
         let circuit = state.desktopWorld.circuit
         editor.pan(by: CGSize(width: -1600, height: 800), size: CGSize(width: 800, height: 600))
-        editor.seedText = "42"; editor.previewSeed()
+        editor.cancelPreview(state)
         let proposed = editor.proposedDesktopCamera(state)
         XCTAssertEqual(proposed.worldOrigin, WorldPoint(x: 40, y: -20))
         XCTAssertEqual(proposed.pointsPerTile, 64)
         XCTAssertTrue(editor.useThisArea(state))
         XCTAssertEqual(state.desktopCamera, proposed)
-        XCTAssertEqual(state.desktopWorld.generation?.seed, 42)
+        XCTAssertEqual(state.desktopWorld.generation?.seed, 2026)
         XCTAssertEqual(state.desktopWorld.circuit, circuit)
         state.shutdown()
         let reopened = self.state(store)
         defer { reopened.shutdown() }
         XCTAssertEqual(reopened.desktopCamera, proposed)
-        XCTAssertEqual(reopened.desktopWorld.generation?.seed, 42)
+        XCTAssertEqual(reopened.desktopWorld.generation?.seed, 2026)
         XCTAssertFalse(reopened.isDesktopWorldEnabled)
     }
 
     @MainActor
-    func testSeedThatInvalidatesExistingGeneratedComponentIsRefusedAtomically() throws {
+    func testExistingWorldSeedReplacementIsRefusedAtomically() throws {
         let state = state(), editor = EditorSession()
         defer { state.shutdown() }
         let current = try WorldGenerator(settings: WorldGenerationSettings(seed: 2026))
@@ -99,7 +99,7 @@ final class SeedBrowserTests: XCTestCase {
         XCTAssertTrue(state.placeCircuitComponent(CircuitComponent(kind: .output), at: coordinate).isAllowed)
         let before = state.desktopWorld, camera = state.desktopCamera
         editor.seedText = "42"; editor.previewSeed()
-        XCTAssertEqual(state.invalidCircuitTiles(for: candidate.settings), [coordinate])
+        XCTAssertFalse(state.useDesktopArea(camera: camera, generation: candidate.settings))
         XCTAssertFalse(editor.useThisArea(state))
         XCTAssertEqual(state.desktopWorld, before)
         XCTAssertEqual(state.desktopCamera, camera)
@@ -110,12 +110,12 @@ final class SeedBrowserTests: XCTestCase {
     func testApplyingWhileRunningRebuildsMapperAndOccupancyAndKeepsOneMonitor() throws {
         let screen = ScreenDescriptor(id: "test", frame: CGRect(x: 0, y: 0, width: 1280, height: 800), backingScale: 1)
         let events = FakeGlobalMouseEventMonitor()
-        let state = AppState(screenProviding: { screen }, clickEventMonitoring: events, tickScheduler: ManualCircuitTickScheduler(), worldStore: SeedBrowserStore(), finderReferenceProviding: { screen })
+        let state = AppState(screenProviding: { screen }, clickEventMonitoring: events, tickScheduler: ManualCircuitTickScheduler(), libraryStore: SeedBrowserStore(), finderReferenceProviding: { screen })
         defer { state.shutdown() }
         state.toggleDesktopWorld()
         XCTAssertTrue(state.isDesktopWorldEnabled)
         let camera = CameraState(worldOrigin: WorldPoint(x: 50, y: -30), pointsPerTile: 64)
-        XCTAssertTrue(state.useDesktopArea(camera: camera, generation: WorldGenerationSettings(seed: 42)))
+        XCTAssertTrue(state.useDesktopArea(camera: camera, generation: WorldGenerationSettings(seed: 2026)))
         XCTAssertTrue(state.isDesktopWorldEnabled)
         XCTAssertEqual(state.desktopCamera, camera)
         if let pointer = state.pointer, let worldPoint = pointer.worldPoint {
@@ -138,12 +138,12 @@ final class SeedBrowserTests: XCTestCase {
         let provider = SeedBrowserItemProvider()
         let state = AppState(screenProviding: { screen }, clickEventMonitoring: FakeGlobalMouseEventMonitor(),
             finderDiagnostics: FinderDiagnosticsModel(provider: provider), tickScheduler: ManualCircuitTickScheduler(),
-            worldStore: SeedBrowserStore(), finderReferenceProviding: { screen })
+            libraryStore: SeedBrowserStore(), finderReferenceProviding: { screen })
         defer { state.shutdown() }
         await state.finderDiagnostics.readItems()
         state.toggleDesktopWorld()
         XCTAssertEqual(state.desktopOccupancy.state(at: WorldCoordinate(x: 7, y: 3)), .occupied(provider.item))
-        XCTAssertTrue(state.useDesktopArea(camera: CameraState(worldOrigin: WorldPoint(x: 10, y: -5), pointsPerTile: 64), generation: WorldGenerationSettings(seed: 42)))
+        XCTAssertTrue(state.useDesktopArea(camera: CameraState(worldOrigin: WorldPoint(x: 10, y: -5), pointsPerTile: 64), generation: WorldGenerationSettings(seed: 2026)))
         XCTAssertEqual(state.desktopOccupancy.state(at: WorldCoordinate(x: 7, y: 3)), .empty)
         XCTAssertEqual(state.desktopOccupancy.state(at: WorldCoordinate(x: 17, y: -2)), .occupied(provider.item))
     }
@@ -167,11 +167,11 @@ final class SeedBrowserTests: XCTestCase {
     @MainActor
     func testMissingDisplayAndInvalidCameraRefuseAreaWithoutChanges() {
         let state = AppState(screenProviding: { nil }), before = state.desktopWorld
-        XCTAssertFalse(state.useDesktopArea(camera: state.desktopCamera, generation: WorldGenerationSettings(seed: 42)))
+        XCTAssertFalse(state.useDesktopArea(camera: state.desktopCamera, generation: WorldGenerationSettings(seed: 2026)))
         XCTAssertEqual(state.desktopWorld, before)
         let valid = self.state()
         defer { valid.shutdown() }
-        XCTAssertFalse(valid.useDesktopArea(camera: CameraState(worldOrigin: WorldPoint(x: .nan, y: 0), pointsPerTile: 64), generation: WorldGenerationSettings(seed: 42)))
+        XCTAssertFalse(valid.useDesktopArea(camera: CameraState(worldOrigin: WorldPoint(x: .nan, y: 0), pointsPerTile: 64), generation: WorldGenerationSettings(seed: 2026)))
         XCTAssertFalse(valid.useDesktopArea(camera: valid.desktopCamera, generation: WorldGenerationSettings(generationVersion: 99, seed: 42)))
     }
 }

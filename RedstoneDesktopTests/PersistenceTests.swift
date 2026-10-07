@@ -2,15 +2,15 @@ import AppKit
 import XCTest
 @testable import RedstoneDesktop
 
-private final class MemoryWorldStore: WorldStoring {
-    var document: WorldDocument?
-    var saves: [WorldDocument] = []
+private final class MemoryWorldStore: WorldLibraryStoring {
+    var document: WorldLibraryDocument? = try! WorldLibraryDocument(legacy: LegacyWorldDocument())
+    var saves: [WorldLibraryDocument] = []
     var fails = false
-    func load() throws -> WorldDocument? {
+    func load() throws -> WorldLibraryDocument? {
         if fails { throw WorldStoreError.invalidDocument("Test read failure") }
         return document
     }
-    func save(_ document: WorldDocument) throws {
+    func save(_ document: WorldLibraryDocument) throws {
         if fails { throw WorldStoreError.invalidDocument("Test write failure") }
         saves.append(document)
         self.document = document
@@ -26,11 +26,11 @@ final class PersistenceTests: XCTestCase {
     }
 
     func testLegacyFixtureMigratesWithoutChangingIdentityCircuitOrProtectedTerrain() throws {
-        let original = WorldDocument()
+        let original = LegacyWorldDocument()
         var json = try XCTUnwrap(JSONSerialization.jsonObject(with: JSONEncoder().encode(original)) as? [String: Any])
         json["formatVersion"] = 1
         json.removeValue(forKey: "generation")
-        let migrated = try JSONDecoder().decode(WorldDocument.self, from: JSONSerialization.data(withJSONObject: json))
+        let migrated = try JSONDecoder().decode(LegacyWorldDocument.self, from: JSONSerialization.data(withJSONObject: json))
         XCTAssertEqual(migrated.formatVersion, 2)
         XCTAssertEqual(migrated.id, original.id)
         XCTAssertEqual(migrated.circuit, original.circuit)
@@ -42,7 +42,7 @@ final class PersistenceTests: XCTestCase {
     }
 
     func testGeneratedPlacementsSaveAndRestoreWithoutPersistingBaseTiles() throws {
-        var document = WorldDocument()
+        var document = LegacyWorldDocument()
         let generator = try WorldGenerator(settings: document.generation)
         let target = try XCTUnwrap((32..<128).map { WorldCoordinate(x: $0, y: 32) }.first {
             let tile = generator.tile(at: $0)
@@ -61,13 +61,13 @@ final class PersistenceTests: XCTestCase {
     }
 
     func testDocumentRoundTripPreservesIdentityCameraCircuitAndLeverPositions() throws {
-        var document = WorldDocument()
+        var document = LegacyWorldDocument()
         document.camera.worldOrigin = WorldPoint(x: -42.25, y: 10.75)
         document.circuit.components[cell(10)] = CircuitComponent(kind: .lever)
         document.circuit.components[cell(12)] = CircuitComponent(kind: .repeater, direction: .west, repeaterDelay: .four)
         document.activeLevers = [cell(10)]
         let data = try JSONEncoder().encode(document)
-        let restored = try JSONDecoder().decode(WorldDocument.self, from: data)
+        let restored = try JSONDecoder().decode(LegacyWorldDocument.self, from: data)
         XCTAssertEqual(restored, document)
         XCTAssertEqual(try restored.restoredWorld().tiles, EditorConstructionArea.makeWorld().tiles)
         XCTAssertFalse(String(decoding: data, as: UTF8.self).contains("tiles"))
@@ -75,29 +75,29 @@ final class PersistenceTests: XCTestCase {
     }
 
     func testDocumentRejectsFutureFormatFixtureInvalidCameraPlacementAndLeverState() throws {
-        var invalid = WorldDocument()
+        var invalid = LegacyWorldDocument()
         invalid.formatVersion = 99
         XCTAssertThrowsError(try invalid.restoredWorld())
-        invalid = WorldDocument(); invalid.fixtureVersion = 99
+        invalid = LegacyWorldDocument(); invalid.fixtureVersion = 99
         XCTAssertThrowsError(try invalid.restoredWorld())
         for scale in [0, -1, Double.infinity, Double.nan, 129] {
-            invalid = WorldDocument(); invalid.camera.pointsPerTile = scale
+            invalid = LegacyWorldDocument(); invalid.camera.pointsPerTile = scale
             XCTAssertThrowsError(try invalid.restoredWorld())
         }
-        invalid = WorldDocument(); invalid.camera.worldOrigin.x = .nan
+        invalid = LegacyWorldDocument(); invalid.camera.worldOrigin.x = .nan
         XCTAssertThrowsError(try invalid.restoredWorld())
-        invalid = WorldDocument(); invalid.circuit.components[cell(14, 3)] = CircuitComponent(kind: .dust)
+        invalid = LegacyWorldDocument(); invalid.circuit.components[cell(14, 3)] = CircuitComponent(kind: .dust)
         XCTAssertThrowsError(try invalid.restoredWorld())
-        invalid = WorldDocument(); invalid.circuit.components[cell(10, 5)] = CircuitComponent(kind: .output)
+        invalid = LegacyWorldDocument(); invalid.circuit.components[cell(10, 5)] = CircuitComponent(kind: .output)
         XCTAssertThrowsError(try invalid.restoredWorld())
-        invalid = WorldDocument(); invalid.activeLevers = [DemoCircuit.button]
+        invalid = LegacyWorldDocument(); invalid.activeLevers = [DemoCircuit.button]
         XCTAssertThrowsError(try invalid.restoredWorld())
     }
 
     func testStoreCreatesSupportDirectoryAndAtomicallyReplacesWholeDocument() throws {
         let store = try temporaryStore()
         XCTAssertNil(try store.load())
-        var document = WorldDocument()
+        var document = LegacyWorldDocument()
         try store.save(document)
         document.circuit.components.removeAll()
         try store.save(document)
@@ -110,22 +110,22 @@ final class PersistenceTests: XCTestCase {
 
     func testFailedValidationPreservesExistingFile() throws {
         let store = try temporaryStore()
-        try store.save(WorldDocument())
+        try store.save(LegacyWorldDocument())
         let before = try Data(contentsOf: store.fileURL)
-        var invalid = WorldDocument(); invalid.formatVersion = 99
+        var invalid = LegacyWorldDocument(); invalid.formatVersion = 99
         XCTAssertThrowsError(try store.save(invalid))
         XCTAssertEqual(try Data(contentsOf: store.fileURL), before)
     }
 
     func testMalformedTruncatedAndFutureJSONAreNotTreatedAsMissing() throws {
         let store = try temporaryStore()
-        try store.save(WorldDocument())
+        try store.save(LegacyWorldDocument())
         for text in ["{", "null", "{}", "garbage"] {
             try Data(text.utf8).write(to: store.fileURL)
             XCTAssertThrowsError(try store.load())
             XCTAssertEqual(try String(contentsOf: store.fileURL, encoding: .utf8), text)
         }
-        var future = WorldDocument(); future.formatVersion = 99
+        var future = LegacyWorldDocument(); future.formatVersion = 99
         try JSONEncoder().encode(future).write(to: store.fileURL)
         XCTAssertThrowsError(try store.load())
     }
@@ -136,17 +136,17 @@ final class PersistenceTests: XCTestCase {
         try FileManager.default.createDirectory(at: parent.deletingLastPathComponent(), withIntermediateDirectories: true)
         let original = Data("existing file".utf8)
         try original.write(to: parent)
-        XCTAssertThrowsError(try store.save(WorldDocument()))
+        XCTAssertThrowsError(try store.save(LegacyWorldDocument()))
         XCTAssertEqual(try Data(contentsOf: parent), original)
         XCTAssertThrowsError(try store.load())
     }
 
     func testStoreRejectsOversizedJSONAndInvalidComponentConfiguration() throws {
         let store = try temporaryStore()
-        try store.save(WorldDocument())
+        try store.save(LegacyWorldDocument())
         try Data(repeating: 32, count: 2_000_001).write(to: store.fileURL)
         XCTAssertThrowsError(try store.load())
-        var document = WorldDocument()
+        var document = LegacyWorldDocument()
         document.circuit = CircuitWorld(components: [cell(10): CircuitComponent(kind: .repeater)])
         let json = String(decoding: try JSONEncoder().encode(document), as: UTF8.self)
         try Data(json.replacingOccurrences(of: "\"repeaterDelay\":1", with: "\"repeaterDelay\":9").utf8).write(to: store.fileURL)
@@ -160,8 +160,8 @@ final class PersistenceTests: XCTestCase {
         let store = MemoryWorldStore()
         var messages: [String] = []
         let saver = WorldAutosaver(store: store, delay: .milliseconds(40)) { messages.append($0) }
-        var first = WorldDocument(); first.name = "first"
-        var latest = first; latest.name = "latest"
+        var first = WorldLibraryDocument(); first.worlds[0].name = "first"
+        var latest = first; latest.worlds[0].name = "latest"
         saver.schedule(first); saver.schedule(latest)
         XCTAssertTrue(store.saves.isEmpty)
         try await Task.sleep(for: .milliseconds(100))
@@ -179,7 +179,7 @@ final class PersistenceTests: XCTestCase {
         var status = ""
         let saver = WorldAutosaver(store: store, delay: .seconds(60)) { status = $0 }
         store.fails = true
-        var document = WorldDocument(); document.name = "latest"
+        var document = WorldLibraryDocument(); document.worlds[0].name = "latest"
         saver.schedule(document); saver.flush()
         XCTAssertEqual(saver.pending, document)
         XCTAssertTrue(status.contains("Save failed"))
@@ -191,31 +191,35 @@ final class PersistenceTests: XCTestCase {
     @MainActor
     func testAppEditsSaveOnShutdownAndReopenWithoutEnablingDesktop() throws {
         let store = try temporaryStore()
-        let app = AppState(worldStore: store, autosaveDelay: .seconds(60))
+        try store.save(LegacyWorldDocument())
+        let legacySource = try Data(contentsOf: store.fileURL)
+        let libraryStore = WorldLibraryStore(fileURL: store.fileURL.deletingLastPathComponent().appendingPathComponent("library.json"), legacyFileURL: store.fileURL)
+        let app = AppState(libraryStore: libraryStore, autosaveDelay: .seconds(60))
         XCTAssertTrue(app.placeCircuitComponent(CircuitComponent(kind: .repeater, direction: .south, repeaterDelay: .three), at: cell(10)).isAllowed)
         XCTAssertTrue(app.configureRepeater(at: cell(10), direction: .west, delay: .four))
         XCTAssertTrue(app.eraseCircuitComponent(at: DemoCircuit.button))
         app.shutdown() // flush even within debounce window
-        let reopened = AppState(worldStore: store)
+        XCTAssertEqual(try Data(contentsOf: store.fileURL), legacySource)
+        let reopened = AppState(libraryStore: libraryStore)
         XCTAssertEqual(reopened.desktopWorld, app.desktopWorld)
         XCTAssertEqual(reopened.desktopCamera, app.desktopCamera)
         XCTAssertFalse(reopened.isDesktopWorldEnabled)
         XCTAssertTrue(reopened.simulator.poweredTiles.isEmpty)
         XCTAssertFalse(reopened.finderDiagnostics.hasRead)
-        XCTAssertEqual(reopened.persistenceStatus, "World restored. Desktop World starts disabled.")
+        XCTAssertEqual(reopened.persistenceStatus, "Library restored. Desktop World starts disabled.")
         reopened.shutdown()
     }
 
     @MainActor
     func testCorruptLoadUsesFixtureAndBlocksOverwriteEvenAfterEditingAndShutdown() throws {
         let store = try temporaryStore()
-        try store.save(WorldDocument())
+        try store.save(LegacyWorldDocument())
         let corrupt = Data("{broken".utf8)
         try corrupt.write(to: store.fileURL)
-        let app = AppState(worldStore: store)
-        XCTAssertEqual(app.desktopWorld, EditorConstructionArea.makeWorld())
+        let app = AppState(libraryStore: WorldLibraryStore(fileURL: store.fileURL.deletingLastPathComponent().appendingPathComponent("library.json"), legacyFileURL: store.fileURL))
+        XCTAssertTrue(app.desktopWorld.circuit.components.isEmpty)
         XCTAssertFalse(app.canSaveWorld)
-        XCTAssertTrue(app.persistenceStatus.contains("Saved file preserved"))
+        XCTAssertTrue(app.persistenceStatus.contains("Saved files preserved"))
         app.placeCircuitComponent(CircuitComponent(kind: .dust), at: cell(10))
         app.saveWorldNow(); app.shutdown()
         XCTAssertEqual(try Data(contentsOf: store.fileURL), corrupt)
@@ -224,30 +228,30 @@ final class PersistenceTests: XCTestCase {
     @MainActor
     func testRejectedPlacementDoesNotScheduleSaveAndPatchResetIsPersisted() {
         let store = MemoryWorldStore()
-        let app = AppState(worldStore: store, autosaveDelay: .seconds(60))
+        let app = AppState(libraryStore: store, autosaveDelay: .seconds(60))
         app.placeCircuitComponent(CircuitComponent(kind: .dust), at: cell(14, 3))
         app.saveWorldNow()
         XCTAssertTrue(store.saves.isEmpty)
         app.placeCircuitComponent(CircuitComponent(kind: .dust), at: cell(10, 3))
         app.placeCircuitComponent(CircuitComponent(kind: .output), at: cell(10))
         app.resetDeveloperPlacements(); app.saveWorldNow()
-        XCTAssertNil(store.document?.circuit.components[cell(10, 3)])
-        XCTAssertEqual(store.document?.circuit.components[cell(10)]?.kind, .output)
+        XCTAssertNil(store.document?.worlds[0].circuit.components[cell(10, 3)])
+        XCTAssertEqual(store.document?.worlds[0].circuit.components[cell(10)]?.kind, .output)
         app.shutdown()
     }
 
     @MainActor
     func testSavedLeverPositionsResumeOnlyAfterExplicitEnableAndFreshFinderRead() async throws {
         let store = MemoryWorldStore()
-        var document = WorldDocument(); document.activeLevers = [DemoCircuit.lever]
-        store.document = document
+        var document = LegacyWorldDocument(); document.activeLevers = [DemoCircuit.lever]
+        store.document = try WorldLibraryDocument(legacy: document)
         let provider = PersistenceItemProvider()
         let opener = FixtureItemOpener()
         let screen = ScreenDescriptor(id: "fixture", frame: CGRect(x: 0, y: 0, width: 1600, height: 900), backingScale: 1)
         let app = AppState(screenProviding: { screen }, clickEventMonitoring: FakeGlobalMouseEventMonitor(),
             finderDiagnostics: FinderDiagnosticsModel(provider: provider),
             desktopInteractionAssessment: { _ in DesktopInteractionAssessment(rejectionReason: nil, details: "fixture") },
-            tickScheduler: ManualCircuitTickScheduler(), itemOpener: opener, worldStore: store,
+            tickScheduler: ManualCircuitTickScheduler(), itemOpener: opener, libraryStore: store,
             finderReferenceProviding: { screen })
         defer { app.shutdown() }
         XCTAssertTrue(app.simulator.activeLevers.isEmpty)
@@ -261,13 +265,13 @@ final class PersistenceTests: XCTestCase {
         await app.activationTask?.value
         app.advanceCircuitTick()
         app.saveWorldNow()
-        XCTAssertTrue(try XCTUnwrap(store.document).activeLevers.isEmpty)
+        XCTAssertTrue(try XCTUnwrap(store.document).worlds[0].activeLevers.isEmpty)
         app.handleCircuitClick(DemoCircuit.lever)
         await app.activationTask?.value
         app.advanceCircuitTick()
         await app.activationTask?.value
         app.shutdown()
-        XCTAssertEqual(try XCTUnwrap(store.document).activeLevers, [DemoCircuit.lever])
+        XCTAssertEqual(try XCTUnwrap(store.document).worlds[0].activeLevers, [DemoCircuit.lever])
         XCTAssertTrue(app.simulator.poweredTiles.isEmpty)
         XCTAssertTrue(app.simulator.activeLevers.isEmpty)
     }

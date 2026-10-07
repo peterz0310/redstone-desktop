@@ -1,47 +1,38 @@
 import Foundation
 
-/// Durable configuration only: no Finder paths, power snapshots, or pending actions.
-struct WorldDocument: Codable, Equatable, Sendable {
-    static let currentFormatVersion = 2
+enum TerrainProfile: String, Codable, Sendable { case procedural, legacyFixtureV1 }
+
+/// A map owns its components. Camera bookmarks belong to SavedArea, not the map.
+struct WorldDocument: Codable, Equatable, Sendable, Identifiable {
+    static let currentFormatVersion = 3
     var formatVersion = currentFormatVersion
-    var generation = WorldGenerationSettings(seed: 2026)
-    var fixtureVersion = 1
     var id = UUID()
-    var name = "My Desktop"
-    var camera = CameraState(worldOrigin: WorldPoint(x: 0, y: 0), pointsPerTile: 64)
-    var circuit = EditorConstructionArea.makeWorld().circuit
+    var name: String
+    let generation: WorldGenerationSettings
+    let terrainProfile: TerrainProfile
+    var circuit = CircuitWorld()
     var activeLevers: Set<WorldCoordinate> = []
 
-    private enum CodingKeys: String, CodingKey { case formatVersion, fixtureVersion, generation, id, name, camera, circuit, activeLevers }
+    init(name: String = "New World", generation: WorldGenerationSettings = WorldGenerationSettings(seed: 2026), terrainProfile: TerrainProfile = .procedural) {
+        self.name = name.trimmingCharacters(in: .whitespacesAndNewlines)
+        self.generation = generation
+        self.terrainProfile = terrainProfile
+    }
 
-    init() {}
-
-    init(from decoder: any Decoder) throws {
-        let values = try decoder.container(keyedBy: CodingKeys.self)
-        let version = try values.decode(Int.self, forKey: .formatVersion)
-        guard version == 1 || version == Self.currentFormatVersion else { throw WorldStoreError.unsupportedVersion(version) }
-        formatVersion = Self.currentFormatVersion
-        fixtureVersion = try values.decode(Int.self, forKey: .fixtureVersion)
-        id = try values.decode(UUID.self, forKey: .id)
-        name = try values.decode(String.self, forKey: .name)
-        camera = try values.decode(CameraState.self, forKey: .camera)
-        circuit = try values.decode(CircuitWorld.self, forKey: .circuit)
-        activeLevers = try values.decode(Set<WorldCoordinate>.self, forKey: .activeLevers)
-        // Version 1 stored the fixed fixture only. Keep those overrides and add surroundings.
-        generation = version == 1 ? WorldGenerationSettings(seed: 2026) : try values.decode(WorldGenerationSettings.self, forKey: .generation)
+    init(legacy: LegacyWorldDocument) throws {
+        _ = try legacy.restoredWorld()
+        self.init(name: legacy.name, generation: legacy.generation, terrainProfile: .legacyFixtureV1)
+        id = legacy.id
+        name = legacy.name // Preserve the earlier saved label exactly during migration.
+        circuit = legacy.circuit
+        activeLevers = legacy.activeLevers
     }
 
     func restoredWorld() throws -> World {
         guard formatVersion == Self.currentFormatVersion else { throw WorldStoreError.unsupportedVersion(formatVersion) }
-        guard fixtureVersion == 1 else { throw WorldStoreError.invalidDocument("Unsupported terrain fixture version.") }
-        guard camera.worldOrigin.x.isFinite, camera.worldOrigin.y.isFinite,
-              camera.pointsPerTile.isFinite, (16...128).contains(camera.pointsPerTile),
-              camera.worldOrigin.x > Double(Int.min), camera.worldOrigin.x < Double(Int.max),
-              camera.worldOrigin.y > Double(Int.min), camera.worldOrigin.y < Double(Int.max) else {
-            throw WorldStoreError.invalidDocument("Invalid desktop camera.")
-        }
+        guard !name.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else { throw WorldStoreError.invalidDocument("World name cannot be empty.") }
         _ = try WorldGenerator(settings: generation)
-        var world = EditorConstructionArea.makeWorld()
+        var world = terrainProfile == .legacyFixtureV1 ? EditorConstructionArea.makeWorld() : World()
         world.generation = generation
         world.circuit = CircuitWorld()
         for (coordinate, component) in circuit.components {
