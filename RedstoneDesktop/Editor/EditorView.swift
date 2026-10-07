@@ -47,7 +47,7 @@ struct EditorView: View {
                 Text(appState.isDesktopWorldEnabled ? "Desktop running — disable it to edit. Select and Pan still work." : "Editing enabled. Green preview: allowed; red: blocked. Use the grass area to the right (x=10–25, y=7–11).")
                 Text(editor.status).foregroundStyle(.secondary)
                 Text(appState.persistenceStatus).foregroundStyle(.secondary).textSelection(.enabled)
-                Text("Slice 16 · Persistence")
+                Text("Slice 17 · Terrain generator")
                     .font(.caption)
             }.font(.callout).frame(maxWidth: .infinity, alignment: .leading).padding(10)
         }

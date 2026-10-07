@@ -2232,30 +2232,32 @@ Acceptance:
 
 ### Manual acceptance
 
-- [ ] MANUAL: build, quit, reopen, state is restored.
+- [x] MANUAL: build, quit, reopen, state is restored.
 
-**Status: implemented; owner restart validation pending.** Debug application build and all 148 automated tests pass. World configuration autosaves to Application Support after 0.75 seconds and flushes on quit. Damaged/unsupported documents are preserved with autosave disabled. README.md describes the restart checks.
+**Status: complete; owner-confirmed restart validation on 2026-10-07.** The owner reported “Works!” after the quit/reopen walkthrough. This records Mac validation separately from the 148 automated tests. World configuration autosaves to Application Support after 0.75 seconds and flushes on quit. Damaged/unsupported documents are preserved with autosave disabled.
 
 ---
 
 ## Slice 17 — Deterministic terrain generator
 
-- [ ] deterministic seed/hash
-- [ ] 2D noise
-- [ ] elevation
-- [ ] moisture
-- [ ] terrain/biome selection
-- [ ] water
-- [ ] basic decorations
-- [ ] chunk generation
-- [ ] negative-coordinate correctness
-- [ ] generator snapshot/hash tests
+- [x] deterministic seed/hash
+- [x] 2D noise
+- [x] elevation
+- [x] moisture
+- [x] terrain/biome selection
+- [x] water
+- [x] basic decorations
+- [x] chunk generation
+- [x] negative-coordinate correctness
+- [x] generator snapshot/hash tests
 
 Acceptance:
 
-- [ ] same seed and coordinate always gives same result for generation version.
-- [ ] different seeds differ visibly.
-- [ ] no chunk seams.
+- [x] same seed and coordinate always gives same result for generation version.
+- [x] different seeds differ visibly.
+- [x] no chunk seams.
+
+**Status: complete; generator implementation and automated acceptance.** Debug application build and all 157 tests pass. A standalone seed comparison was generated and inspected. Live app rendering remains the existing persisted fixture until Slice 18; the new generator does not mutate saved circuits. Slice 17 has no roadmap MANUAL checkbox.
 
 ---
 
@@ -3214,3 +3216,20 @@ Validation rejects unsupported document/fixture versions, invalid cameras, inval
 Validation: Debug application build and all 148 automated tests pass. Thirteen persistence tests cover JSON/value round trips, terrain reconstruction without stored tiles, stable identity and camera, version/configuration validation, nested Application Support-style directory creation, full-file replacement, invalid-save and filesystem-failure preservation, damaged/oversized documents, debounce coalescing and flush cancellation, failed-save retry, AppState edit/erase/repeater restoration on shutdown/reopen, corrupt-load write blocking, developer patch reset, rejected-edit no-save, and saved lever resume with explicit enable/Finder access. Existing 135 tests remain green.
 
 Consequences: all seven Slice 16 implementation tasks are complete. Its MANUAL restart checkbox awaits the owner's Mac test; automated lifecycle calls do not prove Command-Q/relaunch behavior. Slice 17 and later remain unchecked. No terrain generator, seed UI, general import/export, resource-pack code, backend or private API is introduced.
+
+
+## 2026-10-07 — Owner confirms Slice 16; Slice 17 deterministic generation
+
+Context: the owner reported “Works!” after the persistence quit/reopen walkthrough. Mark Slice 16's MANUAL checkbox complete based on that owner-reported Mac validation, separate from its 148 automated tests. Implement only the next slice's generator; chunk rendering/cache and seed browsing remain Slices 18–19.
+
+Decision: add a stateless pure Swift WorldGenerator with Codable WorldGenerationSettings (generationVersion and full UInt64 seed), project-owned SeededNoise, ChunkCoordinate and TerrainChunk. Generation version 1 fixes all scales, thresholds and densities. Reject unknown generation versions instead of silently changing their terrain. No Swift Hasher, system random generator, OS noise API, trigonometry or floating-point sampling is used.
+
+Hash global lattice coordinates and independent field channels using fixed UInt64 avalanche constants and wrapping arithmetic. Integer Q16 smooth interpolation yields elevation, moisture and temperature in 0…65535. Elevation blends 64- and 32-tile fields; biome/moisture/temperature use 128-tile fields. Classify wetland, plains, woodland, desert and rocky areas; generate grass, dirt, stone, sand, shallow/deep water. Shore heights select sand/shallow-water transitions. An independent coordinate roll places trees/flowers/rocks/reeds only on their designated terrain. Terrain sampling is independent of circuits and placement remains governed by the existing shared capabilities.
+
+Chunks are fixed 32×32 snapshots sampled at global coordinates, not independently seeded images. Mathematical floor division gives negative chunk addresses without negating Int.min or multiplying intermediate negative origins. Checked chunk-origin multiplication rejects unrepresentable requests; valid chunks containing Int.min/Int.max still produce all 1,024 tiles without overflow. Sampling is exact even at those integer limits and does not convert large coordinates to Double. The generator owns no cache, unbounded world collection or renderer.
+
+Validation: Debug build and all 157 tests pass; pure World/Circuit files also type-check independently of AppKit/SpriteKit. Nine new tests cover negative chunk boundaries, full integer limits, overflow refusal, noise range/lattice values/continuity, request-order independence, full chunk-to-global sample equality across negative/positive axes, smooth boundary fields, fixed version-1 semantic field/terrain/decoration fingerprints for seeds 42 and 2026, different-seed terrain differences, all six terrain/four decoration/five biome types, decoration constraints, settings Codable/full UInt64 seed and unsupported-version rejection, and reuse of placement capabilities without changing the original circuit fixture.
+
+Generate a standalone developer comparison with scripts/terrain-preview.sh. It compiles only the pure domain/generator plus an artifact writer and writes build/terrain-preview.svg: 128×128 samples per seed at coordinates −64…63, 32-tile chunk lines and decoration dots. The generated image was inspected and the two seeds visibly differ without artificial chunk borders. This is a data preview, not verification of a live desktop terrain renderer. Snapshot fingerprints were recorded after inspection; changing version-1 output requires an explicit version/migration decision.
+
+Consequences: all ten Slice 17 tasks and three acceptance items are complete. This slice has no roadmap MANUAL checkbox; no new one is invented. The application footer identifies Slice 17, while existing fixture rendering, saved JSON, desktop camera and circuit behavior remain intact. Generated-world persistence/migration will be added when generated worlds enter the application; current format-1 fixture documents are not rewritten or reinterpreted. Slice 18 and later remain unchecked. No chunk cache/render nodes, seed UI, procedural live terrain replacement, resource packs, private APIs or backend are introduced.

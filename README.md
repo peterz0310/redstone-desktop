@@ -46,7 +46,9 @@ Slice 14 adds pure terrain capabilities and one shared placement evaluator/trans
 
 Slice 15 replaces the main placeholder with a SwiftUI editor and SpriteKit canvas: Select, Pan, Dust, Button, Lever, Repeater, Output, and Erase tools; anchored scroll/button zoom; an inspector with repeater direction/delay; and green/red placement previews with rejection reasons. Its independent camera leaves the real desktop unchanged. Editing requires Desktop World disabled, while selection and browsing remain available when running. Existing diagnostic controls are in **Desktop Controls…**. A finite grass construction area occupies x=10–25, y=7–11 to the right of the existing circuits. The editor displays cached output occupancy without querying Finder. Debug build and all **135 tests** pass; the owner confirmed useful-circuit authoring on their Mac on 2026-10-07. Slice 16 adds persistence below.
 
-Slice 16 adds versioned Codable JSON persistence, an atomic WorldStore, debounced autosave and quit-time flush. Circuit components, repeater configuration, desktop camera and lever positions restore from `~/Library/Application Support/RedstoneDesktop/world.json`. The terrain fixture is recreated by version, not saved tile-by-tile. Desktop World always starts disabled; Finder data and transient simulation/actions are excluded. The footer reports pending/saved/error status, and **Save Now** retries failed writes. Corrupt/unsupported documents are preserved with saving disabled for that session. Debug build and all **148 tests** pass; the owner's quit/reopen manual validation is pending.
+Slice 16 adds versioned Codable JSON persistence, an atomic WorldStore, debounced autosave and quit-time flush. Circuit components, repeater configuration, desktop camera and lever positions restore from `~/Library/Application Support/RedstoneDesktop/world.json`. The terrain fixture is recreated by version, not saved tile-by-tile. Desktop World always starts disabled; Finder data and transient simulation/actions are excluded. The footer reports pending/saved/error status, and **Save Now** retries failed writes. Corrupt/unsupported documents are preserved with saving disabled for that session. Debug build and all **148 tests** pass; the owner confirmed quit/reopen validation on 2026-10-07.
+
+Slice 17 adds a pure, stateless deterministic terrain generator, versioned UInt64 seed settings, integer hash/smooth 2D noise, elevation/moisture/temperature, biome selection, all six terrain types and four decorations, and 32×32 chunk sampling. Negative and extreme integer coordinates are tested. Fixed version-1 fingerprints protect reproducibility, and adjacent chunks use the same global fields. Debug build and all **157 tests** pass. The live app still renders its persisted fixture: chunked terrain rendering is Slice 18, and seed browsing is Slice 19. A standalone comparison image can be generated with `scripts/terrain-preview.sh`.
 
 ## Development
 
@@ -361,4 +363,29 @@ The saved file is outside the repository:
 
 If restoration fails, the footer explains the problem and saving is disabled so the original file stays untouched. To recover, quit, use Finder's **Go → Go to Folder…** to open the directory above, and move `world.json` somewhere safe as a backup before relaunching. The app will start a new fixture; keep that backup for diagnosis. Corrupted-file handling has automated coverage, so deliberately damaging your saved circuit is not required for the Mac acceptance check.
 
-Please confirm that both normal quit/reopen and immediate quit after editing restore the correct circuit. The Slice 16 MANUAL checkbox remains pending that report. Deterministic terrain generation is the next slice.
+Please confirm that both normal quit/reopen and immediate quit after editing restore the correct circuit. The owner confirmed the restart checks on 2026-10-07 with “Works!” The Slice 16 MANUAL checkbox is checked based on that report. This walkthrough remains available for regression.
+
+
+## Generator regression and preview — Slice 17
+
+This slice implements the generator without replacing your saved terrain/circuit. There is no new roadmap MANUAL checkbox. Please check the existing app still behaves correctly:
+
+1. Quit the old app with **Command-Q**, then launch:
+
+   ```sh
+   open /Users/peterzielinski/git/redstone-desktop/build/Build/Products/Debug/RedstoneDesktop.app
+   ```
+
+2. Confirm **Slice 17 · Terrain generator** in the footer. Your saved components and repeater settings should remain, and Desktop World should start disabled. The canvas should still show the previous fixture and construction area; procedural terrain is not yet connected to the live renderer.
+3. Enable Desktop World and check your existing circuit as before. Try an edit while disabled, quit/reopen, and verify persistence still works. New chunks must not appear or replace tiles beneath your circuit in this revision.
+
+To see the generator's current output, run these commands from the repository directory:
+
+```sh
+./scripts/terrain-preview.sh
+open build/terrain-preview.svg
+```
+
+This creates a comparison image outside the source/bundle: seed **42** on the left, seed **2026** on the right. Both cover x/y **−64…63**. Colors indicate terrain; dark dots indicate decorations; faint lines mark 32-tile chunk boundaries. The seeds should have different land/water layouts, and the faint chunk lines should not create artificial breaks in terrain. Re-running produces identical output. These previews are developer data plots, not an interactive seed browser or polished terrain art.
+
+The generator's fixed snapshot, chunk consistency, negative-coordinate and seed-diversity checks are automated. The next implementation is **Slice 18 — Chunked terrain renderer**.
