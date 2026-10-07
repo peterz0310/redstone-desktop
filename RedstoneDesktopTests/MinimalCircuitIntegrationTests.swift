@@ -26,7 +26,7 @@ final class MinimalCircuitIntegrationTests: XCTestCase {
     @MainActor
     private func makeState(_ provider: CircuitFixtureProvider, _ opener: FixtureItemOpener, allowed: @escaping () -> Bool = { true }, events: FakeGlobalMouseEventMonitor = FakeGlobalMouseEventMonitor()) -> AppState {
         AppState(screenProviding: { self.screen }, clickEventMonitoring: events,
-                 finderDiagnostics: FinderDiagnosticsModel(provider: provider), desktopInteractionAllowed: { _ in allowed() },
+                 finderDiagnostics: FinderDiagnosticsModel(provider: provider), desktopInteractionRejection: { _ in allowed() ? nil : "Fixture desktop check rejected the click." },
                  itemOpener: opener, finderReferenceProviding: { self.screen })
     }
     @MainActor
@@ -99,6 +99,9 @@ final class MinimalCircuitIntegrationTests: XCTestCase {
         state.toggleDesktopWorld()
         await press(state)
         XCTAssertEqual(provider.calls, 1)
+        XCTAssertEqual(state.observedPressCount, 1)
+        XCTAssertTrue(state.lastActionResult.contains("PRESS click received"))
+        XCTAssertTrue(state.lastActionResult.contains("Fixture desktop check rejected"))
         allowed = true
         for x in [2, 3] {
             provider.items = [item("target"), item("overlap", tileX: x)]

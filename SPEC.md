@@ -2068,12 +2068,14 @@ This alignment must be trustworthy before further UI investment.
 
 Prove the central concept before building the engine.
 
+**Status: feasibility blocked on 2026-10-07.** The owner reports PRESS never powers the wire. Live public window metadata includes a full-display Dock window, contradicting the bounds-based interaction gate assumption. Do not advance to Slice 10; see the decision log below.
+
 ### Tasks
 
 - [x] create fixed test button
 - [x] fixed visual dust path
 - [x] fixed output
-- [x] clicking button visually powers path
+- [ ] clicking button visually powers path
 - [x] output emits rising activation
 - [x] output reads current Finder occupant
 - [x] output opens occupant via `NSWorkspace`
@@ -2902,6 +2904,20 @@ Each press requires a prior explicit successful Finder read and performs a fresh
 Finder interaction takes priority. Public on-screen window metadata excludes desktop elements and rejects clicks covered by ordinary windows; Finder must be frontmost. Window rectangle conversion stays in CoordinateMapper. A conservative one-tile margin around PRESS rejects nearby icon centers because exact Finder icon/label hit regions are not available from the center query. This intentionally favors Finder and is not claimed as exact hit testing. No private API, window capture, script executor, resource packs, or general simulation engine is introduced.
 
 Consequences: implementation/build and 59 automated tests pass, including pure pulse/rising-edge tests, fake Finder/open integration, target movement, ambiguity, failure, cancellation, and window metadata checks. Real desktop activation and opening remain the five unchecked Slice 9 MANUAL checks. Stop and record any contradictory macOS behavior before advancing through Gate A.
+
+---
+
+## 2026-10-07 — Slice 9 stopped: window bounds are not click ownership
+
+Observation: the owner reports that PRESS never activates the wire and provides no feedback, with or without an output item. A read-only query of CGWindowListCopyWindowInfo on this Mac returned a Dock-owned, layer-20, alpha-1 window with bounds (0, 0, 1728, 1117), covering the entire primary display. Its transformed bounds include the PRESS center (160, 224). The query was made while Brave was frontmost; it is not a captured Finder click or proof of which branch rejected the owner's exact click. It does establish a concrete false-positive mechanism in the current gate.
+
+Contradicted assumption: every non-desktop, nonnegative-layer window rectangle containing a point owns that click. A large system window can have a full-display rectangle without visually covering or receiving clicks over the entire rectangle. The current gate also returned silently, hiding the rejection reason.
+
+Decision: stop Slice 9 at Gate A. Restore the clicking-button task to unchecked; all five Slice 9 MANUAL checks remain unchecked. Add a PRESS observation counter and explicit rejection/read feedback, plus a fixture reproducing the actual Dock metadata. Keep the gate conservative while diagnosing; do not add Dock-name exceptions, layer-number exceptions, or remove ordinary-window protection.
+
+Smallest proposed architecture adjustment: forward the captured mouse event's public recipient/window identity through DesktopClickMonitor. Determine whether Finder's desktop received that event, rather than treating every reported rectangle as a hit region. Public NSEvent windowNumber and CGEvent recipient/window fields are candidates; verify their real global-monitor values on this Mac before relying on them. Continue rejecting Finder folder-window and other application-window clicks. If that metadata is insufficient, document it and choose the smallest public-API alternative instead of adding owner-name heuristics.
+
+Validation: the diagnostic revision builds and all 60 automated tests pass. These establish pulse/action behavior with fakes and rejection feedback, not a working physical desktop click. The next owner check should report the PRESS counter, last observed tile, and rejection result. No successful end-to-end action is claimed until Gate A is revalidated.
 
 ---
 

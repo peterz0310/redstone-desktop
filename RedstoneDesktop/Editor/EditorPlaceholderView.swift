@@ -22,7 +22,7 @@ struct EditorPlaceholderView: View {
             Button("Finder Diagnostics…") {
                 openWindow(id: "finder-diagnostics")
             }
-            Text("PRESS: (2, 3) → OUTPUT: (7, 3)")
+            Text("PRESS: (2, 3) → OUTPUT: (7, 3) · Press clicks: \(appState.observedPressCount)")
                 .font(.caption.monospaced())
             Text(appState.lastActionResult)
                 .font(.callout)

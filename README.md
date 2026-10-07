@@ -22,7 +22,9 @@ Slice 8 groups icon centers into world tiles using a pure `DesktopOccupancyResol
 
 Manual acceptance through Slice 8 is complete based on the owner's confirmations on 2026-10-07. The roadmap records those reports separately from automated validation. Future manual checks will be checked off as the owner confirms them.
 
-Slice 9 adds a fixed **PRESS (2, 3) → four dust tiles → OUTPUT (7, 3)** circuit. Clicking PRESS on the exposed desktop refreshes Finder positions, then starts a 20-tick pulse at 20 Hz. Dust turns yellow, the button/output turn orange, and the output flashes white. A separate `OpenItemAction` uses [NSWorkspace.open](https://developer.apple.com/documentation/appkit/nsworkspace/open(_:)) to request normal macOS opening of exactly one current occupant. The editor reports the request result; acceptance by macOS does not prove the target application's UI opened correctly.
+**Slice 9 is currently blocked:** the owner reports no wire activation. A read-only window metadata query found a full-display Dock window that the rectangle-based gate can mistake for click ownership. The diagnostic build now shows a PRESS counter and explicit rejection reasons. A working physical button-to-open path is not yet proven; do not proceed to Slice 10. The proposed replacement uses captured event recipient/window identity, subject to real-Mac verification, instead of blanket rectangle hit testing.
+
+Slice 9 adds a fixed **PRESS (2, 3) → four dust tiles → OUTPUT (7, 3)** circuit. When the interaction gate accepts a PRESS click, it refreshes Finder positions, then starts a 20-tick pulse at 20 Hz. Dust turns yellow, the button/output turn orange, and the output flashes white. A separate `OpenItemAction` uses [NSWorkspace.open](https://developer.apple.com/documentation/appkit/nsworkspace/open(_:)) to request normal macOS opening of exactly one current occupant. The editor reports the request result; acceptance by macOS does not prove the target application's UI opened correctly.
 
 Each rising pulse requests one open. Pressing again while powered extends the pulse without another activation. Empty, ambiguous, and unavailable outputs open nothing. An initial explicit Finder read is required. A busy Finder read asks you to retry rather than queueing presses. The world remains click-through. Normal component clicks require Finder to be frontmost and no ordinary window to cover the click point; this uses public Core Graphics window metadata, not screenshots. A conservative one-tile margin around PRESS protects nearby Finder icon/label interaction because center-only scripting data does not establish exact hit regions. Keep PRESS and its neighboring tiles clear. Disabling the desktop invalidates pending activation reads and stops the pulse timer. This slice adds neither script execution nor a general circuit engine.
 
@@ -174,3 +176,13 @@ The owner confirmed Slice 8 with “It works!” on 2026-10-07. Its boundary-tra
 9. If two centers can fit in OUTPUT, confirm it opens neither and reports ambiguity. Disable Desktop World and confirm the circuit disappears. Re-enable and confirm it starts unpowered.
 
 Report any wrong target, unexpected repeated opening, window click activating a hidden button, or delayed/missing pulse. Slice 9's five MANUAL acceptance items remain unchecked until you confirm them; Gate A must pass before Slice 10.
+
+### Slice 9 blocked-click diagnostic check
+
+Quit and reopen the latest app using the launch command above, then enable the desktop. Read Finder items, leave polling stopped, expose PRESS, and click blank desktop before clicking PRESS. Return to the editor and report:
+
+- **Press clicks** count: does it increase?
+- **Last tile**: does it say **(2, 3)**?
+- The complete action/rejection text, particularly any **Dock** or **Finder is not active** message.
+
+The counter means the global event was mapped to PRESS; it does not mean activation was accepted. A Dock-bounds rejection confirms the known gate problem. This build adds diagnostic feedback and intentionally does not bypass that gate. The feasibility slice remains stopped pending the documented architecture adjustment.
