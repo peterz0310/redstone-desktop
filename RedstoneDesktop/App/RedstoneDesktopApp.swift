@@ -6,9 +6,9 @@ struct RedstoneDesktopApp: App {
 
     var body: some Scene {
         WindowGroup("Redstone Desktop") {
-            EditorPlaceholderView(appState: appState)
+            EditorView(appState: appState)
         }
-        .defaultSize(width: 640, height: 520)
+        .defaultSize(width: 1200, height: 760)
         .commands {
             CommandGroup(after: .windowArrangement) {
                 Button(appState.isDesktopWorldEnabled ? "Disable Desktop World" : "Enable Desktop World") {
@@ -16,6 +16,10 @@ struct RedstoneDesktopApp: App {
                 }
             }
         }
+        Window("Desktop Controls", id: "desktop-controls") {
+            EditorPlaceholderView(appState: appState)
+        }
+        .defaultSize(width: 640, height: 740)
         Window("Developer Placement", id: "developer-placement") {
             DeveloperPlacementView(appState: appState)
         }

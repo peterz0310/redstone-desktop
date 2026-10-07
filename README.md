@@ -42,7 +42,9 @@ Slice 13 extracts a snapshot-driven `CircuitRenderer` and adds original cached t
 The three existing demo rows keep their positions. Future test circuits will extend to their **right**, rather than above them. After you confirm a slice, the confirmation and next implementation will be handled in one turn.
 
 
-Slice 14 adds pure terrain capabilities and one shared placement evaluator/transaction. Components cannot be placed on water, unspecified terrain, decorations, or an occupied circuit cell. Rejected attempts preserve the entire world, and accepted placements preserve existing terrain and unrelated components. **Developer Placement…** opens a small SwiftUI rule-testing form with component/test-tile selection, repeater configuration, preview feedback, placement, and patch-only reset. Its explicit terrain patch is to the right at x=10–15. Disable Desktop World to edit, then enable it to inspect/use the placed components. Configuration lasts across enable/disable during this app session; relaunch starts from the fixture because persistence comes later. Debug build and all **123 tests** pass; owner placement-form regression confirmation is pending. This is the roadmap's developer UI; the general canvas editor is Slice 15.
+Slice 14 adds pure terrain capabilities and one shared placement evaluator/transaction. Components cannot be placed on water, unspecified terrain, decorations, or an occupied circuit cell. Rejected attempts preserve the entire world, and accepted placements preserve existing terrain and unrelated components. **Developer Placement…** opens a small SwiftUI rule-testing form with component/test-tile selection, repeater configuration, preview feedback, placement, and patch-only reset. Its explicit terrain patch is to the right at x=10–15. Disable Desktop World to edit, then enable it to inspect/use the placed components. Configuration lasts across enable/disable during this app session; relaunch starts from the fixture because persistence comes later. Debug build and all **123 tests** pass; the owner confirmed the placement-form regression on 2026-10-07. This is the roadmap's developer UI; the general canvas editor is Slice 15.
+
+Slice 15 replaces the main placeholder with a SwiftUI editor and SpriteKit canvas: Select, Pan, Dust, Button, Lever, Repeater, Output, and Erase tools; anchored scroll/button zoom; an inspector with repeater direction/delay; and green/red placement previews with rejection reasons. Its independent camera leaves the real desktop unchanged. Editing requires Desktop World disabled, while selection and browsing remain available when running. Existing diagnostic controls are in **Desktop Controls…**. A finite grass construction area occupies x=10–25, y=7–11 to the right of the existing circuits. The editor displays cached output occupancy without querying Finder. Debug build and all **135 tests** pass; useful-circuit authoring on the owner's Mac remains pending. Changes are temporary until Slice 16 persistence.
 
 ## Development
 
@@ -283,7 +285,7 @@ Please report whether visual states follow the circuit correctly, or describe an
 
 ## Developer placement walkthrough — Slice 14
 
-Debug build and 123 tests pass. The new form still needs your Mac confirmation. Slice 14 has no roadmap MANUAL checkbox.
+Debug build and 123 tests passed for this revision. The owner confirmed the walkthrough on 2026-10-07 with “Looks good! Continue.” Slice 14 has no roadmap MANUAL checkbox.
 
 1. Quit the old app with **Command-Q**, then launch the latest build:
 
@@ -299,4 +301,36 @@ Debug build and 123 tests pass. The new form still needs your Mac confirmation. 
 7. Disable the world again. Click **Reset test placements** in the developer window; the patch list should return to empty. Enable the world and confirm the placed dust is gone, while terrain/decorations and the original circuits remain.
 8. Optional: with the world disabled, place a repeater on a dry test tile and choose its direction/delay. Enable the world and check the matching arrow/delay label. Reset afterwards if desired.
 
-Changes are temporary for this app session. Please report whether placement/rejection/reset behave as described, and any problem opening or scrolling the developer window. On confirmation, the next slice is the basic canvas editor.
+Changes are temporary for this app session. This walkthrough remains available for regression; the current main window is the Slice 15 editor below.
+
+
+## Basic editor walkthrough — Slice 15
+
+The application builds and all 135 automated tests pass. Please verify the visible editor and author a circuit on your Mac before the Slice 15 MANUAL checkbox is checked.
+
+1. Quit the old app with **Command-Q**, then launch this build:
+
+   ```sh
+   open /Users/peterzielinski/git/redstone-desktop/build/Build/Products/Debug/RedstoneDesktop.app
+   ```
+
+2. Confirm **Slice 15 · Basic editor** in the footer. Keep Desktop World disabled. You should see tools on the left, the world canvas in the middle, and the Inspector on the right. The original three circuits should remain at x=2–7; the new grass construction area is to their right.
+3. Choose **Pan**, then drag the canvas. Try scrolling and the **+ / −** buttons to zoom. **Reset view** returns the editor to its starting view. These controls should move only the editor view, not the real desktop.
+4. Build the following row on the grass area. Choose each tool, move over the canvas, and check the Inspector's **Hover (x, y)** before clicking. A green preview means placement is allowed. For the repeater, choose **East** and **2 redstone ticks** in the Inspector before placing it.
+
+   | Tile | Tool |
+   | --- | --- |
+   | (10, 7) | Button |
+   | (11, 7) | Dust |
+   | (12, 7) | Repeater, East, 2 redstone ticks |
+   | (13, 7) | Dust |
+   | (14, 7) | Output |
+
+   After placement, a red preview on that same tile is expected because it is now occupied. The status should confirm successful placement. If you make a mistake, use **Erase** to remove the component, then place it again. The grass should remain.
+5. Choose **Select**, then click the repeater at (12, 7). Check its terrain, component and stored settings. Change its direction/delay and click **Apply direction/delay**; confirm the arrow and delay label change. Return it to **East, 2 redstone ticks** for the circuit test. Selecting the button/output in the editor should not activate it or open anything.
+6. Choose **Dust** and hover over water at (14, 3), then the tree at (10, 5). Both should show red previews and a reason for rejection. Clicking should leave them unchanged. An occupied circuit tile should also refuse replacement.
+7. Open **Finder Diagnostics…** and click **Read Finder Items**. Enable Desktop World. Editing tools and inspector edit buttons should be disabled; Select/Pan/zoom should still work. Minimize or move the editor and diagnostic windows so they do not cover the real desktop circuit. Ordinary application windows intentionally block desktop activation beneath them.
+8. On the **real desktop**, put a harmless folder on OUTPUT (14, 7), and keep PRESS (10, 7) and its neighboring tiles clear of Finder icons. Use **Desktop Controls…** to inspect pointer tile coordinates if necessary. Press the real desktop button: the circuit should light up, with about a **0.2-second repeater delay**, then request opening the folder once. Try it with the output empty too: the circuit should still light up without opening anything. The original circuits should continue working.
+9. Disable Desktop World and confirm your new circuit remains editable. Erase one component and verify its terrain stays intact. Please confirm whether you could author and run this circuit using only the UI, and report any missing hover preview, wrong tile placement, or layout/input problem.
+
+The circuit stays only for this app session. Quitting/reopening resets the fixture; saving and restoring are the next slice, **Slice 16**.

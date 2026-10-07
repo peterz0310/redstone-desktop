@@ -8,7 +8,7 @@ final class AppState: ObservableObject {
     @Published private(set) var pointer: PointerSnapshot?
     @Published private(set) var lastClick: DesktopClickSnapshot?
     @Published private(set) var observedClickCount = 0
-    @Published private(set) var desktopWorld = DeveloperPlacementFixture.makeWorld()
+    @Published private(set) var desktopWorld = EditorConstructionArea.makeWorld()
     @Published private(set) var developerPlacementStatus = "Choose a component and test tile."
     private let circuitPlacement = CircuitPlacement()
     let desktopCamera = CameraState(worldOrigin: WorldPoint(x: 0, y: 0), pointsPerTile: 64)
@@ -70,6 +70,11 @@ final class AppState: ObservableObject {
 
     @discardableResult
     func placeDeveloperComponent(_ component: CircuitComponent, at coordinate: WorldCoordinate) -> PlacementResult {
+        placeCircuitComponent(component, at: coordinate)
+    }
+
+    @discardableResult
+    func placeCircuitComponent(_ component: CircuitComponent, at coordinate: WorldCoordinate) -> PlacementResult {
         guard !isDesktopWorldEnabled else {
             developerPlacementStatus = "Disable Desktop World before editing."
             return .rejected(.reserved)
@@ -82,6 +87,44 @@ final class AppState: ObservableObject {
             developerPlacementStatus = "Placed \(component.kind.rawValue) at (\(coordinate.x), \(coordinate.y)). Enable Desktop World to view it."
         } else { developerPlacementStatus = result.message }
         return result
+    }
+
+    @discardableResult
+    func eraseCircuitComponent(at coordinate: WorldCoordinate) -> Bool {
+        guard !isDesktopWorldEnabled else {
+            developerPlacementStatus = "Disable Desktop World before editing."
+            return false
+        }
+        guard desktopWorld.circuit.components[coordinate] != nil else {
+            developerPlacementStatus = "No component at (\(coordinate.x), \(coordinate.y))."
+            return false
+        }
+        var next = desktopWorld
+        next.circuit.components.removeValue(forKey: coordinate)
+        desktopWorld = next
+        simulator = CircuitSimulator(world: next.circuit)
+        developerPlacementStatus = "Erased component at (\(coordinate.x), \(coordinate.y)); terrain preserved."
+        return true
+    }
+
+    @discardableResult
+    func configureRepeater(at coordinate: WorldCoordinate, direction: Direction, delay: RepeaterDelay) -> Bool {
+        guard !isDesktopWorldEnabled else {
+            developerPlacementStatus = "Disable Desktop World before editing."
+            return false
+        }
+        guard var component = desktopWorld.circuit.components[coordinate], component.kind == .repeater else {
+            developerPlacementStatus = "Select a repeater to change its direction or delay."
+            return false
+        }
+        component.direction = direction
+        component.repeaterDelay = delay
+        var next = desktopWorld
+        next.circuit.components[coordinate] = component
+        desktopWorld = next
+        simulator = CircuitSimulator(world: next.circuit)
+        developerPlacementStatus = "Repeater updated at (\(coordinate.x), \(coordinate.y))."
+        return true
     }
 
     func resetDeveloperPlacements() {

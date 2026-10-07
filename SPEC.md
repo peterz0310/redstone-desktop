@@ -2191,30 +2191,32 @@ Acceptance:
 - [x] blocked decoration rejects placement.
 - [x] occupied circuit tile does not silently overwrite.
 
-**Status: implemented.** Debug application build and all 123 automated tests pass. Owner regression of the developer placement form is pending; instructions are in README.md. This slice has no roadmap MANUAL checkbox.
+**Status: complete; owner-confirmed regression on 2026-10-07.** Debug application build and all 123 automated tests pass. The owner reported “Looks good! Continue.” after the developer placement walkthrough. This slice has no roadmap MANUAL checkbox.
 
 ---
 
 ## Slice 15 — Basic editor
 
-- [ ] editor layout
-- [ ] canvas
-- [ ] pan
-- [ ] zoom
-- [ ] selection
-- [ ] dust tool
-- [ ] button tool
-- [ ] lever tool
-- [ ] repeater tool
-- [ ] output tool
-- [ ] erase tool
-- [ ] inspector
-- [ ] placement preview
-- [ ] invalid placement feedback
+- [x] editor layout
+- [x] canvas
+- [x] pan
+- [x] zoom
+- [x] selection
+- [x] dust tool
+- [x] button tool
+- [x] lever tool
+- [x] repeater tool
+- [x] output tool
+- [x] erase tool
+- [x] inspector
+- [x] placement preview
+- [x] invalid placement feedback
 
 ### Manual acceptance
 
 - [ ] MANUAL: useful circuit can be authored without code changes.
+
+**Status: implemented; owner manual acceptance pending.** Debug application build and all 135 automated tests pass. README.md provides a circuit-authoring walkthrough. Editing is available while Desktop World is disabled; editor browsing uses an independent camera. Changes last for this app session; persistence is Slice 16.
 
 ---
 
@@ -3178,3 +3180,18 @@ AppState dispatches rising-edge events to a bounded queue of at most 32 pending 
 Validation: Debug application build succeeds; all 86 automated tests pass. Pure World/Circuit sources pass standalone Swift 6 typechecking. Tests cover attenuation to zero, exact button expiry/repress, held levers and output edges, loops including a 1,600-dust grid, insertion order, strongest sources, prohibited diagonal/output relay, deferred repeaters, coordinate overflow, scheduler registration/stop/restart, serialized fresh output reads, item replacement, and disable/re-enable invalidation. Existing mapping, Finder, occupancy, actions, and renderer integration tests also pass.
 
 Consequences: Slice 11 tasks and required automated-test checkboxes are complete. No MANUAL checkbox is changed or newly claimed. Owner regression confirmation is pending; README.md gives the exact Mac checks. Slice 12 and later slices remain unchecked. No persistence I/O, advanced component semantics, terrain generation, resource packs, private APIs, or backend are introduced.
+
+
+## 2026-10-07 — Slice 14 owner confirmation and Slice 15 basic editor
+
+Observation: the owner reported “Looks good! Continue.” after the Slice 14 placement walkthrough. Record that as owner-reported regression validation, separate from the 123 automated tests. Slice 14 has no MANUAL checkbox to add or change.
+
+Decision: implement Slice 15 with a normal SwiftUI editor surrounding a local AppKit/SpriteKit canvas. Reuse the snapshot-only DesktopScene/CircuitRenderer. EditorSession owns an independent camera, tools, selection and hover; all canvas/world conversion, pan and anchored zoom go through CoordinateMapper. Native local mouse events keep upward Y coordinates; hover uses Apple's documented [NSTrackingArea](https://developer.apple.com/library/archive/documentation/Cocoa/Conceptual/EventOverview/TrackingAreaObjects/TrackingAreaObjects.html) mouse-moved option. Source/output clicks in the editor select or place components; only real desktop input can activate the simulation/action adapter.
+
+Placement uses the existing centralized evaluator. Erasing removes only circuit components, and the inspector changes typed repeater direction/delay. All world edits require Desktop World disabled, preserving the simulation's immutable configuration and cancellation boundary. The editor reads cached world occupancy, never queries Finder or opens files. Browsing does not move the desktop camera or remap physical targets. Existing controls remain available in a separate Desktop Controls window.
+
+Add an explicit 80-tile grass construction area at x=10–25, y=7–11, to the right of the three original circuits. Preserve the developer terrain patch and all earlier component positions. This is a finite fixture, not terrain generation. Developer patch reset leaves the construction area intact. Changes survive desktop enable/disable within this app session; no persistence is claimed.
+
+Validation: Debug application build and all 135 tests pass. Twelve new tests cover mapper pan/anchor zoom, independent bounded navigation, every placement tool, invalid/occupied rejection, terrain-preserving erase, repeater inspection/configuration, live-edit locks, out-of-canvas input, bounded preview/selection nodes, cached occupancy without Finder reads, native local mouse click/pan coordinates, hosting without permissions, and an authored button/dust/repeater/dust/output circuit with a fresh occupant opened once after its configured delay. Pure World/Circuit sources also type-check independently of AppKit and SpriteKit. A temporary test window's teardown ownership was corrected in the test harness; it is not evidence of an application-window failure.
+
+Consequences: all fourteen Slice 15 implementation tasks are complete. The MANUAL useful-circuit authoring checkbox remains unchecked until the owner validates the current Mac walkthrough. Automated hosting and synthetic mouse events do not establish visible/native-interaction acceptance. Slice 16 and later remain unchecked. No persistence, procedural terrain, Finder ghosts, resource packs, private APIs, or backend are added.

@@ -70,6 +70,25 @@ struct CoordinateMapper: Sendable {
         return CGRect(origin: scenePoint(fromScreen: rect.origin, on: screen), size: rect.size)
     }
 
+    /// Dragging the canvas moves world content with the pointer.
+    func camera(pannedByScreenDelta delta: CGSize) -> CameraState? {
+        guard delta.width.isFinite, delta.height.isFinite else { return nil }
+        let origin = WorldPoint(x: camera.worldOrigin.x - Double(delta.width) / camera.pointsPerTile,
+                                y: camera.worldOrigin.y - Double(delta.height) / camera.pointsPerTile)
+        guard origin.x.isFinite, origin.y.isFinite else { return nil }
+        return CameraState(worldOrigin: origin, pointsPerTile: camera.pointsPerTile)
+    }
+
+    /// Preserve the world point beneath the chosen screen anchor while zooming.
+    func camera(zoomedTo scale: Double, aroundScreen anchor: CGPoint) -> CameraState? {
+        guard scale.isFinite, scale > 0, anchor.x.isFinite, anchor.y.isFinite else { return nil }
+        let world = worldPoint(fromScreen: anchor)
+        let origin = WorldPoint(x: world.x - Double(anchor.x - canvasFrame.minX) / scale,
+                                y: world.y - Double(anchor.y - canvasFrame.minY) / scale)
+        guard origin.x.isFinite, origin.y.isFinite else { return nil }
+        return CameraState(worldOrigin: origin, pointsPerTile: scale)
+    }
+
     /// Finder calibration confirmed by the owner on their Mac: raw point is an icon center measured right/down
     /// from the primary display's upper-left corner. No icon-size/menu-bar offset.
     /// Recheck visually if display or Finder behavior changes.

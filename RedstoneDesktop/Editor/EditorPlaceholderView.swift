@@ -12,7 +12,7 @@ struct EditorPlaceholderView: View {
                 .font(.title3)
                 .foregroundStyle(.secondary)
             Divider()
-            Text("Editor placeholder")
+            Text("Desktop controls and diagnostics")
                 .font(.headline)
             Text("Enable Desktop World and read Finder items. Place a harmless file or folder on OUTPUT, then click the desktop PRESS button. PRESS pulses for one second; LEVER stays on until clicked again. Each output opens its current occupant once when power rises.")
                 .fixedSize(horizontal: false, vertical: true)
@@ -66,7 +66,7 @@ struct EditorPlaceholderView: View {
                 .font(.caption.monospaced())
             }
             Spacer()
-            Text("Slice 14 · Placement rules")
+            Text("Slice 15 · Basic editor")
                 .font(.caption)
                 .foregroundStyle(.secondary)
         }
