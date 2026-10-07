@@ -1898,17 +1898,17 @@ Create a reproducible native macOS app.
 
 ### Tasks
 
-- [ ] `WorldCoordinate`
-- [ ] `WorldPoint`
-- [ ] `CameraState`
-- [ ] `Direction`
-- [ ] `PowerLevel`
-- [ ] base circuit component types
-- [ ] Codable/equality tests
+- [x] `WorldCoordinate`
+- [x] `WorldPoint`
+- [x] `CameraState`
+- [x] `Direction`
+- [x] `PowerLevel`
+- [x] base circuit component types
+- [x] Codable/equality tests
 
 ### Acceptance
 
-- [ ] pure domain layer does not depend on SpriteKit/AppKit.
+- [x] pure domain layer does not depend on SpriteKit/AppKit.
 
 ---
 

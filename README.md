@@ -4,7 +4,7 @@ An experimental native macOS app exploring a block world beneath real Finder des
 
 ## Current scope
 
-Slice 0 provides a SwiftUI editor placeholder and an app-hosted XCTest smoke test. Desktop rendering, Finder access, coordinate mapping, simulation, and actions are not implemented yet. The app does not request privacy permissions at this stage.
+Slices 0–1 provide a SwiftUI editor placeholder, an app-hosted XCTest smoke test, and tested domain primitives for coordinates, camera, directions, power, and component identity. Domain files use only the Swift standard library and do not depend on AppKit or SpriteKit. Desktop rendering, Finder access, coordinate mapping, simulation, and actions are not implemented yet. The app does not request privacy permissions at this stage.
 
 ## Development
 
