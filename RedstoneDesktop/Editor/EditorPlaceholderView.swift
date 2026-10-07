@@ -14,7 +14,7 @@ struct EditorPlaceholderView: View {
             Divider()
             Text("Editor placeholder")
                 .font(.headline)
-            Text("Enable the checker, then read Finder items and start polling. Green tiles contain one icon center; red tiles contain multiple centers.")
+            Text("Enable Desktop World and read Finder items. Place a harmless file or folder on OUTPUT, then click the desktop PRESS button. The path lights for one second and opens the current occupant.")
                 .fixedSize(horizontal: false, vertical: true)
             Button(appState.isDesktopWorldEnabled ? "Disable Desktop World" : "Enable Desktop World") {
                 appState.toggleDesktopWorld()
@@ -22,6 +22,11 @@ struct EditorPlaceholderView: View {
             Button("Finder Diagnostics…") {
                 openWindow(id: "finder-diagnostics")
             }
+            Text("PRESS: (2, 3) → OUTPUT: (7, 3)")
+                .font(.caption.monospaced())
+            Text(appState.lastActionResult)
+                .font(.callout)
+                .textSelection(.enabled)
             if let click = appState.lastClick {
                 Text("Clicks observed: \(appState.observedClickCount) · Last tile: (\(click.tile.x), \(click.tile.y))")
                     .font(.caption.monospaced())
@@ -43,7 +48,7 @@ struct EditorPlaceholderView: View {
                 .font(.caption.monospaced())
             }
             Spacer()
-            Text("Slice 8 · Desktop occupancy")
+            Text("Slice 9 · Button-to-output circuit")
                 .font(.caption)
                 .foregroundStyle(.secondary)
         }

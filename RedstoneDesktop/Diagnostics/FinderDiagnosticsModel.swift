@@ -21,23 +21,25 @@ final class FinderDiagnosticsModel: ObservableObject {
         self.provider = provider
     }
 
-    func readItems() async {
-        guard !isReading else { return }
+    @discardableResult
+    func readItems() async -> Bool {
+        guard !isReading else { return false }
         isReading = true
         defer { isReading = false }
         // Give SwiftUI a chance to display the reading state before NSAppleScript runs.
         await Task.yield()
-        guard !Task.isCancelled else { return }
+        guard !Task.isCancelled else { return false }
         do {
             let result = try await provider.currentDesktopItems()
-            guard !Task.isCancelled else { return }
+            guard !Task.isCancelled else { return false }
             let sorted = result.sorted { ($0.displayName, $0.url.path) < ($1.displayName, $1.url.path) }
             if items != sorted { items = sorted }
             error = nil
             permission = .allowed
             hasRead = true
+            return true
         } catch {
-            guard !Task.isCancelled else { return }
+            guard !Task.isCancelled else { return false }
             self.error = error.localizedDescription
             if !items.isEmpty { items = [] }
             if error as? FinderReadError == .permissionDenied {
@@ -45,6 +47,7 @@ final class FinderDiagnosticsModel: ObservableObject {
             } else if permission == .notRequested {
                 permission = .unknown
             }
+            return false
         }
     }
 }

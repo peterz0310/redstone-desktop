@@ -1831,9 +1831,9 @@ At the end of every slice:
 - tests pass
 - app launches unless slice specifically concerns non-app tooling
 
-## 37.3 Do not mark manual checks complete
+## 37.3 Record owner-confirmed manual checks
 
-Tell the human exactly what to look for.
+Tell the human exactly what to look for. Mark MANUAL items complete only after the owner confirms the corresponding checks passed on their Mac.
 
 ## 37.4 Record discoveries
 
@@ -2070,14 +2070,14 @@ Prove the central concept before building the engine.
 
 ### Tasks
 
-- [ ] create fixed test button
-- [ ] fixed visual dust path
-- [ ] fixed output
-- [ ] clicking button visually powers path
-- [ ] output emits rising activation
-- [ ] output reads current Finder occupant
-- [ ] output opens occupant via `NSWorkspace`
-- [ ] output visually flashes
+- [x] create fixed test button
+- [x] fixed visual dust path
+- [x] fixed output
+- [x] clicking button visually powers path
+- [x] output emits rising activation
+- [x] output reads current Finder occupant
+- [x] output opens occupant via `NSWorkspace`
+- [x] output visually flashes
 
 ### Manual acceptance
 
@@ -2888,6 +2888,20 @@ Context: the owner confirmed Slice 8 with “It works!” and explicitly request
 Decision: mark the 20 roadmap MANUAL checks through Slice 8 complete based on those owner reports. These are physical-Mac checks reported by the owner, not checks performed by the agent. The owner's instruction supersedes the original blanket prohibition against updating MANUAL checkboxes.
 
 Consequences: Slices 0–8 have completed required acceptance checks. Future MANUAL items remain unchecked until the owner confirms the corresponding checks. Slice 9 is next and remains unimplemented. Build/test success alone never establishes manual completion.
+
+---
+
+## 2026-10-07 — Fixed button-to-output feasibility circuit
+
+Context: Slice 8's occupancy boundary was confirmed by the owner. Slice 9 must prove the open-occupant path before the general world model or simulator.
+
+Decision: use fixed world tiles (2, 3) for the button, (3...6, 3) for dust, and (7, 3) for output. The pure FixedTestCircuit emits one output activation on the rising edge of a 20-tick pulse; another press during power restarts the pulse without another activation. SpriteKit displays this state and a white output flash. The separate OpenItemAction sends the unique local Finder occupant to NSWorkspace for ordinary opening.
+
+Each press requires a prior explicit successful Finder read and performs a fresh serialized read before activating. Busy reads request a retry, rather than using stale data or accumulating requests. Errors, ambiguity, and missing occupancy never choose a target. Session invalidation suppresses a cancelled read after disabling/re-enabling the desktop.
+
+Finder interaction takes priority. Public on-screen window metadata excludes desktop elements and rejects clicks covered by ordinary windows; Finder must be frontmost. Window rectangle conversion stays in CoordinateMapper. A conservative one-tile margin around PRESS rejects nearby icon centers because exact Finder icon/label hit regions are not available from the center query. This intentionally favors Finder and is not claimed as exact hit testing. No private API, window capture, script executor, resource packs, or general simulation engine is introduced.
+
+Consequences: implementation/build and 59 automated tests pass, including pure pulse/rising-edge tests, fake Finder/open integration, target movement, ambiguity, failure, cancellation, and window metadata checks. Real desktop activation and opening remain the five unchecked Slice 9 MANUAL checks. Stop and record any contradictory macOS behavior before advancing through Gate A.
 
 ---
 

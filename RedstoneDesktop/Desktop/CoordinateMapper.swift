@@ -70,6 +70,13 @@ struct CoordinateMapper: Sendable {
         return CGRect(origin: scenePoint(fromScreen: rect.origin, on: screen), size: rect.size)
     }
 
+    /// Quartz window-list rectangles use the primary display's upper-left origin.
+    static func screenRect(fromTopLeft rect: CGRect, referenceScreen: ScreenDescriptor) -> CGRect {
+        CGRect(x: referenceScreen.frame.minX + rect.minX,
+               y: referenceScreen.frame.maxY - rect.maxY,
+               width: rect.width, height: rect.height)
+    }
+
     /// Finder calibration confirmed by the owner on their Mac: raw point is an icon center measured right/down
     /// from the primary display's upper-left corner. No icon-size/menu-bar offset.
     /// Recheck visually if display or Finder behavior changes.

@@ -6,6 +6,8 @@ final class DesktopScene: SKScene {
     let mapper: CoordinateMapper
     private let highlight = SKShapeNode()
     private let clickFlash = SKShapeNode()
+    private let circuitLayer = SKNode()
+    private let outputFlash = SKShapeNode()
     private let occupancyLayer = SKNode()
     private let finderMarkers = SKNode()
     private(set) var highlightedTile: WorldCoordinate?
@@ -27,6 +29,14 @@ final class DesktopScene: SKScene {
         clickFlash.strokeColor = .systemOrange
         clickFlash.zPosition = 2
         clickFlash.isHidden = true
+        circuitLayer.name = "test-circuit"
+        circuitLayer.zPosition = 0.75
+        outputFlash.name = "output-flash"
+        outputFlash.strokeColor = .white
+        outputFlash.fillColor = NSColor.white.withAlphaComponent(0.5)
+        outputFlash.lineWidth = 4
+        outputFlash.zPosition = 4
+        outputFlash.isHidden = true
         occupancyLayer.name = "desktop-occupancy"
         occupancyLayer.zPosition = 0.5
         finderMarkers.name = "finder-markers"
@@ -93,8 +103,51 @@ final class DesktopScene: SKScene {
         }
     }
 
+    func updateTestCircuit(_ circuit: FixedTestCircuit) {
+        circuitLayer.removeAllChildren()
+        let powered = circuit.isPowered
+        let coordinates = [FixedTestCircuit.button] + FixedTestCircuit.dust + [FixedTestCircuit.output]
+        let wire = CGMutablePath()
+        for (index, tile) in coordinates.enumerated() {
+            let rect = mapper.sceneRect(forTile: tile, on: screen)
+            let center = CGPoint(x: rect.midX, y: rect.midY)
+            if index == 0 { wire.move(to: center) } else { wire.addLine(to: center) }
+        }
+        let dust = SKShapeNode(path: wire)
+        dust.name = "dust-path"
+        dust.strokeColor = powered ? .systemYellow : .systemRed
+        dust.lineWidth = 8
+        circuitLayer.addChild(dust)
+        for (tile, title) in [(FixedTestCircuit.button, "PRESS"), (FixedTestCircuit.output, "OUTPUT")] {
+            let rect = mapper.sceneRect(forTile: tile, on: screen).insetBy(dx: 8, dy: 8)
+            let node = SKShapeNode(rect: rect)
+            node.name = title
+            node.fillColor = powered ? .systemOrange : .darkGray
+            node.strokeColor = .white
+            node.lineWidth = 2
+            circuitLayer.addChild(node)
+            let label = SKLabelNode(text: title)
+            label.fontName = "Menlo-Bold"
+            label.fontSize = 10
+            label.fontColor = .white
+            label.verticalAlignmentMode = .center
+            label.position = CGPoint(x: rect.midX, y: rect.midY)
+            circuitLayer.addChild(label)
+        }
+    }
+
+    func flashOutput() {
+        outputFlash.removeAllActions()
+        outputFlash.path = CGPath(rect: mapper.sceneRect(forTile: FixedTestCircuit.output, on: screen).insetBy(dx: 3, dy: 3), transform: nil)
+        outputFlash.alpha = 1
+        outputFlash.isHidden = false
+        outputFlash.run(.sequence([.fadeOut(withDuration: 0.5), .hide()]))
+    }
+
     private func rebuildChecker() {
         removeAllChildren()
+        addChild(circuitLayer)
+        addChild(outputFlash)
         addChild(occupancyLayer)
         addChild(highlight)
         addChild(clickFlash)

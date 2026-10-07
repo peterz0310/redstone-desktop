@@ -18,9 +18,13 @@ The owner confirmed Slice 5 desktop clicks, including the expected flash beneath
 
 Slice 7 adds pink rings/crosshairs behind Finder icon centers, plus mapped screen/center and world-tile columns. After a successful read and enabling Desktop World, **Start Polling (2 Hz)** enables serialized live updates. **Stop Polling** freezes the last snapshot; disabling the world or quitting also stops polling. Errors pause polling until you explicitly retry. Identical snapshots do not publish new item arrays or redraw markers. The owner reported all Slice 7 checks working on 2026-10-07, establishing the center mapping on their Mac. This is owner-reported evidence, not an independent check on other configurations. The corresponding MANUAL checkboxes are checked based on the owner's report.
 
-Slice 8 groups icon centers into world tiles using a pure `DesktopOccupancyResolver`. Green tiles contain one item; red tiles contain multiple items. Finder Diagnostics lists every item in ambiguous tiles. Items with centers outside the active display are excluded. Unread or failed Finder data is unavailable, distinct from an empty tile. Polling updates occupancy; stopping polling freezes the last snapshot. Simulation and output actions remain future slices.
+Slice 8 groups icon centers into world tiles using a pure `DesktopOccupancyResolver`. Green tiles contain one item; red tiles contain multiple items. Finder Diagnostics lists every item in ambiguous tiles. Items with centers outside the active display are excluded. Unread or failed Finder data is unavailable, distinct from an empty tile. Polling updates occupancy; stopping polling freezes the last snapshot. The general simulator remains a future slice; Slice 9 adds the fixed feasibility circuit described below.
 
 Manual acceptance through Slice 8 is complete based on the owner's confirmations on 2026-10-07. The roadmap records those reports separately from automated validation. Future manual checks will be checked off as the owner confirms them.
+
+Slice 9 adds a fixed **PRESS (2, 3) → four dust tiles → OUTPUT (7, 3)** circuit. Clicking PRESS on the exposed desktop refreshes Finder positions, then starts a 20-tick pulse at 20 Hz. Dust turns yellow, the button/output turn orange, and the output flashes white. A separate `OpenItemAction` uses [NSWorkspace.open](https://developer.apple.com/documentation/appkit/nsworkspace/open(_:)) to request normal macOS opening of exactly one current occupant. The editor reports the request result; acceptance by macOS does not prove the target application's UI opened correctly.
+
+Each rising pulse requests one open. Pressing again while powered extends the pulse without another activation. Empty, ambiguous, and unavailable outputs open nothing. An initial explicit Finder read is required. A busy Finder read asks you to retry rather than queueing presses. The world remains click-through. Normal component clicks require Finder to be frontmost and no ordinary window to cover the click point; this uses public Core Graphics window metadata, not screenshots. A conservative one-tile margin around PRESS protects nearby Finder icon/label interaction because center-only scripting data does not establish exact hit regions. Keep PRESS and its neighboring tiles clear. Disabling the desktop invalidates pending activation reads and stops the pulse timer. This slice adds neither script execution nor a general circuit engine.
 
 ## Development
 
@@ -151,3 +155,22 @@ Licensed under the owner-selected MIT license; see `LICENSE`. No Minecraft asset
 6. Confirm normal Finder selection, dragging, and double-clicking still work. **Stop Polling** should freeze the markers and occupancy; restarting should refresh them. Disabling Desktop World should remove the overlay.
 
 The owner confirmed Slice 8 with “It works!” on 2026-10-07. Its boundary-transition MANUAL checkbox is checked based on that report. Slice 9 is next.
+
+## Manual validation — Slice 9
+
+1. Quit the old app with **Command-Q**, then launch the new build:
+
+   ```sh
+   open /Users/peterzielinski/git/redstone-desktop/build/Build/Products/Debug/RedstoneDesktop.app
+   ```
+
+2. Confirm the footer says **Slice 9 · Button-to-output circuit**. Click **Enable Desktop World**, then **Finder Diagnostics… → Read Finder Items**. Polling is optional for this test: each accepted button press refreshes Finder itself. Leave polling stopped initially to avoid the busy-read retry message.
+3. Move or minimize the editor/diagnostics windows so the **PRESS** and **OUTPUT** desktop blocks are exposed. Move any icons on or within one tile of PRESS away. Click blank desktop to activate Finder.
+4. Drag a harmless folder (or ordinary document/app alias) so its pink center crosshair sits inside **OUTPUT**, tile **(7, 3)**. Click **Read Finder Items** to verify the table's tile, or temporarily enable polling. If Finder automatically rearranges the icon, disable its sorting before positioning it; restore your preferred settings afterward.
+5. With Finder active, single-click **PRESS**, tile **(2, 3)**. The path should turn yellow, the button/output orange, and OUTPUT briefly flash white. The occupant should open normally. The pulse should end after about one second. In the editor, check the named item in the open-request result.
+6. Close/move the opened window, return to the exposed desktop, and wait until the path is off before pressing again. A new pulse should issue one new open request. Repeated presses during an active pulse should extend it without another request; the result explains this.
+7. Move the item away from OUTPUT and immediately press again after the pulse ends. Nothing should open; the result should say the output is empty. Move a different harmless item onto OUTPUT, then press again. The new item should open, even if polling was stopped.
+8. Check that icons remain selectable/draggable and that clicking one on or near PRESS does not power the circuit. Place a normal window over PRESS, including a Finder folder window, and click inside it: the hidden circuit must not activate. If a click is ignored, return to blank desktop first and keep the PRESS area clear.
+9. If two centers can fit in OUTPUT, confirm it opens neither and reports ambiguity. Disable Desktop World and confirm the circuit disappears. Re-enable and confirm it starts unpowered.
+
+Report any wrong target, unexpected repeated opening, window click activating a hidden button, or delayed/missing pulse. Slice 9's five MANUAL acceptance items remain unchecked until you confirm them; Gate A must pass before Slice 10.
