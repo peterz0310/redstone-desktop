@@ -1,7 +1,8 @@
 import Foundation
+import CoreGraphics
 
 /// The only service for world, global-screen, and renderer-local conversions.
-/// Screen/world Y both increase upward; Finder calibration belongs here later.
+/// Screen/world Y both increase upward; Finder Y increases downward.
 struct CoordinateMapper: Sendable {
     enum ValidationError: Error {
         case invalidCanvas
@@ -69,11 +70,11 @@ struct CoordinateMapper: Sendable {
         return CGRect(origin: scenePoint(fromScreen: rect.origin, on: screen), size: rect.size)
     }
 
-    /// Provisional Finder calibration: raw point is an icon center measured right/down
+    /// Finder calibration confirmed by the owner on their Mac: raw point is an icon center measured right/down
     /// from the primary display's upper-left corner. No icon-size/menu-bar offset.
-    /// Must be checked visually before occupancy or actions use this hypothesis.
-    func provisionalFinderMapping(for item: DesktopItem, referenceScreen: ScreenDescriptor) -> FinderItemMapping {
+    /// Recheck visually if display or Finder behavior changes.
+    func finderMapping(for item: DesktopItem, referenceScreen: ScreenDescriptor) -> FinderItemMapping {
         let center = CGPoint(x: referenceScreen.frame.minX + item.position.x, y: referenceScreen.frame.maxY - item.position.y)
-        return FinderItemMapping(item: item, provisionalCenter: center, tile: tile(atScreen: center))
+        return FinderItemMapping(item: item, screenCenter: center, tile: tile(atScreen: center))
     }
 }

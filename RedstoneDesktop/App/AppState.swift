@@ -12,6 +12,7 @@ final class AppState: ObservableObject {
     let finderDiagnostics: FinderDiagnosticsModel
     let desktopItemTracker: DesktopItemTracker
     @Published private(set) var finderMappings: [FinderItemMapping] = []
+    @Published private(set) var desktopOccupancy: DesktopOccupancySnapshot = .unavailable("Enable Desktop World to resolve occupancy.")
     private var desktopController: DesktopWindowController?
     private var pointerMonitor: PointerMonitor?
     private var clickMonitor: DesktopClickMonitor?
@@ -34,8 +35,8 @@ final class AppState: ObservableObject {
         self.finderDiagnostics = finderDiagnostics
         self.finderReferenceProviding = finderReferenceProviding
         desktopItemTracker = DesktopItemTracker(diagnostics: finderDiagnostics)
-        finderItemsObserver = finderDiagnostics.$items.sink { [weak self] items in
-            MainActor.assumeIsolated { self?.updateFinderMappings(items) }
+        finderItemsObserver = Publishers.CombineLatest3(finderDiagnostics.$items, finderDiagnostics.$error, finderDiagnostics.$hasRead).sink { [weak self] items, error, hasRead in
+            MainActor.assumeIsolated { self?.updateFinderState(items, error: error, hasRead: hasRead) }
         }
         terminationObserver = NotificationCenter.default.publisher(for: NSApplication.willTerminateNotification)
             .sink { [weak self] _ in
@@ -47,6 +48,7 @@ final class AppState: ObservableObject {
     func shutdown() {
         desktopItemTracker.stop()
         finderMappings = []
+        desktopOccupancy = .unavailable("Enable Desktop World to resolve occupancy.")
         finderReferenceScreen = nil
         clickMonitor?.stop()
         clickMonitor = nil
@@ -79,7 +81,7 @@ final class AppState: ObservableObject {
                 }
                 desktopController = controller
                 finderReferenceScreen = finderReferenceProviding()
-                updateFinderMappings(finderDiagnostics.items)
+                updateFinderState(finderDiagnostics.items, error: finderDiagnostics.error, hasRead: finderDiagnostics.hasRead)
                 pointerMonitor = monitor
                 let clicks = DesktopClickMonitor(screen: screen, mapper: mapper, eventMonitoring: clickEventMonitoring) { [weak self, weak controller] snapshot in
                     guard let self else { return }
@@ -100,11 +102,30 @@ final class AppState: ObservableObject {
         }
     }
 
-    private func updateFinderMappings(_ items: [DesktopItem]) {
-        guard let controller = desktopController, let reference = finderReferenceScreen else { return }
-        let mappings = items.map { controller.scene.mapper.provisionalFinderMapping(for: $0, referenceScreen: reference) }
-        guard mappings != finderMappings else { return }
-        finderMappings = mappings
-        controller.scene.updateFinderMarkers(mappings)
+    private func updateFinderState(_ items: [DesktopItem], error: String?, hasRead: Bool) {
+        guard let controller = desktopController else { return }
+        guard let reference = finderReferenceScreen else {
+            desktopOccupancy = .unavailable("The primary display reference is unavailable.")
+            controller.scene.updateOccupancy(desktopOccupancy)
+            return
+        }
+        let mappings = items.map { controller.scene.mapper.finderMapping(for: $0, referenceScreen: reference) }
+        if mappings != finderMappings {
+            finderMappings = mappings
+            controller.scene.updateFinderMarkers(mappings)
+        }
+        let snapshot: DesktopOccupancySnapshot
+        if let error {
+            snapshot = .unavailable(error)
+        } else if !hasRead {
+            snapshot = .unavailable("Read Finder Items to resolve occupancy.")
+        } else {
+            snapshot = DesktopOccupancyResolver().resolve(items: items, mapper: controller.scene.mapper,
+                finderReference: reference, activeScreen: controller.scene.screen)
+        }
+        if snapshot != desktopOccupancy {
+            desktopOccupancy = snapshot
+            controller.scene.updateOccupancy(snapshot)
+        }
     }
 }

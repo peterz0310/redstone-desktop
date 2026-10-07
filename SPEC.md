@@ -2029,8 +2029,8 @@ Do not build fancy terrain if Finder positions are not viable.
 
 - [x] draw marker for every Finder position
 - [x] implement provisional Finder→screen conversion
-- [ ] compare visually
-- [ ] document discovered semantics
+- [x] compare visually
+- [x] document discovered semantics
 - [x] add polling `DesktopItemTracker`
 - [x] prevent concurrent poll pileup
 
@@ -2051,10 +2051,10 @@ This alignment must be trustworthy before further UI investment.
 
 ### Tasks
 
-- [ ] implement pure `DesktopOccupancyResolver`
-- [ ] unit tests with fake items
-- [ ] visually mark occupied world tile
-- [ ] handle multiple-item ambiguity
+- [x] implement pure `DesktopOccupancyResolver`
+- [x] unit tests with fake items
+- [x] visually mark occupied world tile
+- [x] handle multiple-item ambiguity
 
 ### Manual acceptance
 
@@ -2866,6 +2866,18 @@ Decision: Slice 7 tests the hypothesis that the raw point is an icon center in l
 Reason: establish the coordinate contract with visible evidence before implementing occupancy. The primary display reference comes from the documented first `NSScreen.screens` entry, independently of the active renderer screen.
 
 Consequences: this is not a discovered/verified Finder semantic yet. “compare visually”, “document discovered semantics”, and all MANUAL checkboxes remain unchecked. A mismatch must stop this slice and be recorded here before proposing the smallest mapping adjustment. Polling is serialized with explicit reads, publishes meaningful item differences only, and pauses on errors; slow main-thread AppleScript behavior must also be reported.
+
+---
+
+## 2026-10-07 — Owner confirms Finder calibration; occupancy contract
+
+Context: the owner reported “It all appears to work!” after the Slice 7 marker, dragging, screen-edge, and icon-size validation instructions. This records owner-reported evidence on their Mac; the agent did not independently verify those physical desktop checks.
+
+Decision: use the tested center mapping for Slice 8: Finder desktop position is interpreted as an icon center in logical points from the primary display's upper-left. Flip Y using that display's frame maxY, with no menu-bar or icon-size adjustment. All conversion remains in CoordinateMapper. Recheck and stop if a later configuration contradicts this mapping.
+
+Occupancy groups centers in the active display into floor-based world tiles. One center is occupied; multiple centers are ambiguous and retain every item in stable order. Outside-display centers are excluded. Unread or failed Finder data is unavailable, not empty. Green and red tile overlays expose this state without executing actions. Explicitly paused polling freezes the last snapshot.
+
+Consequences: the earlier provisional decision remains as history. Slice 7's non-MANUAL comparison and semantics tasks are now complete based on the owner's report. Every MANUAL checkbox remains unchecked. Slice 8 still requires the owner to verify the tile-boundary transition before Slice 9.
 
 ---
 

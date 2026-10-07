@@ -16,15 +16,15 @@ private final class TrackerFixtureProvider: DesktopItemProviding {
 
 final class DesktopItemTrackerTests: XCTestCase {
     @MainActor
-    func testProvisionalFinderConversionAndMarkersUseLogicalPoints() throws {
+    func testFinderConversionAndMarkersUseLogicalPoints() throws {
         let screen = ScreenDescriptor(id: "negative", frame: CGRect(x: -1280, y: -200, width: 1280, height: 800), backingScale: 2)
         let mapper = try CoordinateMapper(canvasFrame: screen.frame, camera: camera)
         let item = item(id: "file", x: 100, y: 200)
-        let mapping = mapper.provisionalFinderMapping(for: item, referenceScreen: screen)
-        XCTAssertEqual(mapping.provisionalCenter, CGPoint(x: -1180, y: 400))
+        let mapping = mapper.finderMapping(for: item, referenceScreen: screen)
+        XCTAssertEqual(mapping.screenCenter, CGPoint(x: -1180, y: 400))
         XCTAssertEqual(mapping.tile, WorldCoordinate(x: 1, y: 9))
         let nonRetina = ScreenDescriptor(id: "negative", frame: screen.frame, backingScale: 1)
-        XCTAssertEqual(mapping, mapper.provisionalFinderMapping(for: item, referenceScreen: nonRetina))
+        XCTAssertEqual(mapping, mapper.finderMapping(for: item, referenceScreen: nonRetina))
         let scene = DesktopScene(screen: screen, mapper: mapper)
         scene.updateFinderMarkers([mapping])
         let markers = try XCTUnwrap(scene.childNode(withName: "finder-markers"))
@@ -43,8 +43,8 @@ final class DesktopItemTrackerTests: XCTestCase {
         let primary = ScreenDescriptor(id: "primary", frame: CGRect(x: 0, y: 0, width: 1920, height: 1080), backingScale: 2)
         let canvas = CGRect(x: -1280, y: -200, width: 1280, height: 800)
         let mapper = try CoordinateMapper(canvasFrame: canvas, camera: camera)
-        let mapping = mapper.provisionalFinderMapping(for: item(id: "file", x: 120, y: 80), referenceScreen: primary)
-        XCTAssertEqual(mapping.provisionalCenter, CGPoint(x: 120, y: 1000))
+        let mapping = mapper.finderMapping(for: item(id: "file", x: 120, y: 80), referenceScreen: primary)
+        XCTAssertEqual(mapping.screenCenter, CGPoint(x: 120, y: 1000))
         let scene = DesktopScene(screen: ScreenDescriptor(id: "active", frame: canvas, backingScale: 1), mapper: mapper)
         scene.updateFinderMarkers([mapping])
         XCTAssertTrue(try XCTUnwrap(scene.childNode(withName: "finder-markers")).children.isEmpty)
@@ -147,10 +147,10 @@ final class DesktopItemTrackerTests: XCTestCase {
         provider.operation = { [self.item(id: "one", x: 100, y: 100)] }
         await model.readItems()
         state.toggleDesktopWorld()
-        XCTAssertEqual(state.finderMappings.first?.provisionalCenter, CGPoint(x: 100, y: 380))
+        XCTAssertEqual(state.finderMappings.first?.screenCenter, CGPoint(x: 100, y: 380))
         provider.operation = { [self.item(id: "one", x: 200, y: 200)] }
         await model.readItems()
-        XCTAssertEqual(state.finderMappings.first?.provisionalCenter, CGPoint(x: 200, y: 280))
+        XCTAssertEqual(state.finderMappings.first?.screenCenter, CGPoint(x: 200, y: 280))
         state.desktopItemTracker.start()
         state.toggleDesktopWorld()
         XCTAssertFalse(state.desktopItemTracker.isPolling)

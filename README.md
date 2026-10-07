@@ -16,7 +16,9 @@ The owner confirmed the Slice 4 alignment and Finder-interaction checks on 2026-
 
 The owner confirmed Slice 5 desktop clicks, including the expected flash beneath a Finder folder icon, on 2026-10-07. Slice 6 introduced **Finder Diagnostics…** in the editor. Its **Read Finder Items** button explicitly queries Finder through `DesktopItemProviding`. Opening the app or diagnostics window does not contact Finder. Permission denial and malformed responses display different errors, and failed reads clear the list instead of retaining stale positions. The owner reported Slice 6 working on 2026-10-07.
 
-Slice 7 adds pink rings/crosshairs behind provisional Finder icon centers, plus mapped screen/center and world-tile columns. After a successful read and enabling Desktop World, **Start Polling (2 Hz)** enables serialized live updates. **Stop Polling** freezes the last snapshot; disabling the world or quitting also stops polling. Errors pause polling until you explicitly retry. Identical snapshots do not publish new item arrays or redraw markers. Occupancy, simulation, and output actions remain future slices; Slice 7's visual calibration gate is still open.
+Slice 7 adds pink rings/crosshairs behind Finder icon centers, plus mapped screen/center and world-tile columns. After a successful read and enabling Desktop World, **Start Polling (2 Hz)** enables serialized live updates. **Stop Polling** freezes the last snapshot; disabling the world or quitting also stops polling. Errors pause polling until you explicitly retry. Identical snapshots do not publish new item arrays or redraw markers. The owner reported all Slice 7 checks working on 2026-10-07, establishing the center mapping on their Mac. This is owner-reported evidence, not an independent check on other configurations. MANUAL checkboxes remain unchecked.
+
+Slice 8 groups icon centers into world tiles using a pure `DesktopOccupancyResolver`. Green tiles contain one item; red tiles contain multiple items. Finder Diagnostics lists every item in ambiguous tiles. Items with centers outside the active display are excluded. Unread or failed Finder data is unavailable, distinct from an empty tile. Polling updates occupancy; stopping polling freezes the last snapshot. Simulation and output actions remain future slices.
 
 ## Development
 
@@ -131,3 +133,19 @@ Current hypothesis: Finder's raw point is the icon center, measured in logical p
 ## License and assets
 
 Licensed under the owner-selected MIT license; see `LICENSE`. No Minecraft assets are bundled. Future built-in assets must be original; resource packs will be data only.
+
+## Manual validation — Slice 8
+
+1. Quit the old app with **Command-Q**. In Terminal, run:
+
+   ```sh
+   open /Users/peterzielinski/git/redstone-desktop/build/Build/Products/Debug/RedstoneDesktop.app
+   ```
+
+2. Confirm the editor footer says **Slice 8 · Desktop occupancy**. Click **Enable Desktop World**, open **Finder Diagnostics…**, click **Read Finder Items**, then **Start Polling (2 Hz)**.
+3. Check that each pink icon-center crosshair sits in a green tile. Drag one icon so its center crosses a checkerboard boundary, then release it. Within the next poll, its new tile should turn green and its old tile should clear (unless another icon remains there). Compare the table's world tile. Finder may report positions only after dropping an icon; smooth updates during the drag are not required.
+4. Repeat across a horizontal boundary. The icon image or label overlapping a boundary should not move occupancy before its center crosses it.
+5. If Finder allows two icon centers inside the same 64-point tile, put two there. That tile should be red. Expand **Ambiguous tiles (red) — all occupants** and confirm both names and paths appear. Move one away; the remaining tile should turn green. Report if Finder's snapping prevents this arrangement.
+6. Confirm normal Finder selection, dragging, and double-clicking still work. **Stop Polling** should freeze the markers and occupancy; restarting should refresh them. Disabling Desktop World should remove the overlay.
+
+Report whether the center-boundary transition matches the expected tile. Slice 9 waits for that check. No MANUAL checkbox is marked complete by the agent.

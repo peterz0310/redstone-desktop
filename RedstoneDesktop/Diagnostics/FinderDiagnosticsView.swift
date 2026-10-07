@@ -46,9 +46,9 @@ struct FinderDiagnosticsView: View {
                     Text("(\(item.position.x, specifier: "%.1f"), \(item.position.y, specifier: "%.1f"))")
                         .monospacedDigit()
                 }
-                TableColumn("Mapped screen / assumed center") { item in
+                TableColumn("Mapped screen / center") { item in
                     if let mapping = appState.finderMappings.first(where: { $0.id == item.id }) {
-                        Text("(\(mapping.provisionalCenter.x, specifier: "%.1f"), \(mapping.provisionalCenter.y, specifier: "%.1f"))")
+                        Text("(\(mapping.screenCenter.x, specifier: "%.1f"), \(mapping.screenCenter.y, specifier: "%.1f"))")
                     } else { Text("Enable Desktop World") }
                 }
                 TableColumn("World tile") { item in
@@ -57,7 +57,26 @@ struct FinderDiagnosticsView: View {
                     } else { Text("—") }
                 }
             }
-            Text("Provisional: raw point is the icon center, measured from the primary display's upper-left. Pink rings/crosshairs must align with real icon centers. No menu-bar or icon-size offset is applied. Enable Desktop World to see markers; report any misalignment before continuing.")
+            if case let .unavailable(reason) = appState.desktopOccupancy {
+                Text("Occupancy unavailable: \(reason)").foregroundStyle(.secondary)
+            }
+            if !appState.desktopOccupancy.ambiguousTiles.isEmpty {
+                DisclosureGroup("Ambiguous tiles (red) — all occupants") {
+                    ScrollView {
+                        VStack(alignment: .leading) {
+                            ForEach(appState.desktopOccupancy.ambiguousTiles) { occupancy in
+                                Text("Tile (\(occupancy.coordinate.x), \(occupancy.coordinate.y))")
+                                    .font(.headline)
+                                ForEach(occupancy.items) { item in
+                                    Text("\(item.displayName) — \(item.url.path)")
+                                        .textSelection(.enabled)
+                                }
+                            }
+                        }.frame(maxWidth: .infinity, alignment: .leading)
+                    }.frame(maxHeight: 100)
+                }
+            }
+            Text("Green: one icon center in the tile. Red: multiple centers; no item is chosen. Pink crosshairs show centers. Calibration was confirmed on your Mac; report any later misalignment.")
                 .font(.caption)
                 .foregroundStyle(.secondary)
         }

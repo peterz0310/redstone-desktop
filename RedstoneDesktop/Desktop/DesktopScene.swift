@@ -6,6 +6,7 @@ final class DesktopScene: SKScene {
     let mapper: CoordinateMapper
     private let highlight = SKShapeNode()
     private let clickFlash = SKShapeNode()
+    private let occupancyLayer = SKNode()
     private let finderMarkers = SKNode()
     private(set) var highlightedTile: WorldCoordinate?
 
@@ -26,6 +27,8 @@ final class DesktopScene: SKScene {
         clickFlash.strokeColor = .systemOrange
         clickFlash.zPosition = 2
         clickFlash.isHidden = true
+        occupancyLayer.name = "desktop-occupancy"
+        occupancyLayer.zPosition = 0.5
         finderMarkers.name = "finder-markers"
         finderMarkers.zPosition = 3
         rebuildChecker()
@@ -59,7 +62,7 @@ final class DesktopScene: SKScene {
 
     func updateFinderMarkers(_ mappings: [FinderItemMapping]) {
         finderMarkers.removeAllChildren()
-        for mapping in mappings where screen.contains(mapping.provisionalCenter) {
+        for mapping in mappings where screen.contains(mapping.screenCenter) {
             let path = CGMutablePath()
             path.addEllipse(in: CGRect(x: -32, y: -32, width: 64, height: 64))
             path.move(to: CGPoint(x: -40, y: 0))
@@ -68,7 +71,7 @@ final class DesktopScene: SKScene {
             path.addLine(to: CGPoint(x: 0, y: 40))
             let marker = SKShapeNode(path: path)
             marker.name = mapping.id
-            marker.position = mapper.scenePoint(fromScreen: mapping.provisionalCenter, on: screen)
+            marker.position = mapper.scenePoint(fromScreen: mapping.screenCenter, on: screen)
             marker.strokeColor = .systemPink.withAlphaComponent(0.85)
             marker.fillColor = .clear
             marker.lineWidth = 1.5
@@ -76,8 +79,23 @@ final class DesktopScene: SKScene {
         }
     }
 
+    func updateOccupancy(_ snapshot: DesktopOccupancySnapshot) {
+        occupancyLayer.removeAllChildren()
+        guard case let .available(tiles) = snapshot else { return }
+        for occupancy in tiles.values where !occupancy.items.isEmpty {
+            let rect = mapper.sceneRect(forTile: occupancy.coordinate, on: screen).insetBy(dx: 2, dy: 2)
+            let node = SKShapeNode(rect: rect)
+            let color: NSColor = occupancy.items.count == 1 ? .systemGreen : .systemRed
+            node.fillColor = color.withAlphaComponent(0.3)
+            node.strokeColor = color
+            node.lineWidth = 2
+            occupancyLayer.addChild(node)
+        }
+    }
+
     private func rebuildChecker() {
         removeAllChildren()
+        addChild(occupancyLayer)
         addChild(highlight)
         addChild(clickFlash)
         addChild(finderMarkers)

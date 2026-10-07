@@ -1,4 +1,5 @@
 import Foundation
+import CoreGraphics
 
 /// A snapshot of display geometry. Frames use global macOS logical points.
 struct ScreenDescriptor: Equatable, Sendable {

@@ -1,9 +1,10 @@
 import Foundation
+import CoreGraphics
 
-/// A calibration hypothesis, not confirmed Finder icon geometry.
+/// Finder center mapping using the owner-validated calibration.
 struct FinderItemMapping: Identifiable, Equatable, Sendable {
     let item: DesktopItem
-    let provisionalCenter: CGPoint
+    let screenCenter: CGPoint
     let tile: WorldCoordinate?
     var id: String { item.id }
 }
