@@ -2979,6 +2979,16 @@ Consequences: all Slice 10 tasks are complete. Slice 11 (Circuit simulator core)
 
 ---
 
+## 2026-10-07 — Owner confirms Slice 10 regression
+
+Context: the owner reports “I confirm it works basically the same as before except with green blocks under the circuit.”
+
+Decision: record the model-rendering regression check as passed on the owner's Mac. The green blocks are the explicit grass tiles in the feasibility World fixture and are expected. This report confirms the existing demo behaves as before after moving rendering to model data.
+
+Consequences: Slice 10 remains complete. It has no additional roadmap MANUAL checkbox, so none is invented or changed. Slice 11 remains next and unchecked. The last implementation build and all 72 automated tests passed; this update changes documentation only.
+
+---
+
 # 47. Public technical references
 
 Re-check the current SDK documentation while implementing.

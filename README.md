@@ -192,7 +192,7 @@ The separate command-line probe did not receive the owner's clicks and provides 
 
 ## Manual regression check — Slice 10
 
-Slice 10 has no new MANUAL acceptance checkbox; this checks that moving rendering to the model preserved the previously proven desktop behavior.
+The owner confirmed this regression check on 2026-10-07: the demo works as before, with the expected green grass tiles beneath the circuit. Slice 10 has no new roadmap MANUAL acceptance checkbox. These instructions remain available for future regression checks.
 
 1. Quit the previous app with **Command-Q**, then launch the latest build:
 
