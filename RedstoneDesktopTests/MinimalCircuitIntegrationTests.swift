@@ -26,7 +26,7 @@ final class MinimalCircuitIntegrationTests: XCTestCase {
     @MainActor
     private func makeState(_ provider: CircuitFixtureProvider, _ opener: FixtureItemOpener, allowed: @escaping () -> Bool = { true }, events: FakeGlobalMouseEventMonitor = FakeGlobalMouseEventMonitor()) -> AppState {
         AppState(screenProviding: { self.screen }, clickEventMonitoring: events,
-                 finderDiagnostics: FinderDiagnosticsModel(provider: provider), desktopInteractionRejection: { _ in allowed() ? nil : "Fixture desktop check rejected the click." },
+                 finderDiagnostics: FinderDiagnosticsModel(provider: provider), desktopInteractionAssessment: { _ in DesktopInteractionAssessment(rejectionReason: allowed() ? nil : "Fixture desktop check rejected the click.", details: "Fixture recipient details") },
                  itemOpener: opener, finderReferenceProviding: { self.screen })
     }
     @MainActor
@@ -100,6 +100,7 @@ final class MinimalCircuitIntegrationTests: XCTestCase {
         await press(state)
         XCTAssertEqual(provider.calls, 1)
         XCTAssertEqual(state.observedPressCount, 1)
+        XCTAssertEqual(state.lastPressMetadata, "Fixture recipient details")
         XCTAssertTrue(state.lastActionResult.contains("PRESS click received"))
         XCTAssertTrue(state.lastActionResult.contains("Fixture desktop check rejected"))
         allowed = true

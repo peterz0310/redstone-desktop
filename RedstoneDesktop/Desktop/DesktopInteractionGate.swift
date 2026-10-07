@@ -1,33 +1,42 @@
 import AppKit
 
-/// Accept only the captured event's Finder desktop recipient, never unrelated bounds.
+struct DesktopInteractionAssessment {
+    let rejectionReason: String?
+    let details: String
+}
+
+/// Validate the associated window; a monitored CGEvent target PID is diagnostic only.
 @MainActor
 enum DesktopInteractionGate {
-    static func rejectionReason(_ identity: MouseEventIdentity) -> String? {
-        let rawID = identity.handlingWindowID > 0 ? identity.handlingWindowID : Int64(identity.windowNumber)
-        guard rawID > 0, let windowID = CGWindowID(exactly: rawID) else {
-            return "Click recipient is unavailable (event window \(identity.windowNumber), handling window \(identity.handlingWindowID), target PID \(identity.targetProcessID))."
+    static func selectedWindowID(_ identity: MouseEventIdentity) -> CGWindowID? {
+        // NSEvent documents windowNumber as the window associated with this event.
+        let rawID = identity.windowNumber > 0 ? Int64(identity.windowNumber) : identity.handlingWindowID
+        guard rawID > 0 else { return nil }
+        return CGWindowID(exactly: rawID)
+    }
+
+    static func assess(_ identity: MouseEventIdentity) -> DesktopInteractionAssessment {
+        let rawDetails = "Event window: \(identity.windowNumber) · Handling window: \(identity.handlingWindowID) · Target PID: \(identity.targetProcessID)"
+        guard let windowID = selectedWindowID(identity) else {
+            return DesktopInteractionAssessment(rejectionReason: "Click recipient is unavailable.", details: rawDetails)
         }
         let windows = CGWindowListCopyWindowInfo(.optionIncludingWindow, windowID) as? [[String: Any]]
         guard let window = windows?.first(where: {
             ($0[kCGWindowNumber as String] as? NSNumber)?.uint32Value == windowID
         }), let owner = window[kCGWindowOwnerPID as String] as? NSNumber,
             let layer = window[kCGWindowLayer as String] as? NSNumber else {
-            return "The captured click's window metadata is unavailable (window \(windowID))."
+            return DesktopInteractionAssessment(rejectionReason: "The captured click's window metadata is unavailable.",
+                details: "\(rawDetails) · Selected window: \(windowID)")
         }
         let bundleID = NSRunningApplication(processIdentifier: owner.int32Value)?.bundleIdentifier
-        return rejectionReason(identity, recipientOwnerPID: owner.int64Value,
-                               recipientBundleID: bundleID, recipientLayer: layer.intValue)
+        let reason = rejectionReason(identity, recipientBundleID: bundleID, recipientLayer: layer.intValue)
+        let details = "\(rawDetails) · Selected window: \(windowID) · Owner: \(bundleID ?? "unknown") · Owner PID: \(owner.int64Value) · Layer: \(layer.intValue)"
+        return DesktopInteractionAssessment(rejectionReason: reason, details: details)
     }
 
-    static func rejectionReason(_ identity: MouseEventIdentity, recipientOwnerPID: Int64,
+    static func rejectionReason(_ identity: MouseEventIdentity,
                                 recipientBundleID: String?, recipientLayer: Int) -> String? {
-        guard identity.handlingWindowID > 0 || identity.windowNumber > 0 else {
-            return "Click recipient is unavailable."
-        }
-        if identity.targetProcessID > 0, identity.targetProcessID != recipientOwnerPID {
-            return "Click recipient and target process disagree; nothing activated."
-        }
+        guard selectedWindowID(identity) != nil else { return "Click recipient is unavailable." }
         guard recipientBundleID == "com.apple.finder" else {
             return "The click belongs to another application; use the exposed desktop."
         }

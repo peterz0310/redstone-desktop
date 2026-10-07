@@ -27,6 +27,11 @@ struct EditorPlaceholderView: View {
             Text(appState.lastActionResult)
                 .font(.callout)
                 .textSelection(.enabled)
+            if !appState.lastPressMetadata.isEmpty {
+                Text(appState.lastPressMetadata)
+                    .font(.caption.monospaced())
+                    .textSelection(.enabled)
+            }
             if let click = appState.lastClick {
                 Text("Clicks observed: \(appState.observedClickCount) · Last tile: (\(click.tile.x), \(click.tile.y))")
                     .font(.caption.monospaced())

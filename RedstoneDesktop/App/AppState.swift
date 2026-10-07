@@ -13,13 +13,14 @@ final class AppState: ObservableObject {
     let desktopItemTracker: DesktopItemTracker
     @Published private(set) var finderMappings: [FinderItemMapping] = []
     @Published private(set) var desktopOccupancy: DesktopOccupancySnapshot = .unavailable("Enable Desktop World to resolve occupancy.")
+    @Published private(set) var lastPressMetadata = ""
     @Published private(set) var observedPressCount = 0
     @Published private(set) var testCircuit = FixedTestCircuit()
     @Published private(set) var lastActionResult = "Place a harmless Finder item on OUTPUT, then click PRESS on the desktop."
     private let openItemAction: OpenItemAction
     private var circuitTimer: Timer?
     private(set) var activationTask: Task<Void, Never>?
-    private let desktopInteractionRejection: (MouseEventIdentity) -> String?
+    private let desktopInteractionAssessment: (MouseEventIdentity) -> DesktopInteractionAssessment
     private var desktopSession = UUID()
     private var desktopController: DesktopWindowController?
     private var pointerMonitor: PointerMonitor?
@@ -35,12 +36,12 @@ final class AppState: ObservableObject {
         NSScreen.main.map { ScreenDescriptor(screen: $0) }
     }, clickEventMonitoring: any GlobalMouseEventMonitoring = AppKitGlobalMouseEventMonitor(),
        finderDiagnostics: FinderDiagnosticsModel = FinderDiagnosticsModel(),
-       desktopInteractionRejection: @escaping (MouseEventIdentity) -> String? = { DesktopInteractionGate.rejectionReason($0) },
+       desktopInteractionAssessment: @escaping (MouseEventIdentity) -> DesktopInteractionAssessment = { DesktopInteractionGate.assess($0) },
        itemOpener: any ItemOpening = WorkspaceItemOpener(),
        finderReferenceProviding: @escaping () -> ScreenDescriptor? = {
            NSScreen.screens.first.map { ScreenDescriptor(screen: $0) }
        }) {
-        self.desktopInteractionRejection = desktopInteractionRejection
+        self.desktopInteractionAssessment = desktopInteractionAssessment
         openItemAction = OpenItemAction(opener: itemOpener)
         self.screenProviding = screenProviding
         self.clickEventMonitoring = clickEventMonitoring
@@ -62,6 +63,7 @@ final class AppState: ObservableObject {
         activationTask?.cancel()
         circuitTimer?.invalidate()
         circuitTimer = nil
+        lastPressMetadata = ""
         observedPressCount = 0
         testCircuit = FixedTestCircuit()
         lastActionResult = "Desktop circuit is disabled."
@@ -150,7 +152,9 @@ final class AppState: ObservableObject {
     func handleCircuitClick(_ tile: WorldCoordinate, identity: MouseEventIdentity = MouseEventIdentity()) {
         guard isDesktopWorldEnabled, tile == FixedTestCircuit.button, desktopController != nil else { return }
         observedPressCount += 1
-        if let reason = desktopInteractionRejection(identity) {
+        let assessment = desktopInteractionAssessment(identity)
+        lastPressMetadata = assessment.details
+        if let reason = assessment.rejectionReason {
             lastActionResult = "PRESS click received; not activated: \(reason)"
             return
         }

@@ -2068,7 +2068,7 @@ This alignment must be trustworthy before further UI investment.
 
 Prove the central concept before building the engine.
 
-**Status: replacement gate awaiting manual validation on 2026-10-07.** The owner confirmed the previous gate rejected PRESS because of a full-display Dock window. Captured event recipient identity now replaces rectangle-based hit inference. Gate A remains open; do not advance to Slice 10 until the owner verifies activation and opening. See the decision log below.
+**Status: replacement gate awaiting manual validation on 2026-10-07.** The owner confirmed the previous gate rejected PRESS because of a full-display Dock window. Captured associated-window identity now replaces rectangle-based hit inference, and target PID is diagnostic only after the owner reported a PID mismatch. Gate A remains open; do not advance to Slice 10 until the owner verifies activation and opening. See the decision log below.
 
 ### Tasks
 
@@ -2930,6 +2930,18 @@ Decision: carry the captured mouse event's windowNumber, handling-window ID, and
 Evidence and limits: a read-only live query found Finder desktop window 107 at layer -2147483603, equal to the SDK's public desktopIconWindow level. Two command-line listener attempts received no events even though the owner clicked; they do not verify the real global-monitor recipient fields. The new app captures them directly and explains missing recipient identity in its rejection result. If those fields are absent or contradict the model on a real click, stop and document that observation before another adjustment.
 
 Validation: build succeeds and all 63 tests pass. Tests cover native event-field extraction from an unposted fixture, identity forwarding with mapped tiles, desktop acceptance, ordinary-window rejection, missing/conflicting identity, and existing circuit/action behavior. No new manual check is marked complete. The clicking-button task remains unchecked pending the owner's retest; Gate A and Slice 9 remain incomplete.
+
+---
+
+## 2026-10-07 — Captured target PID does not match window owner
+
+Observation: the owner reports no circuit change and “Click recipient and target process disagree; nothing activated.” The event reaches PRESS, but the PID-equality requirement rejects it. This does not establish what either PID represents in that monitored copy, nor prove that the selected window is Finder's desktop.
+
+Smallest proposed correction: use the documented NSEvent.windowNumber as the associated-window identity when available, with the public handling-window field only as fallback. Validate that selected window's owner and public desktop-icon level. Retain target PID as diagnostic data instead of equating it with window ownership. Show all selected/raw identity values and window metadata in the editor; keep ordinary Finder/application windows rejected. No process-name exceptions, event consumption, or private APIs are proposed.
+
+Implemented adjustment: select the associated window first, query its owner/layer, and keep target PID out of the acceptance predicate. The editor shows the complete raw and selected-window metadata on every PRESS attempt. Regression tests accept a Finder desktop with a different target PID, still reject ordinary Finder/application windows, and verify window-number preference/fallback. Build succeeds and all 64 tests pass.
+
+Slice 9 remains stopped at Gate A pending the owner's real-Mac retest. Its clicking-button task and five MANUAL checks remain unchecked. Do not advance to Slice 10 or describe the physical circuit as working based on automated fixtures.
 
 ---
 
