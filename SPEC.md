@@ -2293,9 +2293,9 @@ Acceptance:
 
 ### Manual acceptance
 
-- [ ] MANUAL: explore seed, choose location, live desktop changes to selected area.
+- [x] MANUAL: explore seed, choose location, live desktop changes to selected area.
 
-**Status: implemented; owner seed/area validation pending.** Debug build and all 178 automated tests pass. Seed preview and editor navigation leave the live world unchanged until Use This Area. Invalidating seeds are refused; successful applies preserve circuits and save the seed/camera. README.md provides the Mac walkthrough.
+**Status: complete; owner-confirmed seed/area validation on 2026-10-07.** The owner reported “It works!” after the seed/location/restart walkthrough. This records owner-reported Mac validation separately from the last implementation build and 178 passing automated tests. Seed preview and editor navigation leave the live world unchanged until Use This Area. Invalidating seeds are refused; successful applies preserve circuits and save the seed/camera. README.md provides the Mac walkthrough.
 
 ---
 
@@ -3273,3 +3273,18 @@ Use This Area first validates the display, representable/bounded camera, generat
 Validation: Debug build and all 178 tests pass. Nine new tests cover full-range seed parsing and invalid drafts/random selection, preview/pan/zoom/cancel isolation without saves, paused preview editing, successful seed/camera save and restart with preserved circuit, atomic refusal of a seed invalidating a generated component, applying while enabled with replaced monitor and stale-callback rejection, real item snapshot remapping to the new camera's tile, negative-origin physical viewport projection and bounded overlays, and missing-display/invalid-camera/version refusal. Existing renderer root-count expectation includes the new bounded viewport overlay. A test-store actor annotation was corrected to match the synchronous storage protocol, and a pointer assertion was corrected to account for the monitor's immediate sample; all tests are green after those corrections.
 
 Consequences: all eight Slice 19 implementation tasks are complete. Its MANUAL seed/location/live-desktop checkbox remains pending the owner's Mac check. Existing fixture positions are preserved globally; moving the desktop camera may put those circuits outside the current display, rather than deleting/moving them. README.md includes recovery to origin zero and checking camera/seed persistence. Slice 20 and later remain unchecked. No Finder ghosts/snapping, resource packs, backend or private API is added.
+
+
+## 2026-10-07 — Owner confirms Slice 19; proposal for independent worlds and saved areas
+
+Context: the owner reports “It works!” for Slice 19 and asks whether circuits can belong to their seeded map, with a list of built areas to browse/edit and one explicitly active desktop area. Mark Slice 19's MANUAL checkbox complete based on that owner report. This turn discusses a product/model adjustment rather than implementing Slice 20.
+
+Current behavior: there is one WorldDocument and one circuit dictionary. Camera movement within the same seed leaves components at their original world coordinates. Applying a different seed changes generation settings in that same document, retaining the existing circuit; it does not load a separate saved map. Seed previews also retain that circuit for validation.
+
+Proposed design, pending adoption: a library of independently identified world documents, each with fixed generation settings, its own coordinate-keyed circuit, durable lever positions and terrain overrides. A seed defines terrain, not save identity: two independent documents may intentionally use the same seed. Named saved areas reference a world ID and a desktop camera; they are bookmarks into that world and never copy or own circuit components. Overlapping areas share the same world-coordinate components. Browsing a world or saved area affects only editor selection; explicit Activate on Desktop chooses the live world/area. Inactive worlds do not simulate or execute actions. Define the treatment of offscreen components in the active world before implementation; area bookmarks must not silently clip connected circuits.
+
+Architecture assessment: this fits existing pure World/Circuit models, CoordinateMapper, Finder provider and separate action executor. Changes concentrate in document/library persistence, editor selection and AppState lifecycle; the generator, simulator and renderer can be reused. Switching active world/area must invalidate old input/action work, clear transient simulation state, rebuild mapping and refresh Finder occupancy. Finder items remain physical desktop items and are not stored or moved with areas.
+
+Recommended implementation sequence if adopted: add a small world-library/persistence migration slice, then a named-area list and explicit activation slice before Finder ghosts. Preserve the current document as the first world, including identity, chosen seed, camera, circuit and levers; preserve the source save during migration and retain fail-closed damaged-document handling. Fresh worlds should not receive the old world's user components or automatically inherit prototype demo fixtures. Test independent edits across seeds, shared coordinates for overlapping areas, browse/live isolation, cancelled stale actions, atomic persistence and restart restoration.
+
+Consequences: this is a recorded proposal, not an implemented feature or a change to the ordered roadmap. Slice 20 and later remain unchecked. Only SPEC.md and README.md are changed this turn; no new application build/test results or manual acceptance beyond Slice 19 are claimed.
