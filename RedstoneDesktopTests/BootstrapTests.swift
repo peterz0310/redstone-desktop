@@ -6,7 +6,7 @@ import XCTest
 final class BootstrapTests: XCTestCase {
     @MainActor
     func testEditorPlaceholderCanBeHostedInNativeApp() {
-        let hostingView = NSHostingView(rootView: EditorPlaceholderView())
+        let hostingView = NSHostingView(rootView: EditorPlaceholderView(appState: AppState()))
         let size = hostingView.fittingSize
 
         XCTAssertGreaterThanOrEqual(size.width, 480)

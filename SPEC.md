@@ -1920,12 +1920,12 @@ Prove correct macOS window layering.
 
 ### Tasks
 
-- [ ] Add `DesktopWindowController`.
-- [ ] Add `DesktopScene`.
-- [ ] Create renderer on main display.
-- [ ] Render unmistakable checker/grid.
-- [ ] Make renderer click-through.
-- [ ] Add enable/disable command.
+- [x] Add `DesktopWindowController`.
+- [x] Add `DesktopScene`.
+- [x] Create renderer on main display.
+- [x] Render unmistakable checker/grid.
+- [x] Make renderer click-through.
+- [x] Add enable/disable command.
 
 ### Manual acceptance
 

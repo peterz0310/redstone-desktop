@@ -1,6 +1,8 @@
 import SwiftUI
 
 struct EditorPlaceholderView: View {
+    @ObservedObject var appState: AppState
+
     var body: some View {
         VStack(alignment: .leading, spacing: 16) {
             Text("Redstone Desktop")
@@ -11,10 +13,16 @@ struct EditorPlaceholderView: View {
             Divider()
             Text("Editor placeholder")
                 .font(.headline)
-            Text("The native app foundation is ready. Desktop rendering, Finder integration, and circuits will be added in roadmap order.")
+            Text("Enable the desktop checker to test whether it appears beneath real Finder icons. Finder integration and circuits will be added in roadmap order.")
                 .fixedSize(horizontal: false, vertical: true)
+            Button(appState.isDesktopWorldEnabled ? "Disable Desktop World" : "Enable Desktop World") {
+                appState.toggleDesktopWorld()
+            }
+            Text(appState.desktopStatus)
+                .font(.callout)
+                .foregroundStyle(.secondary)
             Spacer()
-            Text("Slice 0 · Repository bootstrap")
+            Text("Slice 2 · Desktop renderer window spike")
                 .font(.caption)
                 .foregroundStyle(.secondary)
         }
