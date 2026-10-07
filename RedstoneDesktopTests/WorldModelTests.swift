@@ -53,14 +53,15 @@ final class WorldModelTests: XCTestCase {
     }
 
     func testFeasibilityFixtureIsModelDataAndPowerIsRuntimeState() {
-        let world = FixedTestCircuit.makeWorld()
-        XCTAssertEqual(world.circuit.components.count, 6)
-        XCTAssertEqual(world.tiles.count, 6)
-        XCTAssertEqual(world.circuit.components[FixedTestCircuit.button]?.kind, .button)
-        XCTAssertEqual(world.circuit.components[FixedTestCircuit.output]?.kind, .output)
-        var pulse = FixedTestCircuit()
+        let world = DemoCircuit.makeWorld()
+        XCTAssertEqual(world.circuit.components.count, 12)
+        XCTAssertEqual(world.tiles.count, 12)
+        XCTAssertEqual(world.circuit.components[DemoCircuit.button]?.kind, .button)
+        XCTAssertEqual(world.circuit.components[DemoCircuit.output]?.kind, .output)
+        var pulse = CircuitSimulator(world: world.circuit)
         XCTAssertTrue(pulse.poweredTiles.isEmpty)
-        _ = pulse.press(at: FixedTestCircuit.button)
-        XCTAssertEqual(pulse.poweredTiles, Set(world.circuit.components.keys))
+        _ = pulse.pressButton(at: DemoCircuit.button)
+        _ = pulse.advanceTick()
+        XCTAssertEqual(pulse.poweredTiles, Set([DemoCircuit.button] + DemoCircuit.dust + [DemoCircuit.output]))
     }
 }

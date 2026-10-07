@@ -2110,27 +2110,29 @@ Do not build the full editor until this works.
 
 ## Slice 11 — Circuit simulator core
 
-- [ ] fixed 20 Hz tick scheduler
-- [ ] power 0–15
-- [ ] dust propagation
-- [ ] attenuation
-- [ ] lever
-- [ ] button pulse
-- [ ] output rising edge
-- [ ] two-phase update
-- [ ] loop protection
-- [ ] comprehensive unit tests
+- [x] fixed 20 Hz tick scheduler
+- [x] power 0–15
+- [x] dust propagation
+- [x] attenuation
+- [x] lever
+- [x] button pulse
+- [x] output rising edge
+- [x] two-phase update
+- [x] loop protection
+- [x] comprehensive unit tests
+
+**Status: implemented.** Debug build and all 86 automated tests pass. Real-Mac regression instructions are in README.md; owner confirmation for this revision is pending. This slice has no roadmap MANUAL checkbox.
 
 Required tests:
 
-- [ ] straight dust line power levels
-- [ ] signal eventually reaches 0
-- [ ] lever remains powered
-- [ ] button expires at exact tick
-- [ ] output triggers once per rising edge
-- [ ] held output does not retrigger
-- [ ] loop does not hang
-- [ ] insertion order does not change result
+- [x] straight dust line power levels
+- [x] signal eventually reaches 0
+- [x] lever remains powered
+- [x] button expires at exact tick
+- [x] output triggers once per rising edge
+- [x] held output does not retrigger
+- [x] loop does not hang
+- [x] insertion order does not change result
 
 ---
 
@@ -3061,3 +3063,20 @@ The central magic is:
 > A real desktop item can be physically moved onto a circuit endpoint in a persistent block world, changing what the circuit does.
 
 Everything in the architecture should protect that interaction.
+
+
+## 2026-10-07 — Slice 11 deterministic circuit simulator
+
+Context: the owner confirmed Slice 10 behaves as before, including its grass tiles, and authorized the next slice. The fixed feasibility pulse could not simulate arbitrary component networks.
+
+Decision: replace FixedTestCircuit with a pure CircuitSimulator and a model-only DemoCircuit fixture. The simulator accepts button presses and lever toggles, computes an entire next power snapshot from active sources, emits output rising edges, and commits the snapshot. Sources emit 15; the first adjacent dust receives 15 and subsequent dust-to-dust steps attenuate by one. Only cardinal dust connections transmit power. Outputs sense neighboring sources/dust but never relay power. Repeaters remain inert until Slice 12.
+
+Within one simulation tick, an iterative queue settles the network to its strongest reachable power. Each queued dust update strictly increases a level bounded by 15; previous tick power never seeds the queue. This bounds work and prevents loops retaining power after a source turns off. Coordinates and output events are sorted by (y, x), independent of dictionary insertion order. A button powers exactly 20 tick snapshots, then turns off on tick 21; re-pressing restarts its remaining duration without retriggering a held output. Levers remain on until toggled off. Runtime state resets when the diagnostic desktop world is disabled; saving/restoring lever state with a persistent world remains for the persistence slice.
+
+A separate injectable CircuitTickScheduler registers a 50 ms timer in the main run loop's common modes. Rendering consumes simulator state and stays separate from actions. Main-thread delays, including the existing synchronous Finder scripting adapter, can lengthen visible wall-clock pulses; the scheduler does not issue catch-up bursts. Exact pulse duration is tested in simulation ticks, rather than claiming real-time timing on the owner's Mac.
+
+AppState dispatches rising-edge events to a bounded queue of at most 32 pending output actions. It waits for existing Finder/input reads, refreshes occupancy through DesktopItemProviding before each action, and delegates opening to OpenItemAction. Read failures clear pending actions; disabling invalidates late results and clears power/actions. The renderer never launches files. The original button row remains at y=3; a separate lever row at y=5 permits held-power regression checks without adding editor authoring.
+
+Validation: Debug application build succeeds; all 86 automated tests pass. Pure World/Circuit sources pass standalone Swift 6 typechecking. Tests cover attenuation to zero, exact button expiry/repress, held levers and output edges, loops including a 1,600-dust grid, insertion order, strongest sources, prohibited diagonal/output relay, deferred repeaters, coordinate overflow, scheduler registration/stop/restart, serialized fresh output reads, item replacement, and disable/re-enable invalidation. Existing mapping, Finder, occupancy, actions, and renderer integration tests also pass.
+
+Consequences: Slice 11 tasks and required automated-test checkboxes are complete. No MANUAL checkbox is changed or newly claimed. Owner regression confirmation is pending; README.md gives the exact Mac checks. Slice 12 and later slices remain unchecked. No persistence I/O, advanced component semantics, terrain generation, resource packs, private APIs, or backend are introduced.

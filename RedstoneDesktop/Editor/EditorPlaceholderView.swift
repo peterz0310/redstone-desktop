@@ -14,7 +14,7 @@ struct EditorPlaceholderView: View {
             Divider()
             Text("Editor placeholder")
                 .font(.headline)
-            Text("Enable Desktop World and read Finder items. Place a harmless file or folder on OUTPUT, then click the desktop PRESS button. The path lights for one second and opens the current occupant.")
+            Text("Enable Desktop World and read Finder items. Place a harmless file or folder on OUTPUT, then click the desktop PRESS button. PRESS pulses for one second; LEVER stays on until clicked again. Each output opens its current occupant once when power rises.")
                 .fixedSize(horizontal: false, vertical: true)
             Button(appState.isDesktopWorldEnabled ? "Disable Desktop World" : "Enable Desktop World") {
                 appState.toggleDesktopWorld()
@@ -22,7 +22,11 @@ struct EditorPlaceholderView: View {
             Button("Finder Diagnostics…") {
                 openWindow(id: "finder-diagnostics")
             }
-            Text("PRESS: (2, 3) → OUTPUT: (7, 3) · Press clicks: \(appState.observedPressCount)")
+            Text("PRESS: (2, 3) → OUTPUT: (7, 3) · Input clicks: \(appState.observedPressCount)")
+                .font(.caption.monospaced())
+            Text("LEVER: (2, 5) → OUTPUT: (7, 5) · Simulation: 20 Hz")
+                .font(.caption.monospaced())
+            Text("Button-row dust power: " + DemoCircuit.dust.map { String(appState.simulator.power(at: $0).rawValue) }.joined(separator: ", "))
                 .font(.caption.monospaced())
             Text(appState.lastActionResult)
                 .font(.callout)
@@ -53,7 +57,7 @@ struct EditorPlaceholderView: View {
                 .font(.caption.monospaced())
             }
             Spacer()
-            Text("Slice 10 · World model")
+            Text("Slice 11 · Circuit simulator")
                 .font(.caption)
                 .foregroundStyle(.secondary)
         }

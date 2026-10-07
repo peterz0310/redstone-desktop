@@ -8,7 +8,7 @@ final class AppState: ObservableObject {
     @Published private(set) var pointer: PointerSnapshot?
     @Published private(set) var lastClick: DesktopClickSnapshot?
     @Published private(set) var observedClickCount = 0
-    let desktopWorld = FixedTestCircuit.makeWorld()
+    let desktopWorld = DemoCircuit.makeWorld()
     let desktopCamera = CameraState(worldOrigin: WorldPoint(x: 0, y: 0), pointsPerTile: 64)
     let finderDiagnostics: FinderDiagnosticsModel
     let desktopItemTracker: DesktopItemTracker
@@ -16,10 +16,11 @@ final class AppState: ObservableObject {
     @Published private(set) var desktopOccupancy: DesktopOccupancySnapshot = .unavailable("Enable Desktop World to resolve occupancy.")
     @Published private(set) var lastPressMetadata = ""
     @Published private(set) var observedPressCount = 0
-    @Published private(set) var testCircuit = FixedTestCircuit()
+    @Published private(set) var simulator = CircuitSimulator(world: DemoCircuit.makeWorld().circuit)
     @Published private(set) var lastActionResult = "Place a harmless Finder item on OUTPUT, then click PRESS on the desktop."
     private let openItemAction: OpenItemAction
-    private var circuitTimer: Timer?
+    private let tickScheduler: any CircuitTickScheduling
+    private var pendingOutputs: [WorldCoordinate] = []
     private(set) var activationTask: Task<Void, Never>?
     private let desktopInteractionAssessment: (MouseEventIdentity) -> DesktopInteractionAssessment
     private var desktopSession = UUID()
@@ -38,10 +39,12 @@ final class AppState: ObservableObject {
     }, clickEventMonitoring: any GlobalMouseEventMonitoring = AppKitGlobalMouseEventMonitor(),
        finderDiagnostics: FinderDiagnosticsModel = FinderDiagnosticsModel(),
        desktopInteractionAssessment: @escaping (MouseEventIdentity) -> DesktopInteractionAssessment = { DesktopInteractionGate.assess($0) },
+       tickScheduler: any CircuitTickScheduling = CircuitTickScheduler(),
        itemOpener: any ItemOpening = WorkspaceItemOpener(),
        finderReferenceProviding: @escaping () -> ScreenDescriptor? = {
            NSScreen.screens.first.map { ScreenDescriptor(screen: $0) }
        }) {
+        self.tickScheduler = tickScheduler
         self.desktopInteractionAssessment = desktopInteractionAssessment
         openItemAction = OpenItemAction(opener: itemOpener)
         self.screenProviding = screenProviding
@@ -62,11 +65,11 @@ final class AppState: ObservableObject {
     func shutdown() {
         desktopSession = UUID()
         activationTask?.cancel()
-        circuitTimer?.invalidate()
-        circuitTimer = nil
+        tickScheduler.stop()
+        pendingOutputs = []
         lastPressMetadata = ""
         observedPressCount = 0
-        testCircuit = FixedTestCircuit()
+        simulator = CircuitSimulator(world: desktopWorld.circuit)
         lastActionResult = "Desktop circuit is disabled."
         desktopItemTracker.stop()
         finderMappings = []
@@ -102,7 +105,7 @@ final class AppState: ObservableObject {
                     controller?.scene.updateHighlight(snapshot.tile)
                 }
                 desktopController = controller
-                controller.scene.updateWorld(desktopWorld, poweredTiles: testCircuit.poweredTiles)
+                controller.scene.updateWorld(desktopWorld, poweredTiles: simulator.poweredTiles)
                 finderReferenceScreen = finderReferenceProviding()
                 updateFinderState(finderDiagnostics.items, error: finderDiagnostics.error, hasRead: finderDiagnostics.hasRead)
                 pointerMonitor = monitor
@@ -130,44 +133,73 @@ final class AppState: ObservableObject {
 
     private func startCircuitTimer() {
         let session = desktopSession
-        let timer = Timer(timeInterval: 0.05, repeats: true) { [weak self] _ in
-            MainActor.assumeIsolated {
-                guard let self, self.desktopSession == session else { return }
-                self.advanceCircuitTick()
-            }
+        tickScheduler.start { [weak self] in
+            guard let self, self.desktopSession == session else { return }
+            self.advanceCircuitTick()
         }
-        circuitTimer = timer
-        RunLoop.main.add(timer, forMode: .common)
     }
 
-    // Internal for deterministic integration tests; production cadence is the timer above.
     func advanceCircuitTick() {
-        guard testCircuit.isPowered else { return }
-        var next = testCircuit
-        next.advanceTick()
-        let changedPower = next.isPowered != testCircuit.isPowered
-        testCircuit = next
+        guard isDesktopWorldEnabled else { return }
+        var next = simulator
+        let events = next.advanceTick()
+        let changedPower = next.power != simulator.power
+        if next != simulator { simulator = next }
         if changedPower { desktopController?.scene.updateWorld(desktopWorld, poweredTiles: next.poweredTiles) }
+        for case let .outputActivated(coordinate) in events {
+            desktopController?.scene.flashOutput(at: coordinate)
+            // Bound pending I/O independently of simulation, rather than accumulating requests.
+            if pendingOutputs.count < 32 { pendingOutputs.append(coordinate) }
+            else { lastActionResult = "Output action queue is full; activation skipped." }
+        }
+        drainOutputActions()
+    }
+
+    private func drainOutputActions() {
+        guard isDesktopWorldEnabled, activationTask == nil, !finderDiagnostics.isReading,
+              !pendingOutputs.isEmpty else { return }
+        guard finderDiagnostics.permission == .allowed else {
+            pendingOutputs = []
+            lastActionResult = "Finder unavailable; output actions skipped."
+            return
+        }
+        let coordinate = pendingOutputs.removeFirst()
+        let session = desktopSession
+        activationTask = Task { @MainActor [weak self] in
+            guard let self else { return }
+            defer { self.activationTask = nil }
+            let succeeded = await self.finderDiagnostics.readItems()
+            guard !Task.isCancelled, self.desktopSession == session, self.isDesktopWorldEnabled else { return }
+            guard succeeded else {
+                self.pendingOutputs = []
+                self.lastActionResult = "Finder could not be refreshed; nothing opened."
+                return
+            }
+            self.lastActionResult = self.openItemAction.perform(occupancy: self.desktopOccupancy.state(at: coordinate))
+        }
     }
 
     func handleCircuitClick(_ tile: WorldCoordinate, identity: MouseEventIdentity = MouseEventIdentity()) {
-        guard isDesktopWorldEnabled, tile == FixedTestCircuit.button, desktopController != nil else { return }
+        guard isDesktopWorldEnabled, desktopController != nil,
+              let kind = desktopWorld.circuit.components[tile]?.kind,
+              kind == .button || kind == .lever else { return }
         observedPressCount += 1
+        let inputTitle = kind == .button ? "PRESS" : "LEVER"
         let assessment = desktopInteractionAssessment(identity)
         lastPressMetadata = assessment.details
         if let reason = assessment.rejectionReason {
-            lastActionResult = "PRESS click received; not activated: \(reason)"
+            lastActionResult = "\(inputTitle) click received; not activated: \(reason)"
             return
         }
         guard activationTask == nil, !finderDiagnostics.isReading else {
-            lastActionResult = "Finder is busy; click PRESS again after the read finishes."
+            lastActionResult = "Finder is busy; click \(inputTitle) again after the read finishes."
             return
         }
         guard finderDiagnostics.hasRead, finderDiagnostics.permission == .allowed else {
-            lastActionResult = "Read Finder Items in Finder Diagnostics before using PRESS."
+            lastActionResult = "Read Finder Items in Finder Diagnostics before using \(inputTitle)."
             return
         }
-        lastActionResult = "PRESS click received; refreshing Finder items…"
+        lastActionResult = "\(inputTitle) click received; refreshing Finder items…"
         let session = desktopSession
         activationTask = Task { @MainActor [weak self] in
             guard let self else { return }
@@ -184,18 +216,17 @@ final class AppState: ObservableObject {
             let protectedRect = controller.scene.mapper.screenRect(forTile: tile)
                 .insetBy(dx: -self.desktopCamera.pointsPerTile, dy: -self.desktopCamera.pointsPerTile)
             if self.finderMappings.contains(where: { protectedRect.contains($0.screenCenter) }) {
-                self.lastActionResult = "Finder item is on or near PRESS; move it away to use the circuit."
+                self.lastActionResult = "Finder item is on or near \(inputTitle); move it away to use the circuit."
                 return
             }
-            let events = self.testCircuit.press(at: tile)
-            controller.scene.updateWorld(self.desktopWorld, poweredTiles: self.testCircuit.poweredTiles)
-            guard case let .outputActivated(outputTile)? = events.first else {
-                self.lastActionResult = "Pulse extended; output opens once per rising activation."
-                return
+            if kind == .button {
+                self.simulator.pressButton(at: tile)
+                self.lastActionResult = "Button pulse queued; repeats extend it without another rising activation."
+            } else {
+                self.simulator.toggleLever(at: tile)
+                self.lastActionResult = self.simulator.activeLevers.contains(tile)
+                    ? "Lever on; power updates on the next tick." : "Lever off; power updates on the next tick."
             }
-            controller.scene.flashOutput(at: outputTile)
-            self.lastActionResult = self.openItemAction.perform(
-                occupancy: self.desktopOccupancy.state(at: outputTile))
         }
     }
 
