@@ -2121,7 +2121,7 @@ Do not build the full editor until this works.
 - [x] loop protection
 - [x] comprehensive unit tests
 
-**Status: implemented.** Debug build and all 86 automated tests pass. Real-Mac regression instructions are in README.md; owner confirmation for this revision is pending. This slice has no roadmap MANUAL checkbox.
+**Status: complete; owner-confirmed regression on 2026-10-07.** Debug build and all 86 automated tests pass. The owner reported that this revision works as expected after the README.md Mac walkthrough. This slice has no roadmap MANUAL checkbox.
 
 Required tests:
 
@@ -2988,6 +2988,16 @@ Context: the owner reports “I confirm it works basically the same as before ex
 Decision: record the model-rendering regression check as passed on the owner's Mac. The green blocks are the explicit grass tiles in the feasibility World fixture and are expected. This report confirms the existing demo behaves as before after moving rendering to model data.
 
 Consequences: Slice 10 remains complete. It has no additional roadmap MANUAL checkbox, so none is invented or changed. Slice 11 remains next and unchecked. The last implementation build and all 72 automated tests passed; this update changes documentation only.
+
+---
+
+## 2026-10-07 — Owner confirms Slice 11 regression
+
+Context: after receiving the Slice 11 Mac walkthrough, the owner reported: “It seems to work as expected!”
+
+Decision: record the Slice 11 regression as passed based on the owner's Mac report. This is owner-reported validation, separate from the 86 passing automated tests; no additional agent-performed physical checks are claimed.
+
+Consequences: Slice 11 is complete. It has no roadmap MANUAL checkbox, so none is invented or changed. Slice 12 (Repeater) is next and remains unchecked. The last application build and all 86 tests passed; this update changes documentation only.
 
 ---
 

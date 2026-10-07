@@ -31,7 +31,7 @@ Each rising pulse requests one open. Pressing again while powered extends the pu
 Slice 10 adds pure Swift `World`, `Tile`, `TerrainID`, `DecorationID`, and `CircuitWorld` value types. Terrain tiles and coordinate-keyed circuit components are separate data, and runtime power is supplied separately to the renderer. The existing demo is now a model fixture; `DesktopScene` contains no fixed test-circuit coordinates. It draws visible model tiles, decoration labels, components, and dust paths, and clears/rebuilds them as the model or viewport changes. The six demo tiles have simple grass-color fills; the checker remains behind unspecified tiles. At that revision, there was no procedural terrain or general simulator. Its Debug build and all 72 tests passed, including the existing fake Finder/open integration.
 
 
-Slice 11 replaces the fixed pulse with a pure, deterministic `CircuitSimulator`. Buttons and levers supply power 15, cardinal dust attenuates by one per dust-to-dust step, and outputs emit one event when power rises from zero. The entire network settles within each tick using a bounded queue; loops cannot retain power after sources turn off. A separate scheduler requests 20 ticks per second. The original button row remains at y=3, and a second **LEVER (2, 5) → four dust tiles → OUTPUT (7, 5)** row demonstrates continuous power. The editor displays button-row dust strengths. Output actions wait for busy reads and refresh Finder occupancy before opening; simulation and rendering never launch files. Disabling resets runtime state; world persistence comes later. Debug build and all **86 tests** pass. The Mac regression below awaits owner confirmation; repeaters remain for Slice 12.
+Slice 11 replaces the fixed pulse with a pure, deterministic `CircuitSimulator`. Buttons and levers supply power 15, cardinal dust attenuates by one per dust-to-dust step, and outputs emit one event when power rises from zero. The entire network settles within each tick using a bounded queue; loops cannot retain power after sources turn off. A separate scheduler requests 20 ticks per second. The original button row remains at y=3, and a second **LEVER (2, 5) → four dust tiles → OUTPUT (7, 5)** row demonstrates continuous power. The editor displays button-row dust strengths. Output actions wait for busy reads and refresh Finder occupancy before opening; simulation and rendering never launch files. Disabling resets runtime state; world persistence comes later. Debug build and all **86 tests** pass. The owner confirmed the Mac regression on 2026-10-07; repeaters remain for Slice 12.
 
 ## Development
 
@@ -213,7 +213,7 @@ These were the Slice 10 checks. For the current build, use the Slice 11 walkthro
 
 ## Manual regression check — Slice 11
 
-Automated checks pass; this revision still needs your Mac confirmation. Slice 11 has no roadmap MANUAL checkbox. The older walkthroughs above describe their respective builds.
+The owner confirmed this regression on 2026-10-07, reporting that it works as expected. This is owner-reported Mac validation, separate from the 86 passing automated tests. Slice 11 has no roadmap MANUAL checkbox. These steps remain available for future regression checks; the older walkthroughs above describe their respective builds.
 
 1. Quit the previous Redstone Desktop app with **Command-Q**. In Terminal, launch the new build:
 
