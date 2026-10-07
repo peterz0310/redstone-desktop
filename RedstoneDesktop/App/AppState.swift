@@ -9,6 +9,7 @@ final class AppState: ObservableObject {
     @Published private(set) var lastClick: DesktopClickSnapshot?
     @Published private(set) var observedClickCount = 0
     let desktopCamera = CameraState(worldOrigin: WorldPoint(x: 0, y: 0), pointsPerTile: 64)
+    let finderDiagnostics = FinderDiagnosticsModel()
     private var desktopController: DesktopWindowController?
     private var pointerMonitor: PointerMonitor?
     private var clickMonitor: DesktopClickMonitor?

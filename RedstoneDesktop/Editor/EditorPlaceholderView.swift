@@ -2,6 +2,7 @@ import SwiftUI
 
 struct EditorPlaceholderView: View {
     @ObservedObject var appState: AppState
+    @Environment(\.openWindow) private var openWindow
 
     var body: some View {
         VStack(alignment: .leading, spacing: 16) {
@@ -13,10 +14,13 @@ struct EditorPlaceholderView: View {
             Divider()
             Text("Editor placeholder")
                 .font(.headline)
-            Text("Enable the desktop checker, then click the desktop to briefly flash a tile. Finder integration and circuits will be added in roadmap order.")
+            Text("Test desktop clicks with the checker, or open Finder Diagnostics to read real desktop item positions.")
                 .fixedSize(horizontal: false, vertical: true)
             Button(appState.isDesktopWorldEnabled ? "Disable Desktop World" : "Enable Desktop World") {
                 appState.toggleDesktopWorld()
+            }
+            Button("Finder Diagnostics…") {
+                openWindow(id: "finder-diagnostics")
             }
             if let click = appState.lastClick {
                 Text("Clicks observed: \(appState.observedClickCount) · Last tile: (\(click.tile.x), \(click.tile.y))")
@@ -39,7 +43,7 @@ struct EditorPlaceholderView: View {
                 .font(.caption.monospaced())
             }
             Spacer()
-            Text("Slice 5 · Global click observation")
+            Text("Slice 6 · Finder automation spike")
                 .font(.caption)
                 .foregroundStyle(.secondary)
         }

@@ -2001,14 +2001,14 @@ If layering is wrong, investigate before proceeding.
 
 ### Tasks
 
-- [ ] add required Automation usage configuration
-- [ ] create `FinderScriptRunner`
-- [ ] query Finder desktop items
-- [ ] retrieve name
-- [ ] retrieve URL/path if possible
-- [ ] retrieve raw desktop position
-- [ ] distinguish permission denial from parse failure
-- [ ] diagnostics list
+- [x] add required Automation usage configuration
+- [x] create `FinderScriptRunner`
+- [x] query Finder desktop items
+- [x] retrieve name
+- [x] retrieve URL/path if possible
+- [x] retrieve raw desktop position
+- [x] distinguish permission denial from parse failure
+- [x] diagnostics list
 
 ### Manual acceptance
 

@@ -21,6 +21,8 @@ targets:
         INFOPLIST_KEY_CFBundleDisplayName: Redstone Desktop
         INFOPLIST_KEY_LSApplicationCategoryType: public.app-category.utilities
         ENABLE_APP_SANDBOX: NO
+        INFOPLIST_KEY_NSAppleEventsUsageDescription: Redstone Desktop reads Finder desktop item names, paths, and positions to test desktop integration.
+        CODE_SIGN_ENTITLEMENTS: RedstoneDesktop/Resources/RedstoneDesktop.entitlements
   RedstoneDesktopTests:
     type: bundle.unit-test
     platform: macOS

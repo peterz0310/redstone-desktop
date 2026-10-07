@@ -8,11 +8,13 @@ Slices 0–1 provide a SwiftUI editor placeholder and tested domain primitives f
 
 Slice 2 adds an optional SpriteKit checkerboard in a borderless, click-through AppKit window on the main display. It starts disabled. The editor button or Window → Enable/Disable Desktop World controls it. The owner confirmed the Slice 2 manual checks on 2026-10-07; MANUAL checkboxes remain unchecked under the spec's agent rules.
 
-Slice 3 adds a tested `CoordinateMapper` and `ScreenDescriptor`. Coordinates use logical points, with the camera origin at the canvas's lower-left corner. Negative positions floor to tiles; backing scale does not affect occupancy. Finder access, simulation, and actions are not implemented yet. The app does not request privacy permissions at this stage.
+Slice 3 adds a tested `CoordinateMapper` and `ScreenDescriptor`. Coordinates use logical points, with the camera origin at the canvas's lower-left corner. Negative positions floor to tiles; backing scale does not affect occupancy.
 
 Slice 4 samples global pointer position at 30 Hz while the checker is enabled. A subtle outline marks the world tile under the cursor; the editor shows screen position, world position, tile, display ID, and camera values. The outline hides outside the active display. Checker geometry and highlight placement both go through `CoordinateMapper`. Pointer sampling stops when the desktop world is disabled.
 
 The owner confirmed the Slice 4 alignment and Finder-interaction checks on 2026-10-07. Slice 5 adds a global left-mouse-down observer and a 0.3-second amber tile flash. The editor shows a click count and last clicked tile. Disabling the world or quitting removes the observer and stops pointer sampling. Duplicate starts do not install duplicate observers; late callbacks from removed registrations are ignored. These are diagnostic flashes only; no circuit or file actions exist yet.
+
+The owner confirmed Slice 5 desktop clicks, including the expected flash beneath a Finder folder icon, on 2026-10-07. Slice 6 adds **Finder Diagnostics…** in the editor. Its **Read Finder Items** button explicitly queries Finder through `DesktopItemProviding`. The list shows names, paths, and raw Finder coordinates; no positions are transformed or calibrated yet. Opening the app or diagnostics window does not contact Finder. Permission denial and malformed responses display different errors, and failed reads clear the list instead of retaining stale positions. Finder coordinate calibration, occupancy, simulation, and output actions remain future slices.
 
 ## Development
 
@@ -96,6 +98,20 @@ No new permissions are expected: position comes from Apple's public [NSEvent.mou
 7. If you have another display, click there and confirm the active display has no flash or counter change.
 
 The observer uses Apple's public [global event monitor](https://developer.apple.com/library/archive/documentation/Cocoa/Conceptual/EventOverview/MonitoringEvents/MonitoringEvents.html), which cannot consume or modify clicks. It observes other-app clicks anywhere on the active display; flashes under ordinary application windows may be obscured by those windows. It does not yet determine Finder icon occupancy, and flashes have no action consequences. If macOS shows a permission prompt or desktop clicks fail to register, report that observation before proceeding to Slice 6.
+
+## Manual validation — Slice 6
+
+1. Quit the older app with Command-Q, then open the latest build using the command above. Confirm the footer says “Slice 6 · Finder automation spike”.
+2. Click **Finder Diagnostics…**. The new window should initially say “Finder Automation: Not requested”. Opening it should not show a permission prompt.
+3. Click **Read Finder Items**. On a fresh permission state, macOS should ask whether Redstone Desktop can control Finder. This app's fixed query only reads names, paths, and positions. Accept the request.
+4. Confirm the list includes real Finder desktop items with plausible paths and raw `(x, y)` values. If your desktop is empty, put a harmless test folder there first, then read again. Note that values are deliberately not matched to world tiles yet.
+5. Drag a desktop item to a different position, then click **Read Finder Items** again. Confirm that item's raw coordinates change. Reads are manual in this slice; there is no polling.
+6. Test denial: open System Settings → Privacy & Security → Automation, expand Redstone Desktop if needed, and turn off Finder access. Read again. Confirm a denial message appears, the item list clears, and the editor/checker still work. Re-enable Finder access and read again to confirm recovery. You may also choose **Don't Allow** on the first prompt and then enable access here afterward.
+7. Report missing items, incorrect paths, unchanging positions, a missing/unexpected permission prompt, errors, or a prolonged UI stall. Do not proceed to calibration until these observations are resolved.
+
+`NSAppleEventsUsageDescription` is included in the built app. The Apple Events entitlement is configured for signed builds; the documented local build continues to use `CODE_SIGNING_ALLOWED=NO`. The bundle ID and build path stay stable. macOS may remember an earlier permission decision and omit a new prompt; use the Automation settings to inspect the current choice. No Accessibility or Full Disk Access permission is requested by this feature.
+
+Apple documents [NSAppleScript as main-thread-only](https://developer.apple.com/library/archive/documentation/Cocoa/Conceptual/Multithreading/ThreadSafetySummary/ThreadSafetySummary.html), so this feasibility spike executes each explicit query there. Finder events use a 10-second timeout; a slow reply or permission interaction can delay this app's UI. Tests exercise the runner with harmless scripts and the UI model with fake providers; they do not query your real Finder or prove TCC permission behavior. Automatic polling and coordinate calibration are scheduled for Slice 7.
 
 ## License and assets
 
