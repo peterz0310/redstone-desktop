@@ -12,6 +12,8 @@ Slice 3 adds a tested `CoordinateMapper` and `ScreenDescriptor`. Coordinates use
 
 Slice 4 samples global pointer position at 30 Hz while the checker is enabled. A subtle outline marks the world tile under the cursor; the editor shows screen position, world position, tile, display ID, and camera values. The outline hides outside the active display. Checker geometry and highlight placement both go through `CoordinateMapper`. Pointer sampling stops when the desktop world is disabled.
 
+The owner confirmed the Slice 4 alignment and Finder-interaction checks on 2026-10-07. Slice 5 adds a global left-mouse-down observer and a 0.3-second amber tile flash. The editor shows a click count and last clicked tile. Disabling the world or quitting removes the observer and stops pointer sampling. Duplicate starts do not install duplicate observers; late callbacks from removed registrations are ignored. These are diagnostic flashes only; no circuit or file actions exist yet.
+
 ## Development
 
 Requirements: macOS 14 or newer, Xcode with Swift 6 support, and XcodeGen 2.44 or newer. This bootstrap was built and tested with Xcode 27.0 on macOS 27.0; the minimum deployment version has not been tested on an older Mac.
@@ -81,7 +83,19 @@ The window level is calculated from public `CGWindowLevelForKey(.desktopWindow) 
 5. Select, drag, and double-click a harmless Finder desktop item. The outline must not interfere with Finder or bring Redstone Desktop to the foreground.
 6. Disable and re-enable the world; confirm pointer updates resume normally. Disable it again and confirm the debug pointer readout disappears.
 
-No new permissions are expected: position comes from Apple's public [NSEvent.mouseLocation](https://developer.apple.com/documentation/appkit/nsevent/mouselocation) property. Manual alignment and Finder-usability checks remain open until the owner reports results; automated tests use fake pointer positions.
+No new permissions are expected: position comes from Apple's public [NSEvent.mouseLocation](https://developer.apple.com/documentation/appkit/nsevent/mouselocation) property. The owner reported these checks passing; automated tests use fake pointer positions, and MANUAL checkboxes remain unchecked under the agent rules.
+
+## Manual validation — Slice 5
+
+1. Quit the previous app with Command-Q and open the latest build using the command above. Confirm the footer says “Slice 5 · Global click observation”.
+2. Enable the desktop world and move the editor aside. Single-click blank desktop: the clicked square should briefly flash amber, then fade away. Move the pointer immediately after clicking to confirm the flash stays at the clicked square.
+3. Select a desktop icon, then click blank desktop. Finder should still handle its normal selection/deselection. Click an icon again and confirm it selects normally; drag it and double-click a harmless file/folder as an additional check.
+4. Watch the editor's “Clicks observed” readout: one single desktop click should add one, and “Last tile” should match the clicked square. Clicking this app's own editor does not count because a global monitor observes events delivered to other apps.
+5. Disable/re-enable the world two or three times, then click blank desktop once. The reset counter should become 1, with one flash. When disabled, the checker and click readout should disappear.
+6. Quit while enabled, relaunch, and enable again. Confirm clicks work once each and Finder is still usable.
+7. If you have another display, click there and confirm the active display has no flash or counter change.
+
+The observer uses Apple's public [global event monitor](https://developer.apple.com/library/archive/documentation/Cocoa/Conceptual/EventOverview/MonitoringEvents/MonitoringEvents.html), which cannot consume or modify clicks. It observes other-app clicks anywhere on the active display; flashes under ordinary application windows may be obscured by those windows. It does not yet determine Finder icon occupancy, and flashes have no action consequences. If macOS shows a permission prompt or desktop clicks fail to register, report that observation before proceeding to Slice 6.
 
 ## License and assets
 

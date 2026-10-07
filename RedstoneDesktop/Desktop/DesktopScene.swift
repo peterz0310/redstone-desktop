@@ -5,6 +5,7 @@ final class DesktopScene: SKScene {
     let screen: ScreenDescriptor
     let mapper: CoordinateMapper
     private let highlight = SKShapeNode()
+    private let clickFlash = SKShapeNode()
     private(set) var highlightedTile: WorldCoordinate?
 
     init(screen: ScreenDescriptor, mapper: CoordinateMapper) {
@@ -19,6 +20,11 @@ final class DesktopScene: SKScene {
         highlight.lineWidth = 2
         highlight.zPosition = 1
         highlight.isHidden = true
+        clickFlash.name = "click-flash"
+        clickFlash.fillColor = NSColor.systemOrange.withAlphaComponent(0.55)
+        clickFlash.strokeColor = .systemOrange
+        clickFlash.zPosition = 2
+        clickFlash.isHidden = true
         rebuildChecker()
     }
 
@@ -40,9 +46,18 @@ final class DesktopScene: SKScene {
         }
     }
 
+    func flashTile(_ coordinate: WorldCoordinate) {
+        clickFlash.removeAllActions()
+        clickFlash.path = CGPath(rect: mapper.sceneRect(forTile: coordinate, on: screen).insetBy(dx: 1, dy: 1), transform: nil)
+        clickFlash.alpha = 1
+        clickFlash.isHidden = false
+        clickFlash.run(.sequence([.fadeOut(withDuration: 0.3), .hide()]))
+    }
+
     private func rebuildChecker() {
         removeAllChildren()
         addChild(highlight)
+        addChild(clickFlash)
         guard size.width > 0, size.height > 0,
               let first = mapper.tile(atScreen: screen.frame.origin),
               let last = mapper.tile(atScreen: CGPoint(x: screen.frame.minX + size.width, y: screen.frame.minY + size.height)) else { return }

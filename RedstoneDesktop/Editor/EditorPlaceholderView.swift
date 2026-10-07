@@ -13,10 +13,14 @@ struct EditorPlaceholderView: View {
             Divider()
             Text("Editor placeholder")
                 .font(.headline)
-            Text("Enable the desktop checker and move the pointer to highlight a world tile. Finder integration and circuits will be added in roadmap order.")
+            Text("Enable the desktop checker, then click the desktop to briefly flash a tile. Finder integration and circuits will be added in roadmap order.")
                 .fixedSize(horizontal: false, vertical: true)
             Button(appState.isDesktopWorldEnabled ? "Disable Desktop World" : "Enable Desktop World") {
                 appState.toggleDesktopWorld()
+            }
+            if let click = appState.lastClick {
+                Text("Clicks observed: \(appState.observedClickCount) · Last tile: (\(click.tile.x), \(click.tile.y))")
+                    .font(.caption.monospaced())
             }
             Text(appState.desktopStatus)
                 .font(.callout)
@@ -35,7 +39,7 @@ struct EditorPlaceholderView: View {
                 .font(.caption.monospaced())
             }
             Spacer()
-            Text("Slice 4 · Cursor highlight")
+            Text("Slice 5 · Global click observation")
                 .font(.caption)
                 .foregroundStyle(.secondary)
         }

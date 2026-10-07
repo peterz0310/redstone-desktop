@@ -1982,12 +1982,12 @@ If layering is wrong, investigate before proceeding.
 
 ### Tasks
 
-- [ ] create `DesktopClickMonitor`
-- [ ] observe left mouse down
-- [ ] map click to tile
-- [ ] show short debug flash
-- [ ] remove monitor cleanly on shutdown
-- [ ] prevent duplicate monitors
+- [x] create `DesktopClickMonitor`
+- [x] observe left mouse down
+- [x] map click to tile
+- [x] show short debug flash
+- [x] remove monitor cleanly on shutdown
+- [x] prevent duplicate monitors
 
 ### Manual acceptance
 

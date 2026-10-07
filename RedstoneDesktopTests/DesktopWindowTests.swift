@@ -42,10 +42,10 @@ final class DesktopWindowTests: XCTestCase {
         let screen = ScreenDescriptor(id: "test", frame: CGRect(x: 0, y: 0, width: 1920, height: 1080), backingScale: 2)
         let mapper = try CoordinateMapper(canvasFrame: screen.frame, camera: camera)
         let scene = DesktopScene(screen: screen, mapper: mapper)
-        XCTAssertEqual(scene.children.count, 3)
+        XCTAssertEqual(scene.children.count, 4)
         for size in [CGSize(width: 800, height: 600), CGSize(width: 2560, height: 1440)] {
             scene.size = size
-            XCTAssertEqual(scene.children.count, 3)
+            XCTAssertEqual(scene.children.count, 4)
             XCTAssertTrue(scene.children.allSatisfy { $0 is SKShapeNode })
         }
     }
@@ -60,7 +60,7 @@ final class DesktopWindowTests: XCTestCase {
     func testStateCanEnableDisableAndEnableAgain() {
         let state = AppState(screenProviding: {
             ScreenDescriptor(id: "test", frame: CGRect(x: -100, y: -100, width: 64, height: 64), backingScale: 1)
-        })
+        }, clickEventMonitoring: FakeGlobalMouseEventMonitor())
         for _ in 0..<2 {
             state.toggleDesktopWorld()
             XCTAssertTrue(state.isDesktopWorldEnabled)
