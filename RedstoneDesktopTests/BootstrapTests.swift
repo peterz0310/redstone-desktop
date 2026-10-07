@@ -5,12 +5,12 @@ import XCTest
 
 final class BootstrapTests: XCTestCase {
     @MainActor
-    func testEditorPlaceholderCanBeHostedInNativeApp() {
-        let hostingView = NSHostingView(rootView: EditorPlaceholderView(appState: AppState()))
+    func testEditorCanBeHostedInNativeApp() {
+        let hostingView = NSHostingView(rootView: EditorView(appState: AppState()))
         let size = hostingView.fittingSize
 
-        XCTAssertGreaterThanOrEqual(size.width, 480)
-        XCTAssertGreaterThanOrEqual(size.height, 320)
+        XCTAssertGreaterThanOrEqual(size.width, 1060)
+        XCTAssertGreaterThanOrEqual(size.height, 760)
         XCTAssertEqual(Bundle.main.bundleIdentifier, "org.redstonedesktop.RedstoneDesktop")
     }
 }

@@ -114,15 +114,4 @@ final class DeveloperPlacementTests: XCTestCase {
         XCTAssertTrue(state.simulator.poweredTiles.isEmpty)
     }
 
-    @MainActor
-    func testDeveloperFormCanBeHostedWithoutDesktopOrFinderAccess() {
-        let provider = PlacementItemProvider(), opener = FixtureItemOpener()
-        let state = state(provider: provider, opener: opener)
-        let view = NSHostingView(rootView: DeveloperPlacementView(appState: state))
-        XCTAssertGreaterThanOrEqual(view.fittingSize.width, 520)
-        XCTAssertGreaterThanOrEqual(view.fittingSize.height, 560)
-        XCTAssertEqual(provider.calls, 0)
-        XCTAssertTrue(opener.urls.isEmpty)
-        XCTAssertFalse(state.isDesktopWorldEnabled)
-    }
 }

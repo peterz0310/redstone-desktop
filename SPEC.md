@@ -23,7 +23,7 @@ The intended workflow is:
 
 The project is an experiment first and a polished application second.
 
-Current implementation: Slices 0–19A are complete with owner-confirmed Mac acceptance where required. **Slice 19B is implemented; its four owner Mac checks are pending.** The atomic library stores independent fixed-seed worlds, named camera bookmarks and one active area. The editor can browse/edit inactive worlds while another runs; Activate on Desktop commits the selected saved camera before switching. Startup remains disabled. Finder ghosts remain **Slice 20**. Completed slice descriptions and dated decision entries are historical evidence; Sections 3.8, 7.1, 25 and 29 define current behavior.
+Current implementation: Slices 0–19A have owner-confirmed acceptance. **Slices 19B–19C are implemented; their specific Mac checks remain pending.** The owner requested 19C usability cleanup after tentative 19B feedback. Worlds now have a sidebar; area previews sit below the canvas; creation/rename/save/deletion use focused sheets. Atomic deletion protects active/final records and preserves configuration on failure. Library, fixed-seed world and explicit saved-area activation contracts remain intact. Finder ghosts remain **Slice 20**. Historical entries record earlier behavior; Sections 3.8, 7.1, 25 and 29 define the current contract.
 
 The most important early question is not whether attractive terrain or redstone can be made. Those are comparatively straightforward. The first major feasibility gate is:
 
@@ -1446,16 +1446,17 @@ No need for full 3D positional audio.
 
 # 25. Editor UX
 
-Target layout after Slice 19B:
+Current layout after Slice 19C:
 
 ```text
-Worlds / Saved Areas | World canvas + tools | Inspector
-New World: Seed / Preview / Random / Create World
-Selected: Experiments / Bench       Desktop: Shortcuts / Morning
-Save Area…                         Activate on Desktop
+Editing: world / area        Desktop: world / area     Start/Stop | Advanced
+Worlds sidebar              World canvas              Build / Inspector
++ opens New World sheet     Pan / Zoom / Show Desktop
+                            Areas in selected world: preview cards
+                            Save Current View… / Manage Area / Activate
 ```
 
-Editor must support world creation/list/rename, area save/list/rename, pan, zoom, selection, placement/erase, component rotation, repeater delay, shared placement validation, viewport outlines and later Finder ghosts. World/area names must be nonempty after trimming; UUIDs identify records even when names coincide. Show each world's seed, its saved areas and the active desktop badge so the selected editor world cannot be mistaken for the live one. World/area deletion, circuit duplication, thumbnails, search and editor simulation are deferred.
+Editor must support world creation/list/rename, area save/list/rename, pan, zoom, selection, placement/erase, component rotation, repeater delay, shared placement validation, viewport outlines and later Finder ghosts. World/area names must be nonempty after trimming; UUIDs identify records even when names coincide. Show each world's seed, its saved areas and the active desktop badge so the selected editor world cannot be mistaken for the live one. Slice 19C adds an explicit worlds sidebar, selected-world area previews below the canvas, creation/rename/save sheets and confirmed deletion. Circuit duplication, search and editor simulation remain deferred.
 
 ## 25.1 Browsing, saved areas and activation
 
@@ -1476,7 +1477,15 @@ Selecting a stored world restores its own components and lever positions. Enteri
 
 Remove the prototype's apply-new-seed-to-existing-circuit path when Slice 19A lands. There is no implicit reset, component transfer or terrain replacement for existing worlds. Import/export, explicit duplication and terrain regeneration/migration tools remain later work.
 
-## 25.3 Output snapping
+## 25.3 Library navigation and cleanup (Slice 19C)
+
+Make the hierarchy visible: worlds in a sidebar; only the selected world's areas in a horizontal preview shelf below the canvas. World creation is a secondary New World sheet with name/seed/Preview/Random; normal editing has no persistent seed/creation/rename fields. Save Area and rename use focused sheets. Keep one compact desktop status/run control and a separately labeled saved-area activation action. Clearly distinguish browsing from the active desktop. Put debug metrics, Finder Diagnostics and desktop event details behind Advanced/Window menus, retaining permission/error recovery. Retire the developer placement window from app navigation; preserve fixtures needed by migration and automated tests, and never erase migrated user/demo circuits as cleanup.
+
+Previews are bounded, disposable schematic terrain/circuit images, not persisted assets or simulations. Use CoordinateMapper for their camera projection; regenerate only on world configuration, saved camera or display-size changes, not transient power ticks. No Finder reads/paths or actions in previews. Areas preview their saved viewport; sidebar worlds preview their first area.
+
+Deletion is explicit and confirmed in UI, with stable target IDs enforced in domain methods. Deleting an area removes only its bookmark, never components. Deleting a world removes that world and all its areas/components/levers. Refuse deleting the active desktop area or world even while disabled: activate another saved area first. Refuse deleting the final world or a world's final area. No implicit desktop reassignment, runtime restart or automatic replacement bookmark. If editor selection is deleted, browse the first remaining area in that world or the active area after world deletion. Validate and synchronously save the complete proposed library before publishing deletion; load-blocked/save-failed deletion preserves in-memory records, selection and runtime and never queues a destructive retry. Other pending configuration still follows normal retry semantics. The legacy backup is untouched; deletion does not change Finder files.
+
+## 25.4 Output snapping
 
 Eventually support:
 
@@ -1877,7 +1886,7 @@ Keep existing desktop demo circuits in place. Extend any additional test circuit
 
 # 38. IMPLEMENTATION ROADMAP
 
-The roadmap is deliberately granular. Adopted order after Slice 19 is **19A → 19B → 20**, then the existing numbered slices. Lettered additions preserve earlier slice numbers and validation history. Documentation planning is not implementation acceptance.
+The roadmap is deliberately granular. Adopted order after Slice 19 is **19A → 19B → 19C → 20**, then the existing numbered slices. Lettered additions preserve earlier slice numbers and validation history. Documentation planning is not implementation acceptance.
 
 ---
 
@@ -2384,6 +2393,27 @@ Browse a list of built areas across worlds and explicitly choose one for the des
 - [ ] MANUAL: a harmless Finder occupant opens only from the active area's visible output; switching cancels the previous world's pending pulse/action.
 
 **Status: implemented; owner Mac validation pending.** Debug build and all 205 automated tests pass; Foundation-only World/Circuit/Persistence type-check also passes. Its four MANUAL checkboxes remain unchecked. README.md contains the exact launch, bookmark, switching, cancellation and restart checks. Finder ghosts follow in Slice 20 after owner confirmation.
+
+---
+
+## Slice 19C — Clear library navigation and cleanup
+
+Owner-requested usability detour before Finder ghosts; preserve Slice 19B runtime contracts.
+
+- [x] Worlds sidebar with selected/desktop distinction; area preview shelf scoped to selected world.
+- [x] Bounded camera-mapped terrain/circuit previews, refreshed on configuration rather than simulation ticks.
+- [x] Secondary New World sheet; focused Save Area/rename/delete flows; compact editor/tool/inspector controls.
+- [x] Confirmed stable-ID world/area deletion with active/final-record guards and save-before-publish failure preservation.
+- [x] Remove developer placement window/navigation and demo-specific desktop diagnostic labels; retain test/migration fixtures and advanced recovery diagnostics.
+- [x] Add deletion/preview/navigation regression tests, build app, run full suite and update README.
+
+### Manual acceptance
+
+- [ ] MANUAL: sidebar worlds and area previews make browsing versus desktop activation clear; create/save/rename sheets work without copying builds.
+- [ ] MANUAL: delete a disposable inactive world and an extra bookmark; builds survive bookmark deletion, active/final records stay protected, and deletion survives reopen.
+- [ ] MANUAL: editing, desktop activation, Finder opening and Advanced diagnostic recovery still work after rearrangement.
+
+**Status: implemented; owner Mac checks pending.** Debug build and all 213 tests pass, plus Foundation-only type-check. The owner said “I think it works” for 19B and requested usability cleanup. Record this as tentative feedback; its four specific MANUAL checks remain pending rather than inferring all passed. Slice 20 remains untouched.
 
 ---
 
@@ -3430,3 +3460,25 @@ The active world's complete finite circuit continues simulating offscreen; outpu
 Evidence: Debug build and all 205 tests pass. SavedAreaTests adds 11 checks covering shared bookmarks, saved-camera versus pan, restart-disabled selection, held live isolation under inactive editing, pending/selection write failure, same-view runtime no-op, old-world input and old-view output completion cancellation, offscreen wire transmission/output suppression, inactive lever labels and display failure before/after commit. Earlier seed browser/library tests now exercise the replacement controls. Foundation-only domain/persistence type-check and git diff --check pass. Owner save-file hashes remained unchanged across the final automated build/test runs; app test startup remains isolated from production persistence/Finder.
 
 Consequences: Slice 19B implementation/automated tasks are complete; its four MANUAL checks remain pending. No new demo circuits, Finder ghosts, resource packs, private APIs, backend, generated-terrain changes or deletion/copying workflows were introduced. README.md distinguishes historical Slice 19A restrictions from current behavior and provides the exact Mac walkthrough.
+
+
+## 2026-10-07 — Owner requests library UX cleanup before Finder ghosts
+
+Context: the owner finds the top controls overwhelming and world creation too prominent. They like areas belonging to worlds and request previews, deletion, clearer layout and removal of obsolete test controls. “I think it works” is tentative 19B feedback, not a specific confirmation of all four Mac checks.
+
+Decision: insert Slice 19C before 20 and adopt Section 25.3. Worlds sidebar, selected-world preview shelf and focused sheets replace permanent top-bar forms. Advanced diagnostics remain useful for Automation/alignment/event rejection failures; move them away from the normal task flow. Remove developer placement navigation and fixed-demo-only diagnostic presentation while retaining automated tests and migration fixtures. Do not automatically clear stored circuits. Add explicit deletion of inactive/nonfinal records, confirmation text distinguishing bookmark versus world removal, and atomic save-before-publish failure behavior. No Finder files are deleted.
+
+Consequences: implement only this owner-requested UX slice, no Finder ghosts/resource packs/advanced redstone. Slice 19B's manual items remain pending. New manual checks require owner validation.
+
+
+## 2026-10-07 — Slice 19C implementation and automated validation
+
+Decision: implement Worlds sidebar with first-area schematic previews, selected-world area shelf with saved-camera previews, focused New World/Save Current View/rename/deletion sheets, compact desktop/browsing labels and right-hand Build/Inspector. New World is secondary; entering or canceling a seed preview never transfers components. Move Finder Diagnostics/Desktop Details/Save Now into Advanced; collapse terrain metrics. Remove DeveloperPlacementView/window and rename EditorPlaceholderView to DesktopDetailsView with world-independent action/event information. Keep legacy data/test fixtures and every existing saved circuit.
+
+Deletion restrictions live in Foundation-only WorldLibraryDocument; AppState validates and saves the complete candidate before publishing. Active desktop/final records are protected. Area deletion retains shared circuits. World deletion removes its areas/configuration, falls back editor browsing to the active bookmark, and leaves active mapping/simulation/session untouched. Write/load failure preserves the old library/selection/runtime and does not retain deletion as an autosave retry. No schema change or Finder file mutation.
+
+Previews sample a fixed 48×30 grid, use CoordinateMapper for saved viewport/world projection, preserve display aspect within 144×88 points, draw terrain/decorations and visible component marks once into a disposable bitmap, and refresh on configuration/camera/display size rather than transient power. They do not query Finder or simulate. SpriteKit remains the actual interactive world renderer. Preview bitmaps are not saved, exported assets or ghost projections.
+
+Evidence: Debug build and all 213 tests pass; nine new cleanup tests cover pure guards/unknown IDs, bookmark-only removal/build preservation/restart, inactive world deletion without live restart, failed proposed deletion and failed pending-save retry, unselected deletion/stopped-active guards, damaged-store preservation, bounded aspect/camera/component previews, and native editor/sheet hosting. Bootstrap now hosts the actual editor; the obsolete developer-form hosting test was removed along with its view, while placement/runtime regression tests remain. Native hosted layout/preview capture was inspected in light appearance; NSView bitmap capture omits the SpriteKit GPU canvas and does not establish physical Finder/desktop behavior. Pure domain/persistence type-check and diff checks pass; owner save hashes stayed unchanged during final automated runs.
+
+Consequences: all 19C implementation tasks complete; its three manual checks and 19B's specific runtime checks remain pending owner confirmation. README describes current controls, disposable deletion checks and recovery. No Finder ghosts, resource packs, advanced circuits, private API or backend added.

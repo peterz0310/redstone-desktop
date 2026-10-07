@@ -5,94 +5,107 @@ struct EditorView: View {
     @StateObject private var editor = EditorSession()
     @Environment(\.openWindow) private var openWindow
 
+    @State private var sheet: LibrarySheet?
+
     var body: some View {
         VStack(spacing: 0) {
-            HStack {
-                Text("Redstone Desktop").font(.headline)
+            HStack(spacing: 12) {
+                VStack(alignment: .leading, spacing: 3) {
+                    Text("Editing: \(appState.selectedDocument.name) / \(appState.selectedArea.name)").font(.headline)
+                    Text("Desktop: \(appState.activeWorldName) / \(appState.library.activeArea!.name) · \(appState.isDesktopWorldEnabled ? "Running" : "Stopped")")
+                        .font(.caption).foregroundStyle(.secondary)
+                }
                 Spacer()
-                Button(appState.isDesktopWorldEnabled ? "Disable Desktop World" : "Enable Desktop World") { appState.toggleDesktopWorld() }
-                Button("Finder Diagnostics…") { openWindow(id: "finder-diagnostics") }
-                Button("Save Now") { appState.saveWorldNow() }.disabled(!appState.canSaveWorld)
-                Button("Desktop Controls…") { openWindow(id: "desktop-controls") }
+                Button(appState.isDesktopWorldEnabled ? "Stop Desktop" : "Start Desktop") { appState.toggleDesktopWorld() }
+                Menu {
+                    Button("Finder Diagnostics…") { openWindow(id: "finder-diagnostics") }
+                    Button("Desktop Details…") { openWindow(id: "desktop-controls") }
+                    Divider()
+                    Button("Save Now") { appState.saveWorldNow() }.disabled(!appState.canSaveWorld)
+                } label: { Label("Advanced", systemImage: "ellipsis.circle") }
             }.padding(12)
             Divider()
-            WorldLibraryView(appState: appState, editor: editor)
-            Divider()
-            HStack {
-                Text("New seed")
-                TextField("Unsigned whole number", text: $editor.seedText).frame(width: 200)
-                    .onSubmit { editor.previewSeed() }
-                Button("Preview") { editor.previewSeed() }
-                Button("Random") { editor.randomSeed() }
-                Button("Cancel Preview") { editor.cancelPreview(appState) }
-                    .disabled(editor.previewGeneration == nil)
-                TextField("New world name", text: $editor.newWorldName).frame(width: 140)
-                Button("Create World") { editor.createWorld(appState) }
-                Spacer()
-            }.padding(.horizontal, 12).padding(.vertical, 8)
-            HStack {
-                TextField("New area name", text: $editor.areaName).frame(width: 180)
-                Button("Save Area") { editor.saveArea(appState) }.disabled(editor.isPreviewing(appState))
-                Button("Activate on Desktop") { editor.activateArea(appState) }
-                    .disabled(appState.desktopScreen == nil || editor.isPreviewing(appState))
-                Text("Target: \(appState.selectedDocument.name) / \(appState.selectedArea.name) · saved origin (\(appState.selectedAreaCamera.worldOrigin.x, specifier: "%.1f"), \(appState.selectedAreaCamera.worldOrigin.y, specifier: "%.1f"))")
-                    .font(.caption)
-            }.padding(.horizontal, 12).padding(.vertical, 8)
-            Text(editor.proposedDesktopCamera(appState) == appState.selectedAreaCamera
-                 ? "Orange: proposed view · Blue: active desktop in this world. Activate uses the saved target."
-                 : "View has moved. Activate uses the saved target above; Save Area bookmarks this proposed view.")
-                .font(.caption).foregroundStyle(.secondary).frame(maxWidth: .infinity, alignment: .leading).padding(.horizontal, 12)
-            Divider()
             HStack(spacing: 0) {
-                VStack(alignment: .leading, spacing: 8) {
-                    Text("Tools").font(.headline)
-                    ForEach(EditorSession.Tool.allCases, id: \.self) { tool in
-                        Button { editor.tool = tool } label: {
-                            HStack { Text(tool.rawValue); Spacer(); if editor.tool == tool { Image(systemName: "checkmark") } }
-                        }
-                        .disabled((appState.isEditorConfigurationLocked || editor.isPreviewing(appState)) && tool.editsWorld)
-                    }
-                    Divider()
+                WorldLibraryView(appState: appState, editor: editor, sheet: $sheet)
+                Divider()
+                VStack(spacing: 0) {
                     HStack {
-                        Button("−") { editor.zoom(by: 0.8) }
-                        Button("+") { editor.zoom(by: 1.25) }
-                    }
-                    Text("\(editor.camera.pointsPerTile, specifier: "%.0f") pt/tile").font(.caption)
-                    Button("Show desktop area") { editor.showDesktopArea(appState) }
-                    Button("Reset view") { editor.resetCamera() }
-                    Text("Pan: drag canvas\nZoom: scroll or +/−").font(.caption).foregroundStyle(.secondary)
-                    Spacer()
-                    Button("Developer Placement…") { openWindow(id: "developer-placement") }
-                }.padding(12).frame(width: 165)
+                        Text(editor.proposedDesktopCamera(appState) == appState.selectedAreaCamera
+                            ? "Browsing saved area · Orange: proposed view · Blue: desktop"
+                            : "Unsaved view · Save Current View to bookmark it")
+                            .font(.caption).foregroundStyle(.secondary)
+                        Spacer()
+                        if editor.proposedDesktopCamera(appState) != appState.selectedAreaCamera {
+                            Button("Return to Area") { editor.selectArea(appState.selectedAreaID, appState: appState) }
+                        }
+                    }.padding(10)
+                    EditorCanvasView(appState: appState, editor: editor)
+                        .frame(maxWidth: .infinity, maxHeight: .infinity)
+                    HStack {
+                        Button("−") { editor.zoom(by: 0.8) }.help("Zoom out")
+                        Button("+") { editor.zoom(by: 1.25) }.help("Zoom in")
+                        Text("Pan: drag with Pan · Zoom: scroll").font(.caption).foregroundStyle(.secondary)
+                        Spacer()
+                        Button("Show Desktop Area") { editor.showDesktopArea(appState) }
+                        Menu("View") { Button("Reset to Origin") { editor.resetCamera() } }
+                    }.padding(8)
+                    Divider()
+                    AreaShelfView(appState: appState, editor: editor, sheet: $sheet)
+                    HStack {
+                        VStack(alignment: .leading, spacing: 2) {
+                            Text("Desktop target: \(appState.selectedArea.name)").font(.callout)
+                            Text("Saved origin (\(appState.selectedAreaCamera.worldOrigin.x, specifier: "%.1f"), \(appState.selectedAreaCamera.worldOrigin.y, specifier: "%.1f")) · browsing never activates it")
+                                .font(.caption).foregroundStyle(.secondary)
+                        }
+                        Spacer()
+                        Button("Activate on Desktop") { editor.activateArea(appState) }
+                            .disabled(appState.desktopScreen == nil || editor.isPreviewing(appState))
+                    }.padding(.horizontal, 12).padding(.bottom, 10)
+                }
                 Divider()
-                EditorCanvasView(appState: appState, editor: editor)
-                    .frame(maxWidth: .infinity, maxHeight: .infinity)
-                Divider()
-                inspector.frame(width: 245)
+                inspector.frame(width: 230)
             }
             Divider()
-            VStack(alignment: .leading, spacing: 4) {
-                Text(appState.isEditorConfigurationLocked ? "Active world running — disable it to edit. Inactive worlds remain editable." : "Editing the selected world. Green: allowed; red: blocked. New worlds have procedural terrain and no demo patches.")
-                if editor.isPreviewing(appState), let generation = editor.previewGeneration {
-                    Text("New-world preview · seed \(generation.seed) · empty circuit. Create World or cancel to edit.").foregroundStyle(.secondary)
-                }
-                Text(editor.status).foregroundStyle(.secondary)
-                Text(appState.persistenceStatus).foregroundStyle(.secondary).textSelection(.enabled)
-                if let error = appState.finderDiagnostics.error {
-                    Text("Finder unavailable: \(error) — open Finder Diagnostics to retry.").foregroundStyle(.red).font(.caption)
-                }
-                Text("Terrain: \(editor.terrainMetrics.retainedChunks) cached chunks · \(editor.terrainMetrics.chunkNodes) chunk nodes · \(editor.terrainMetrics.generatedChunks) generated · \(editor.terrainMetrics.textureBuilds) textures").font(.caption)
-                Text("Slice 19B · Named areas")
-                    .font(.caption)
-            }.font(.callout).frame(maxWidth: .infinity, alignment: .leading).padding(10)
+            HStack {
+                Text(appState.isEditorConfigurationLocked ? "Stop Desktop to edit this world." : editor.status)
+                    .lineLimit(2)
+                Spacer()
+                Text(appState.persistenceStatus).foregroundStyle(.secondary).lineLimit(2).textSelection(.enabled)
+            }.font(.caption).padding(8)
+            if let error = appState.finderDiagnostics.error {
+                HStack {
+                    Text("Finder unavailable: \(error)").foregroundStyle(.red).lineLimit(2)
+                    Spacer()
+                    Button("Finder Diagnostics…") { openWindow(id: "finder-diagnostics") }
+                }.font(.caption).padding(8)
+            }
         }
-        .frame(minWidth: 1100, minHeight: 760)
+        .frame(minWidth: 1060, minHeight: 760)
         .onAppear { editor.syncSelectedWorld(appState) }
+        .sheet(item: $sheet, onDismiss: { if editor.isPreviewing(appState) { editor.cancelPreview(appState) } }) { kind in
+            LibrarySheetView(kind: kind, appState: appState, editor: editor)
+        }
     }
 
     private var inspector: some View {
         ScrollView {
             VStack(alignment: .leading, spacing: 12) {
+                Text("Build").font(.headline)
+                LazyVGrid(columns: [GridItem(.flexible()), GridItem(.flexible())], spacing: 6) {
+                    ForEach(EditorSession.Tool.allCases, id: \.self) { tool in
+                        Button { editor.tool = tool } label: {
+                            HStack(spacing: 4) {
+                                Text(tool.rawValue)
+                                if editor.tool == tool { Image(systemName: "checkmark").font(.caption2) }
+                            }.frame(maxWidth: .infinity).padding(.vertical, 3)
+                        }
+                        .tint(editor.tool == tool ? .accentColor : .secondary)
+                        .disabled((appState.isEditorConfigurationLocked || editor.isPreviewing(appState)) && tool.editsWorld)
+                    }
+                }
+                Text(appState.isEditorConfigurationLocked ? "This world is running. Stop Desktop to edit it." : "Choose a component, then click a green tile to place it.")
+                    .font(.caption).foregroundStyle(.secondary)
+                Divider()
                 Text("Inspector").font(.headline)
                 if let coordinate = editor.selectedTile {
                     Text("Tile (\(coordinate.x), \(coordinate.y))").font(.body.monospaced())
@@ -128,7 +141,11 @@ struct EditorView: View {
                             .foregroundStyle(result.isAllowed ? Color.green : Color.red)
                     }
                 }
-                Text(appState.developerPlacementStatus).font(.caption).textSelection(.enabled)
+                DisclosureGroup("Technical Details") {
+                    Text(appState.developerPlacementStatus).font(.caption).textSelection(.enabled)
+                    Text("Terrain: \(editor.terrainMetrics.retainedChunks) cached chunks · \(editor.terrainMetrics.chunkNodes) nodes · \(editor.terrainMetrics.generatedChunks) generated · \(editor.terrainMetrics.textureBuilds) textures").font(.caption)
+                    Text("Slice 19C · Library navigation").font(.caption)
+                }
                 Divider()
                 Text("To run a circuit, enable Desktop World and press its input on the real desktop. Editor clicks select/place; they do not open files.")
                     .font(.caption).foregroundStyle(.secondary)

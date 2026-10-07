@@ -28,14 +28,14 @@ final class WorldAutosaver {
     }
 
     /// Commit a proposed selection without leaving a failed selection queued for autosave.
-    func commit(_ document: WorldLibraryDocument) -> Bool {
+    func commit(_ document: WorldLibraryDocument, operation: String = "Activation") -> Bool {
         guard flush() else { return false }
         do {
             try store.save(document)
             report("Saved.")
             return true
         } catch {
-            report("Activation save failed: \(error.localizedDescription) Current desktop preserved; retry Activate on Desktop.")
+            report("\(operation) save failed: \(error.localizedDescription) Current library and desktop preserved; retry the operation.")
             return false
         }
     }

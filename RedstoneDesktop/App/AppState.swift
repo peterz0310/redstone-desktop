@@ -241,6 +241,34 @@ final class AppState: ObservableObject {
         return !running || isDesktopWorldEnabled
     }
 
+    @discardableResult
+    func deleteWorld(_ id: UUID) -> Bool {
+        do { return commitDeletion(try library.deletingWorld(id)) }
+        catch { libraryStatus = error.localizedDescription; return false }
+    }
+
+    @discardableResult
+    func deleteArea(_ id: UUID) -> Bool {
+        do { return commitDeletion(try library.deletingArea(id)) }
+        catch { libraryStatus = error.localizedDescription; return false }
+    }
+
+    private func commitDeletion(_ next: WorldLibraryDocument) -> Bool {
+        guard !persistenceBlocked, autosaver?.commit(next, operation: "Deletion") ?? true else {
+            libraryStatus = "Could not save deletion. Nothing deleted; check save/recovery status and retry."
+            return false
+        }
+        let remaining = next.areas.first { $0.id == selectedAreaID }
+            ?? next.areas.first { $0.worldID == selectedWorldID }
+            ?? next.activeArea!
+        library = next
+        selectedWorldID = remaining.worldID
+        selectedAreaID = remaining.id
+        editorWorld = try! selectedDocument.restoredWorld() // already validated before commit
+        libraryStatus = "Deleted. Other builds and the desktop assignment are unchanged."
+        return true
+    }
+
     func developerPlacementPreview(_ component: CircuitComponent, at coordinate: WorldCoordinate) -> PlacementResult {
         guard !isEditorConfigurationLocked else { return .rejected(.reserved) }
         return circuitPlacement.rules.canPlace(component: component, at: coordinate, in: editorWorld)
