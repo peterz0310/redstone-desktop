@@ -2068,14 +2068,14 @@ This alignment must be trustworthy before further UI investment.
 
 Prove the central concept before building the engine.
 
-**Status: replacement gate awaiting manual validation on 2026-10-07.** The owner confirmed the previous gate rejected PRESS because of a full-display Dock window. Captured associated-window identity now replaces rectangle-based hit inference, and target PID is diagnostic only after the owner reported a PID mismatch. Gate A remains open; do not advance to Slice 10 until the owner verifies activation and opening. See the decision log below.
+**Status: activation and opening confirmed by the owner on 2026-10-07.** The corrected associated-window gate accepts PRESS on their Mac. Three manual checks are complete; moving the occupant away and replacing it with a different item still require confirmation before Gate A closes and Slice 10 begins.
 
 ### Tasks
 
 - [x] create fixed test button
 - [x] fixed visual dust path
 - [x] fixed output
-- [ ] clicking button visually powers path
+- [x] clicking button visually powers path
 - [x] output emits rising activation
 - [x] output reads current Finder occupant
 - [x] output opens occupant via `NSWorkspace`
@@ -2083,9 +2083,9 @@ Prove the central concept before building the engine.
 
 ### Manual acceptance
 
-- [ ] MANUAL: place harmless folder/file/app alias on output.
-- [ ] MANUAL: press button and see signal.
-- [ ] MANUAL: occupant opens.
+- [x] MANUAL: place harmless folder/file/app alias on output.
+- [x] MANUAL: press button and see signal.
+- [x] MANUAL: occupant opens.
 - [ ] MANUAL: move occupant away; no target remains.
 - [ ] MANUAL: move a different item onto output; new item becomes target.
 
@@ -2942,6 +2942,16 @@ Smallest proposed correction: use the documented NSEvent.windowNumber as the ass
 Implemented adjustment: select the associated window first, query its owner/layer, and keep target PID out of the acceptance predicate. The editor shows the complete raw and selected-window metadata on every PRESS attempt. Regression tests accept a Finder desktop with a different target PID, still reject ordinary Finder/application windows, and verify window-number preference/fallback. Build succeeds and all 64 tests pass.
 
 Slice 9 remains stopped at Gate A pending the owner's real-Mac retest. Its clicking-button task and five MANUAL checks remain unchecked. Do not advance to Slice 10 or describe the physical circuit as working based on automated fixtures.
+
+---
+
+## 2026-10-07 — Owner confirms circuit activation and occupant opening
+
+Context: after the associated-window/PID correction, the owner reports “That worked! If I place something there, it opens it too.”
+
+Decision: mark the clicking-button task and the first three Slice 9 MANUAL checks complete: place an item on output, press and see signal, and occupant opens. This is owner-reported real-Mac validation, distinct from the 64 passing automated tests.
+
+Consequences: the previous click-gate blocker is resolved for the owner's tested configuration. Moving the occupant away and moving a different item onto output have not yet been confirmed in this report; those two MANUAL checks remain unchecked. Gate A remains open until they pass. No claims are added for window-overlap, repeat-press, or ambiguity manual checks not explicitly reported.
 
 ---
 
