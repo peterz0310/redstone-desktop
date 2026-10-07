@@ -1813,7 +1813,7 @@ Maintain explicit manual validation for things an automated agent cannot safely 
 - display resolution changes survive
 - permissions behave sensibly
 
-The AI must never mark a `MANUAL` checkbox complete on its own.
+The AI may mark a `MANUAL` checkbox complete only after the owner confirms the corresponding checks passed on their Mac. Record that confirmation as owner-reported validation, separate from automated test results. Never infer manual completion from a build or test run.
 
 ---
 
@@ -1890,7 +1890,7 @@ Create a reproducible native macOS app.
 
 ### Manual acceptance
 
-- [ ] MANUAL: app launches and shows editor placeholder.
+- [x] MANUAL: app launches and shows editor placeholder.
 
 ---
 
@@ -1929,11 +1929,11 @@ Prove correct macOS window layering.
 
 ### Manual acceptance
 
-- [ ] MANUAL: checker appears above normal wallpaper.
-- [ ] MANUAL: Finder desktop icons appear above checker.
-- [ ] MANUAL: icons remain selectable.
-- [ ] MANUAL: icons can be dragged normally.
-- [ ] MANUAL: application windows appear above desktop world.
+- [x] MANUAL: checker appears above normal wallpaper.
+- [x] MANUAL: Finder desktop icons appear above checker.
+- [x] MANUAL: icons remain selectable.
+- [x] MANUAL: icons can be dragged normally.
+- [x] MANUAL: application windows appear above desktop world.
 
 ### Stop condition
 
@@ -1973,8 +1973,8 @@ If layering is wrong, investigate before proceeding.
 
 ### Manual acceptance
 
-- [ ] MANUAL: highlight changes exactly at visible tile boundaries.
-- [ ] MANUAL: Finder remains fully interactive.
+- [x] MANUAL: highlight changes exactly at visible tile boundaries.
+- [x] MANUAL: Finder remains fully interactive.
 
 ---
 
@@ -1991,9 +1991,9 @@ If layering is wrong, investigate before proceeding.
 
 ### Manual acceptance
 
-- [ ] MANUAL: empty-desktop click flashes tile.
-- [ ] MANUAL: Finder still receives click.
-- [ ] MANUAL: clicking an icon still selects it normally.
+- [x] MANUAL: empty-desktop click flashes tile.
+- [x] MANUAL: Finder still receives click.
+- [x] MANUAL: clicking an icon still selects it normally.
 
 ---
 
@@ -2012,10 +2012,10 @@ If layering is wrong, investigate before proceeding.
 
 ### Manual acceptance
 
-- [ ] MANUAL: macOS permission prompt appears when expected.
-- [ ] MANUAL: accepting returns desktop items.
-- [ ] MANUAL: moving item changes reported position.
-- [ ] MANUAL: denial does not crash app.
+- [x] MANUAL: macOS permission prompt appears when expected.
+- [x] MANUAL: accepting returns desktop items.
+- [x] MANUAL: moving item changes reported position.
+- [x] MANUAL: denial does not crash app.
 
 ### Stop condition
 
@@ -2036,10 +2036,10 @@ Do not build fancy terrain if Finder positions are not viable.
 
 ### Manual acceptance
 
-- [ ] MANUAL: marker aligns with actual icon.
-- [ ] MANUAL: drag icon and marker follows.
-- [ ] MANUAL: test icons around all screen edges.
-- [ ] MANUAL: change Finder icon size and inspect again.
+- [x] MANUAL: marker aligns with actual icon.
+- [x] MANUAL: drag icon and marker follows.
+- [x] MANUAL: test icons around all screen edges.
+- [x] MANUAL: change Finder icon size and inspect again.
 
 ### FEASIBILITY GATE
 
@@ -2058,7 +2058,7 @@ This alignment must be trustworthy before further UI investment.
 
 ### Manual acceptance
 
-- [ ] MANUAL: dragging icon across a tile boundary changes occupancy at expected point.
+- [x] MANUAL: dragging icon across a tile boundary changes occupancy at expected point.
 
 ---
 
@@ -2782,7 +2782,7 @@ For each slice:
 6. Run the test suite.
 7. Fix build/test failures caused by your changes.
 8. Update SPEC.md checkboxes only for work actually complete.
-9. Never mark a MANUAL checkbox complete. Tell me exactly what I need to verify on my Mac.
+9. Tell me exactly what I need to verify on my Mac. Mark MANUAL checkboxes complete only after I confirm the corresponding checks passed; record them as owner-reported validation.
 10. Summarize changed files and manual validation steps.
 
 Architecture rules:
@@ -2865,7 +2865,7 @@ Decision: Slice 7 tests the hypothesis that the raw point is an icon center in l
 
 Reason: establish the coordinate contract with visible evidence before implementing occupancy. The primary display reference comes from the documented first `NSScreen.screens` entry, independently of the active renderer screen.
 
-Consequences: this is not a discovered/verified Finder semantic yet. “compare visually”, “document discovered semantics”, and all MANUAL checkboxes remain unchecked. A mismatch must stop this slice and be recorded here before proposing the smallest mapping adjustment. Polling is serialized with explicit reads, publishes meaningful item differences only, and pauses on errors; slow main-thread AppleScript behavior must also be reported.
+Consequences at the time (superseded by the owner confirmation below): this was not a discovered/verified Finder semantic yet. “compare visually”, “document discovered semantics”, and all MANUAL checkboxes remain unchecked. A mismatch must stop this slice and be recorded here before proposing the smallest mapping adjustment. Polling is serialized with explicit reads, publishes meaningful item differences only, and pauses on errors; slow main-thread AppleScript behavior must also be reported.
 
 ---
 
@@ -2877,7 +2877,17 @@ Decision: use the tested center mapping for Slice 8: Finder desktop position is 
 
 Occupancy groups centers in the active display into floor-based world tiles. One center is occupied; multiple centers are ambiguous and retain every item in stable order. Outside-display centers are excluded. Unread or failed Finder data is unavailable, not empty. Green and red tile overlays expose this state without executing actions. Explicitly paused polling freezes the last snapshot.
 
-Consequences: the earlier provisional decision remains as history. Slice 7's non-MANUAL comparison and semantics tasks are now complete based on the owner's report. Every MANUAL checkbox remains unchecked. Slice 8 still requires the owner to verify the tile-boundary transition before Slice 9.
+Consequences at the time: the earlier provisional decision remains as history. Slice 7's comparison and semantics tasks were completed based on the owner's report. The original instruction kept MANUAL checkboxes unchecked until the later policy update below. Slice 8's boundary check was still pending at this point.
+
+---
+
+## 2026-10-07 — Record owner-confirmed manual acceptance
+
+Context: the owner confirmed Slice 8 with “It works!” and explicitly requested checking off previous manual validations and future checks as they confirm them. Their earlier confirmations covered the manual acceptance instructions for Slices 0, 2, 4, 5, 6, and 7.
+
+Decision: mark the 20 roadmap MANUAL checks through Slice 8 complete based on those owner reports. These are physical-Mac checks reported by the owner, not checks performed by the agent. The owner's instruction supersedes the original blanket prohibition against updating MANUAL checkboxes.
+
+Consequences: Slices 0–8 have completed required acceptance checks. Future MANUAL items remain unchecked until the owner confirms the corresponding checks. Slice 9 is next and remains unimplemented. Build/test success alone never establishes manual completion.
 
 ---
 

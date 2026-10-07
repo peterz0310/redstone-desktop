@@ -6,7 +6,7 @@ An experimental native macOS app exploring a block world beneath real Finder des
 
 Slices 0–1 provide a SwiftUI editor placeholder and tested domain primitives for coordinates, camera, directions, power, and component identity. Domain files use only the Swift standard library and do not depend on AppKit or SpriteKit.
 
-Slice 2 adds an optional SpriteKit checkerboard in a borderless, click-through AppKit window on the main display. It starts disabled. The editor button or Window → Enable/Disable Desktop World controls it. The owner confirmed the Slice 2 manual checks on 2026-10-07; MANUAL checkboxes remain unchecked under the spec's agent rules.
+Slice 2 adds an optional SpriteKit checkerboard in a borderless, click-through AppKit window on the main display. It starts disabled. The editor button or Window → Enable/Disable Desktop World controls it. The owner confirmed the Slice 2 manual checks on 2026-10-07; The corresponding MANUAL checkboxes are checked based on the owner's report.
 
 Slice 3 adds a tested `CoordinateMapper` and `ScreenDescriptor`. Coordinates use logical points, with the camera origin at the canvas's lower-left corner. Negative positions floor to tiles; backing scale does not affect occupancy.
 
@@ -16,9 +16,11 @@ The owner confirmed the Slice 4 alignment and Finder-interaction checks on 2026-
 
 The owner confirmed Slice 5 desktop clicks, including the expected flash beneath a Finder folder icon, on 2026-10-07. Slice 6 introduced **Finder Diagnostics…** in the editor. Its **Read Finder Items** button explicitly queries Finder through `DesktopItemProviding`. Opening the app or diagnostics window does not contact Finder. Permission denial and malformed responses display different errors, and failed reads clear the list instead of retaining stale positions. The owner reported Slice 6 working on 2026-10-07.
 
-Slice 7 adds pink rings/crosshairs behind Finder icon centers, plus mapped screen/center and world-tile columns. After a successful read and enabling Desktop World, **Start Polling (2 Hz)** enables serialized live updates. **Stop Polling** freezes the last snapshot; disabling the world or quitting also stops polling. Errors pause polling until you explicitly retry. Identical snapshots do not publish new item arrays or redraw markers. The owner reported all Slice 7 checks working on 2026-10-07, establishing the center mapping on their Mac. This is owner-reported evidence, not an independent check on other configurations. MANUAL checkboxes remain unchecked.
+Slice 7 adds pink rings/crosshairs behind Finder icon centers, plus mapped screen/center and world-tile columns. After a successful read and enabling Desktop World, **Start Polling (2 Hz)** enables serialized live updates. **Stop Polling** freezes the last snapshot; disabling the world or quitting also stops polling. Errors pause polling until you explicitly retry. Identical snapshots do not publish new item arrays or redraw markers. The owner reported all Slice 7 checks working on 2026-10-07, establishing the center mapping on their Mac. This is owner-reported evidence, not an independent check on other configurations. The corresponding MANUAL checkboxes are checked based on the owner's report.
 
 Slice 8 groups icon centers into world tiles using a pure `DesktopOccupancyResolver`. Green tiles contain one item; red tiles contain multiple items. Finder Diagnostics lists every item in ambiguous tiles. Items with centers outside the active display are excluded. Unread or failed Finder data is unavailable, distinct from an empty tile. Polling updates occupancy; stopping polling freezes the last snapshot. Simulation and output actions remain future slices.
+
+Manual acceptance through Slice 8 is complete based on the owner's confirmations on 2026-10-07. The roadmap records those reports separately from automated validation. Future manual checks will be checked off as the owner confirms them.
 
 ## Development
 
@@ -64,7 +66,7 @@ When new source files are added, regenerate the project before building. A build
 2. Confirm a normal window titled “Redstone Desktop” appears with “Editor placeholder”. The footer identifies the current slice.
 3. Confirm the window resizes and closes normally; quit using Redstone Desktop → Quit or Command-Q.
 
-An automated hosting test does not prove the visible window is correct. Every `MANUAL` checkbox in the spec remains for the owner to verify.
+An automated hosting test does not prove the visible window is correct. `MANUAL` checkboxes are checked only after the owner confirms the corresponding checks passed on their Mac.
 
 ## Manual validation — Slice 2
 
@@ -89,7 +91,7 @@ The window level is calculated from public `CGWindowLevelForKey(.desktopWindow) 
 5. Select, drag, and double-click a harmless Finder desktop item. The outline must not interfere with Finder or bring Redstone Desktop to the foreground.
 6. Disable and re-enable the world; confirm pointer updates resume normally. Disable it again and confirm the debug pointer readout disappears.
 
-No new permissions are expected: position comes from Apple's public [NSEvent.mouseLocation](https://developer.apple.com/documentation/appkit/nsevent/mouselocation) property. The owner reported these checks passing; automated tests use fake pointer positions, and MANUAL checkboxes remain unchecked under the agent rules.
+No new permissions are expected: position comes from Apple's public [NSEvent.mouseLocation](https://developer.apple.com/documentation/appkit/nsevent/mouselocation) property. The owner reported these checks passing; automated tests use fake pointer positions, and the corresponding MANUAL checkboxes record the owner's confirmation.
 
 ## Manual validation — Slice 5
 
@@ -115,20 +117,20 @@ The observer uses Apple's public [global event monitor](https://developer.apple.
 
 `NSAppleEventsUsageDescription` is included in the built app. The Apple Events entitlement is configured for signed builds; the documented local build continues to use `CODE_SIGNING_ALLOWED=NO`. The bundle ID and build path stay stable. macOS may remember an earlier permission decision and omit a new prompt; use the Automation settings to inspect the current choice. No Accessibility or Full Disk Access permission is requested by this feature.
 
-Apple documents [NSAppleScript as main-thread-only](https://developer.apple.com/library/archive/documentation/Cocoa/Conceptual/Multithreading/ThreadSafetySummary/ThreadSafetySummary.html), so this feasibility spike executes each explicit query there. Finder events use a 10-second timeout; a slow reply or permission interaction can delay this app's UI. Tests exercise the runner with harmless scripts and the UI model with fake providers; they do not query your real Finder or prove TCC permission behavior. Automatic polling and coordinate calibration are scheduled for Slice 7.
+Apple documents [NSAppleScript as main-thread-only](https://developer.apple.com/library/archive/documentation/Cocoa/Conceptual/Multithreading/ThreadSafetySummary/ThreadSafetySummary.html), so this feasibility spike executes each explicit query there. Finder events use a 10-second timeout; a slow reply or permission interaction can delay this app's UI. Tests exercise the runner with harmless scripts and the UI model with fake providers; they do not query your real Finder or prove TCC permission behavior. Automatic polling and coordinate calibration were added in Slice 7.
 
 ## Manual validation — Slice 7
 
 1. Quit the previous app and open the latest build with the command above. Confirm the footer says “Slice 7 · Finder coordinate calibration”.
 2. Enable Desktop World, open **Finder Diagnostics…**, and click **Read Finder Items**. Pink rings/crosshairs should appear behind real icons on the active display. Move/minimize the diagnostics window to see them. A crosshair's arms extend beyond the icon so its center remains assessable even when Finder covers the middle.
-3. Check that each ring/crosshair is centered on the icon image, not its text label. Compare raw position, mapped screen/assumed center, and world tile in the table. The conversion is provisional; do not accept a consistent offset as “close enough”.
+3. Check that each ring/crosshair is centered on the icon image, not its text label. Compare raw position, mapped screen/assumed center, and world tile in the table. Recheck the owner-validated conversion; report any consistent offset.
 4. Click **Start Polling (2 Hz)** and drag an icon. Its marker should follow the latest Finder position, possibly only after Finder commits the drag/drop. Polling is two reads per second; perfectly smooth tracking during the drag is not promised. Report whether it updates during dragging or only after release.
 5. Move a harmless test icon near each screen edge and corner, then check alignment after dropping it. Use icons with different image shapes if available. Keep normal Finder selection, drag, and double-click behavior intact.
 6. Click blank desktop to make Finder active. Open Finder's View → Show View Options (Command-J) and change **Icon size**. After Finder settles, check marker centers again. Restore your preferred size afterward. Finder may rearrange icons; the app should follow the actual new positions.
 7. Click **Stop Polling**, move an icon, and confirm the snapshot stays frozen until **Read Finder Items** or restarting polling. Disable/re-enable Desktop World: polling should remain paused until explicitly restarted.
 8. Report offsets with a description such as “markers are 20 points below every icon”, and copy that item's raw/mapped coordinates. Also report UI stutters, delayed reads, missing markers, or errors. If alignment is wrong, stop here: document the observation and adjust the coordinate contract before occupancy is implemented.
 
-Current hypothesis: Finder's raw point is the icon center, measured in logical points right/down from the primary display's upper-left corner. `CoordinateMapper` converts it to `(primary.minX + rawX, primary.maxY - rawY)` with no additional offset. [Apple documents the primary screen as `NSScreen.screens[0]`](https://developer.apple.com/documentation/appkit/nsscreen/screens); this differs from the active-window screen returned by `NSScreen.main`. Finder's origin and center semantics are not established by that API documentation and remain subject to the manual checks above. This slice covers one active renderer; display reconfiguration and multi-display behavior remain later work.
+Owner-validated mapping: Finder's raw point is the icon center, measured in logical points right/down from the primary display's upper-left corner. `CoordinateMapper` converts it to `(primary.minX + rawX, primary.maxY - rawY)` with no additional offset. [Apple documents the primary screen as `NSScreen.screens[0]`](https://developer.apple.com/documentation/appkit/nsscreen/screens); this differs from the active-window screen returned by `NSScreen.main`. Finder's origin and center semantics are not established by that API documentation and were confirmed by the owner on their Mac using the checks above. This slice covers one active renderer; display reconfiguration and multi-display behavior remain later work.
 
 ## License and assets
 
@@ -148,4 +150,4 @@ Licensed under the owner-selected MIT license; see `LICENSE`. No Minecraft asset
 5. If Finder allows two icon centers inside the same 64-point tile, put two there. That tile should be red. Expand **Ambiguous tiles (red) — all occupants** and confirm both names and paths appear. Move one away; the remaining tile should turn green. Report if Finder's snapping prevents this arrangement.
 6. Confirm normal Finder selection, dragging, and double-clicking still work. **Stop Polling** should freeze the markers and occupancy; restarting should refresh them. Disabling Desktop World should remove the overlay.
 
-Report whether the center-boundary transition matches the expected tile. Slice 9 waits for that check. No MANUAL checkbox is marked complete by the agent.
+The owner confirmed Slice 8 with “It works!” on 2026-10-07. Its boundary-transition MANUAL checkbox is checked based on that report. Slice 9 is next.
