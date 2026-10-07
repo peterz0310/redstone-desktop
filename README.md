@@ -50,7 +50,9 @@ Slice 16 adds versioned Codable JSON persistence, an atomic WorldStore, debounce
 
 Slice 17 adds a pure, stateless deterministic terrain generator, versioned UInt64 seed settings, integer hash/smooth 2D noise, elevation/moisture/temperature, biome selection, all six terrain types and four decorations, and 32×32 chunk sampling. Negative and extreme integer coordinates are tested. Fixed version-1 fingerprints protect reproducibility, and adjacent chunks use the same global fields. Debug build and all **157 tests** pass. The live app still renders its persisted fixture: chunked terrain rendering is Slice 18, and seed browsing is Slice 19. A standalone comparison image can be generated with `scripts/terrain-preview.sh`.
 
-Slice 18 connects the generator to a bounded chunk renderer in the editor and desktop. Original code-drawn 8×8 placeholders are baked into one nearest-filtered sprite per 32×32 chunk. Only visible chunks plus a margin remain cached; camera moves reuse overlapping chunks, and power/occupancy updates do not regenerate terrain. The footer reports retained chunks/nodes and cumulative generation/texture counts. Format-1 saves migrate to format 2 with default seed **2026**, preserving original fixture tiles and circuits over generated surroundings; generated tiles are not saved individually. **Enabling Desktop World now reads Finder automatically and starts serialized 2 Hz polling.** Read Finder Items remains available for diagnosis/retry; denied access pauses automatic reads. Debug build and all **169 tests** pass; visible long-pan and idle checks remain pending.
+Slice 18 connects the generator to a bounded chunk renderer in the editor and desktop. Original code-drawn 8×8 placeholders are baked into one nearest-filtered sprite per 32×32 chunk. Only visible chunks plus a margin remain cached; camera moves reuse overlapping chunks, and power/occupancy updates do not regenerate terrain. The footer reports retained chunks/nodes and cumulative generation/texture counts. Format-1 saves migrate to format 2 with default seed **2026**, preserving original fixture tiles and circuits over generated surroundings; generated tiles are not saved individually. **Enabling Desktop World now reads Finder automatically and starts serialized 2 Hz polling.** Read Finder Items remains available for diagnosis/retry; denied access pauses automatic reads. Debug build and all **169 tests** pass; the owner confirmed the visible long-pan and idle checks on 2026-10-07.
+
+Slice 19 adds a seed browser with Preview/Random/Cancel and **Use This Area**. Seed previews and editor pan/zoom leave the live desktop unchanged. Orange outlines the proposed physical desktop area, blue outlines the current one. The proposed origin is the editor view's lower-left world origin; desktop tile size is preserved. Applying saves seed/camera, updates a running desktop through its normal lifecycle, and recalculates Finder occupancy. A seed that invalidates existing components is refused with a warning, preserving the circuit. Debug build and all **178 tests** pass; owner seed/location acceptance is pending.
 
 ## Development
 
@@ -410,6 +412,26 @@ The owner confirmed the Slice 17 regression on 2026-10-07. This revision adds vi
 6. Optional: open Finder Diagnostics to inspect the automatic read/polling state. Move an icon and confirm its marker/occupancy follows. Disabling Desktop World should stop polling. If access is denied or a read fails, the editor should show the error and polling should pause; use the diagnostics read/retry controls after resolving access. There should be no repeating permission-prompt loop.
 7. With Desktop World disabled, edit a component and quit/reopen. Verify placements/settings survive migration to format 2. You can now place on generated dry terrain when it is free of decorations; generated water/decorations must reject placement. Future test circuits should still go to the right of the originals.
 
-Please confirm whether **long panning keeps retained chunk/node counts bounded**, **idle generated/texture counts stay fixed**, and **enabling works without manually reading Finder**. The two Slice 18 MANUAL checkboxes await that Mac report.
+Please confirm whether **long panning keeps retained chunk/node counts bounded**, **idle generated/texture counts stay fixed**, and **enabling works without manually reading Finder**. The owner confirmed these checks on 2026-10-07 with “Great! it works”; both Slice 18 MANUAL checkboxes are checked based on that report.
 
 Your save remains at `~/Library/Application Support/RedstoneDesktop/world.json`. Legacy saves are migrated in memory; the next edit/save writes format 2 atomically. Seed browsing and choosing the desktop area are Slice 19; there is no seed control yet.
+
+
+## Seed browser and choose area — Slice 19
+
+1. Quit the old app with **Command-Q**, then launch:
+
+   ```sh
+   open /Users/peterzielinski/git/redstone-desktop/build/Build/Products/Debug/RedstoneDesktop.app
+   ```
+
+2. Confirm **Slice 19 · Seed browser** in the footer. Your saved seed/camera and circuit should still be present. Enable Desktop World so you can compare the real desktop with the editor while browsing.
+3. Enter **42** in the Seed field and click **Preview**, or try **Random**. The editor terrain should change while the real desktop remains unchanged. The seed preview keeps your circuit and fixture patches. Circuit editing is paused while previewing a different seed; **Cancel Preview** restores the current terrain.
+4. Choose **Pan**, drag left to explore areas to the right of the original circuits, and zoom out with **−** until you can see the orange rectangle. You can also explore negative coordinates. **Orange** outlines the desktop area that will be applied; **blue** outlines the current one. They overlap when origins match. Editor zoom does not change the desktop's tile size.
+5. Note recognizable terrain inside the orange rectangle, then click **Use This Area**. The live desktop should now show that seed/area, and the blue rectangle should match orange. Minimize/move the editor window to inspect the real desktop. A running circuit's transient button pulse resets during the renderer/input rebuild; saved ON levers resume as usual.
+6. If a seed would invalidate a component you placed on generated terrain, applying should refuse and show the invalid-tile count. The current desktop/circuit should remain intact. Choose another seed or Cancel Preview; components are never silently removed. This warning may not appear for the original circuits because their grass is protected by fixture overrides.
+7. Confirm Finder automatically refreshes after applying and still maps real icons. Their world tile coordinates can change because the desktop camera moved. Circuits retain their global coordinates, so old rows may be outside your chosen view; they have not been deleted.
+8. Wait for **Saved.**, quit and reopen. Confirm the seed field restores the chosen seed. Click **Show desktop area** to browse to the saved desktop origin, then enable Desktop World and confirm it shows the same terrain/location.
+9. To return the desktop to its original location, click **Reset view**, then **Use This Area**. Reset view alone changes only browsing; applying sets desktop origin back to (0, 0). To restore the original surrounding terrain too, preview seed **2026** before applying. Your original circuits and right-hand construction area should be visible again.
+
+Please confirm that preview/navigation leave the desktop unchanged, **Use This Area** updates it to the orange area, and the chosen seed/location survives restart. The Slice 19 MANUAL checkbox awaits that report. Finder ghosts and output snapping are the next slice.

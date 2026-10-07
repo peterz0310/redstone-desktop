@@ -2273,27 +2273,29 @@ Acceptance:
 
 ### Manual acceptance
 
-- [ ] MANUAL: long editor pan does not grow nodes indefinitely.
-- [ ] MANUAL: idle renderer does not regenerate terrain continuously.
+- [x] MANUAL: long editor pan does not grow nodes indefinitely.
+- [x] MANUAL: idle renderer does not regenerate terrain continuously.
 
-**Status: implemented; owner renderer validation pending.** Debug build and all 169 automated tests pass. The renderer retains visible chunks plus one margin, bakes original nearest-filtered textures into one sprite per chunk, and reports cache/node/generation/texture counts. Existing fixture terrain and saved circuits are preserved over generated surroundings. README.md gives the long-pan and idle checks.
+**Status: complete; owner-confirmed renderer validation on 2026-10-07.** The owner reported “Great! it works” after the long-pan, idle, automatic Finder and persistence walkthrough. This records Mac validation separately from the 169 passing automated tests. The renderer retains visible chunks plus one margin, bakes original nearest-filtered textures into one sprite per chunk, and reports cache/node/generation/texture counts. Existing fixture terrain and saved circuits are preserved over generated surroundings. README.md gives the long-pan and idle checks.
 
 ---
 
 ## Slice 19 — Seed browser / choose desktop area
 
-- [ ] seed text entry
-- [ ] random seed
-- [ ] editor free pan
-- [ ] editor free zoom
-- [ ] physical desktop viewport rectangle
-- [ ] `Use This Area`
-- [ ] save desktop camera
-- [ ] browsing does not change live desktop prematurely
+- [x] seed text entry
+- [x] random seed
+- [x] editor free pan
+- [x] editor free zoom
+- [x] physical desktop viewport rectangle
+- [x] `Use This Area`
+- [x] save desktop camera
+- [x] browsing does not change live desktop prematurely
 
 ### Manual acceptance
 
 - [ ] MANUAL: explore seed, choose location, live desktop changes to selected area.
+
+**Status: implemented; owner seed/area validation pending.** Debug build and all 178 automated tests pass. Seed preview and editor navigation leave the live world unchanged until Use This Area. Invalidating seeds are refused; successful applies preserve circuits and save the seed/camera. README.md provides the Mac walkthrough.
 
 ---
 
@@ -3254,3 +3256,20 @@ Persistence format 2 adds generation settings (generation version 1, default see
 Validation: Debug build, standalone pure World/Circuit typecheck and all 169 tests pass. Seven renderer/cache tests cover negative mapper chunk boundaries/margins, bounded cache eviction/seed invalidation, one nearest sprite per chunk, idle/power/occupancy texture reuse, long pan node bounds, camera-scene recreation reuse, explicit/unspecified override pixels and placement consistency, and distinct original semantic placeholder art. Two persistence tests cover format-1 migration preserving configuration and generated-cell placement/restoration without serialized tiles. Three automatic-Finder tests cover initial enable/read, stop on disable, denied-read pause/no repeated request, and a fresh occupant opening without any explicit diagnostic read. Existing cancellation/serialization/Finder and circuit tests remain green. A new test listener initially fulfilled its initial-read expectation on subsequent successful reads; it was corrected to observe only the first matching publication. No application or API behavior contradiction is inferred from that test-harness failure.
 
 Consequences: all seven Slice 18 implementation tasks are complete. Its two MANUAL checkboxes remain pending the owner's visible long-pan/idle validation. README.md also requests checking automatic refresh and preserved circuits after migration. Slice 19 and later remain unchecked. No seed browser, Use This Area, Finder ghosts, resource packs, private macOS API or backend is added. Future examples continue to the right of existing circuits.
+
+
+## 2026-10-07 — Owner confirms Slice 18; Slice 19 seed browser and desktop area
+
+Context: the owner reported “Great! it works” after the chunk renderer's long-pan/idle/automatic Finder/persistence walkthrough. Mark the two Slice 18 MANUAL items complete as owner-reported Mac validation, separate from its 169 automated tests. Continue to Slice 19.
+
+Decision: add unsigned decimal seed entry, Preview, Random, Cancel Preview and Use This Area in normal SwiftUI. Random selection is a UI convenience; the pure generator remains deterministic from the chosen stored seed. Parse the full UInt64 range, rejecting signs, fractional text and overflow. Use This Area validates the current text even when Preview was not clicked. Preview generation lives in EditorSession; its browsing World is a value copy retaining the current circuit and explicit terrain overrides. Preview/pan/zoom never modify the live world, query Finder or write persistence.
+
+Pause editor circuit edits while a different seed is previewed. Preview existing circuit validity and refuse applying any seed that would put an existing component on water, decoration or unspecified terrain. This implements the specification's detect/warn requirement conservatively without silently invalidating/removing a circuit or adding Reset World. Cancel returns to current terrain; the user can revise the existing circuit deliberately before trying a conflicting seed.
+
+The orange physical-desktop rectangle uses the editor view's lower-left world origin as the proposed desktop origin. Blue shows the current desktop camera area. Display size is in logical points; rectangle projection goes through CoordinateMapper. Desktop points-per-tile remains unchanged while editor zoom is browsing state. Zoom out to see the full outline. Show desktop area browses to the current desktop origin; Reset view browses to world origin zero. Neither changes the wallpaper.
+
+Use This Area first validates the display, representable/bounded camera, generation version and complete circuit. Rejection leaves the world, camera and running desktop untouched. On success, publish the selected generation/camera and autosave them in the existing format-2 document, preserving circuit identity/configuration, fixture overrides and durable lever positions. If desktop rendering is enabled, use its established shutdown/re-enable path to cancel old tasks/actions, clear transient power/pulses, recreate renderer/input/pointer mappers, recompute occupancy and resume automatic Finder refresh. Old mouse callbacks are ignored by the stopped monitor. Camera relocation changes which world tiles real Finder items occupy; those mappings are recalculated rather than carried forward. Desktop remains disabled if it was disabled before applying.
+
+Validation: Debug build and all 178 tests pass. Nine new tests cover full-range seed parsing and invalid drafts/random selection, preview/pan/zoom/cancel isolation without saves, paused preview editing, successful seed/camera save and restart with preserved circuit, atomic refusal of a seed invalidating a generated component, applying while enabled with replaced monitor and stale-callback rejection, real item snapshot remapping to the new camera's tile, negative-origin physical viewport projection and bounded overlays, and missing-display/invalid-camera/version refusal. Existing renderer root-count expectation includes the new bounded viewport overlay. A test-store actor annotation was corrected to match the synchronous storage protocol, and a pointer assertion was corrected to account for the monitor's immediate sample; all tests are green after those corrections.
+
+Consequences: all eight Slice 19 implementation tasks are complete. Its MANUAL seed/location/live-desktop checkbox remains pending the owner's Mac check. Existing fixture positions are preserved globally; moving the desktop camera may put those circuits outside the current display, rather than deleting/moving them. README.md includes recovery to origin zero and checking camera/seed persistence. Slice 20 and later remain unchecked. No Finder ghosts/snapping, resource packs, backend or private API is added.

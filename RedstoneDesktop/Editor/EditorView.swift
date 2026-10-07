@@ -16,6 +16,21 @@ struct EditorView: View {
                 Button("Desktop Controls…") { openWindow(id: "desktop-controls") }
             }.padding(12)
             Divider()
+            HStack {
+                Text("Seed")
+                TextField("Unsigned whole number", text: $editor.seedText).frame(width: 200)
+                    .onSubmit { editor.previewSeed() }
+                Button("Preview") { editor.previewSeed() }
+                Button("Random") { editor.randomSeed() }
+                Button("Cancel Preview") { editor.cancelPreview(appState) }
+                    .disabled(editor.previewGeneration == nil)
+                Spacer()
+                Button("Use This Area") { editor.useThisArea(appState) }
+                    .disabled(appState.desktopScreen == nil)
+            }.padding(.horizontal, 12).padding(.vertical, 8)
+            Text("Orange: chosen desktop area · Blue: current desktop area · Zoom out to see the full outline.")
+                .font(.caption).foregroundStyle(.secondary).frame(maxWidth: .infinity, alignment: .leading).padding(.horizontal, 12)
+            Divider()
             HStack(spacing: 0) {
                 VStack(alignment: .leading, spacing: 8) {
                     Text("Tools").font(.headline)
@@ -23,7 +38,7 @@ struct EditorView: View {
                         Button { editor.tool = tool } label: {
                             HStack { Text(tool.rawValue); Spacer(); if editor.tool == tool { Image(systemName: "checkmark") } }
                         }
-                        .disabled(appState.isDesktopWorldEnabled && tool.editsWorld)
+                        .disabled((appState.isDesktopWorldEnabled || editor.isPreviewing(appState)) && tool.editsWorld)
                     }
                     Divider()
                     HStack {
@@ -31,6 +46,7 @@ struct EditorView: View {
                         Button("+") { editor.zoom(by: 1.25) }
                     }
                     Text("\(editor.camera.pointsPerTile, specifier: "%.0f") pt/tile").font(.caption)
+                    Button("Show desktop area") { editor.showDesktopArea(appState) }
                     Button("Reset view") { editor.resetCamera() }
                     Text("Pan: drag canvas\nZoom: scroll or +/−").font(.caption).foregroundStyle(.secondary)
                     Spacer()
@@ -45,17 +61,22 @@ struct EditorView: View {
             Divider()
             VStack(alignment: .leading, spacing: 4) {
                 Text(appState.isDesktopWorldEnabled ? "Desktop running — disable it to edit. Select and Pan still work." : "Editing enabled. Green preview: allowed; red: blocked. Use the grass area to the right (x=10–25, y=7–11).")
+                if editor.isPreviewing(appState), let generation = editor.previewGeneration {
+                    let invalid = appState.invalidCircuitTiles(for: generation)
+                    Text("Seed preview — circuit editing paused. \(invalid.count) circuit tile(s) invalid in this seed.").foregroundStyle(invalid.isEmpty ? Color.secondary : Color.red)
+                }
                 Text(editor.status).foregroundStyle(.secondary)
                 Text(appState.persistenceStatus).foregroundStyle(.secondary).textSelection(.enabled)
                 if let error = appState.finderDiagnostics.error {
                     Text("Finder unavailable: \(error) — open Finder Diagnostics to retry.").foregroundStyle(.red).font(.caption)
                 }
                 Text("Terrain: \(editor.terrainMetrics.retainedChunks) cached chunks · \(editor.terrainMetrics.chunkNodes) chunk nodes · \(editor.terrainMetrics.generatedChunks) generated · \(editor.terrainMetrics.textureBuilds) textures").font(.caption)
-                Text("Slice 18 · Chunked terrain")
+                Text("Slice 19 · Seed browser")
                     .font(.caption)
             }.font(.callout).frame(maxWidth: .infinity, alignment: .leading).padding(10)
         }
-        .frame(minWidth: 900, minHeight: 640)
+        .frame(minWidth: 900, minHeight: 720)
+        .onAppear { editor.cancelPreview(appState) }
     }
 
     private var inspector: some View {
@@ -64,15 +85,15 @@ struct EditorView: View {
                 Text("Inspector").font(.headline)
                 if let coordinate = editor.selectedTile {
                     Text("Tile (\(coordinate.x), \(coordinate.y))").font(.body.monospaced())
-                    Text("Terrain: \(appState.desktopWorld.tile(at: coordinate)?.terrain.rawValue ?? "unspecified")")
-                    Text("Decoration: \(appState.desktopWorld.tile(at: coordinate)?.decoration?.rawValue ?? "none")")
+                    Text("Terrain: \(editor.browsingWorld(appState).tile(at: coordinate)?.terrain.rawValue ?? "unspecified")")
+                    Text("Decoration: \(editor.browsingWorld(appState).tile(at: coordinate)?.decoration?.rawValue ?? "none")")
                     Text("Component: \(appState.desktopWorld.circuit.components[coordinate]?.kind.rawValue ?? "none")")
                     Text("Power: \(appState.simulator.power(at: coordinate).rawValue)")
                     if appState.desktopWorld.circuit.components[coordinate]?.kind == .repeater {
                         Text("Stored: \(appState.desktopWorld.circuit.components[coordinate]!.direction.rawValue), \(appState.desktopWorld.circuit.components[coordinate]!.repeaterDelay.rawValue)t")
                     }
                     Button("Erase selected component") { appState.eraseCircuitComponent(at: coordinate) }
-                        .disabled(appState.isDesktopWorldEnabled || appState.desktopWorld.circuit.components[coordinate] == nil)
+                        .disabled(appState.isDesktopWorldEnabled || editor.isPreviewing(appState) || appState.desktopWorld.circuit.components[coordinate] == nil)
                 } else { Text("Use Select, then click a tile.").foregroundStyle(.secondary) }
                 Divider()
                 if editor.tool == .repeater || editor.selectedTile.flatMap({ appState.desktopWorld.circuit.components[$0]?.kind }) == .repeater {
@@ -86,13 +107,13 @@ struct EditorView: View {
                 if let coordinate = editor.selectedTile, appState.desktopWorld.circuit.components[coordinate]?.kind == .repeater {
                     Button("Apply direction/delay") {
                         appState.configureRepeater(at: coordinate, direction: editor.direction, delay: editor.delay)
-                    }.disabled(appState.isDesktopWorldEnabled)
+                    }.disabled(appState.isDesktopWorldEnabled || editor.isPreviewing(appState))
                 }
                 if let tile = editor.hoveredTile {
                     Text("Hover (\(tile.x), \(tile.y))").font(.caption.monospaced())
                     if let component = editor.proposedComponent {
                         let result = appState.developerPlacementPreview(component, at: tile)
-                        Text(appState.isDesktopWorldEnabled ? "Disable Desktop World to edit." : result.message)
+                        Text(editor.isPreviewing(appState) ? "Apply or cancel the seed preview to edit." : (appState.isDesktopWorldEnabled ? "Disable Desktop World to edit." : result.message))
                             .foregroundStyle(result.isAllowed ? Color.green : Color.red)
                     }
                 }

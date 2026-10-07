@@ -119,6 +119,17 @@ struct CoordinateMapper: Sendable {
         return CGRect(origin: tile.origin, size: CGSize(width: tile.width * 32, height: tile.height * 32))
     }
 
+    /// Project the physical display's persisted/proposed world area into an editor scene.
+    func desktopViewportRect(camera: CameraState, displaySize: CGSize, on screen: ScreenDescriptor) -> CGRect? {
+        guard displaySize.width.isFinite, displaySize.height.isFinite, displaySize.width > 0, displaySize.height > 0,
+              camera.pointsPerTile.isFinite, camera.pointsPerTile > 0 else { return nil }
+        let origin = scenePoint(fromScreen: screenPoint(fromWorld: camera.worldOrigin), on: screen)
+        let size = CGSize(width: displaySize.width / camera.pointsPerTile * self.camera.pointsPerTile,
+                          height: displaySize.height / camera.pointsPerTile * self.camera.pointsPerTile)
+        guard origin.x.isFinite, origin.y.isFinite, size.width.isFinite, size.height.isFinite else { return nil }
+        return CGRect(origin: origin, size: size)
+    }
+
     /// Finder calibration confirmed by the owner on their Mac: raw point is an icon center measured right/down
     /// from the primary display's upper-left corner. No icon-size/menu-bar offset.
     /// Recheck visually if display or Finder behavior changes.

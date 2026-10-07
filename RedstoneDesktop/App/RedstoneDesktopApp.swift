@@ -8,7 +8,7 @@ struct RedstoneDesktopApp: App {
         WindowGroup("Redstone Desktop") {
             EditorView(appState: appState)
         }
-        .defaultSize(width: 1200, height: 760)
+        .defaultSize(width: 1200, height: 820)
         .commands {
             CommandGroup(after: .windowArrangement) {
                 Button(appState.isDesktopWorldEnabled ? "Disable Desktop World" : "Enable Desktop World") {

@@ -12,7 +12,7 @@ final class AppState: ObservableObject {
     @Published private(set) var developerPlacementStatus = "Choose a component and test tile."
     private let automaticallyRefreshFinder: Bool
     private let circuitPlacement = CircuitPlacement()
-    private(set) var desktopCamera = CameraState(worldOrigin: WorldPoint(x: 0, y: 0), pointsPerTile: 64)
+    @Published private(set) var desktopCamera = CameraState(worldOrigin: WorldPoint(x: 0, y: 0), pointsPerTile: 64)
     @Published private(set) var persistenceStatus = "Persistence is disabled for this session."
     private var document = WorldDocument()
     private var savedLevers: Set<WorldCoordinate> = []
@@ -90,6 +90,48 @@ final class AppState: ObservableObject {
             .sink { [weak self] _ in
                 MainActor.assumeIsolated { self?.shutdown() }
             }
+    }
+
+    var desktopScreen: ScreenDescriptor? { desktopController?.scene.screen ?? screenProviding() }
+    @Published private(set) var areaStatus = "Preview a seed and pan to choose an area, then use it on the desktop."
+
+    func invalidCircuitTiles(for generation: WorldGenerationSettings) -> [WorldCoordinate] {
+        var proposed = desktopWorld
+        proposed.generation = generation
+        proposed.circuit = CircuitWorld()
+        return desktopWorld.circuit.components.keys.filter {
+            !circuitPlacement.rules.canPlace(component: desktopWorld.circuit.components[$0]!, at: $0, in: proposed).isAllowed
+        }.sorted { ($0.y, $0.x) < ($1.y, $1.x) }
+    }
+
+    @discardableResult
+    func useDesktopArea(camera: CameraState, generation: WorldGenerationSettings) -> Bool {
+        guard let screen = desktopScreen,
+              let mapper = try? CoordinateMapper(canvasFrame: screen.frame, camera: camera),
+              mapper.tile(atScreen: screen.frame.origin) != nil,
+              mapper.tile(atScreen: CGPoint(x: screen.frame.maxX, y: screen.frame.maxY)) != nil,
+              !mapper.visibleChunks(on: screen, viewport: CGRect(origin: .zero, size: screen.frame.size)).isEmpty,
+              (16...128).contains(camera.pointsPerTile),
+              (try? WorldGenerator(settings: generation)) != nil else {
+            areaStatus = "The chosen area or display is unavailable. Nothing changed."
+            return false
+        }
+        let invalid = invalidCircuitTiles(for: generation)
+        guard invalid.isEmpty else {
+            areaStatus = "Cannot apply this seed: \(invalid.count) existing circuit tile(s) would be invalid. Choose another seed or cancel the preview."
+            return false
+        }
+        let running = isDesktopWorldEnabled
+        if running { shutdown() }
+        desktopCamera = camera
+        var next = desktopWorld
+        next.generation = generation
+        desktopWorld = next
+        simulator = CircuitSimulator(world: next.circuit)
+        worldDidChange()
+        if running { toggleDesktopWorld() }
+        areaStatus = "Desktop area applied. Seed \(generation.seed); origin (\(camera.worldOrigin.x), \(camera.worldOrigin.y))."
+        return true
     }
 
     func developerPlacementPreview(_ component: CircuitComponent, at coordinate: WorldCoordinate) -> PlacementResult {
@@ -174,6 +216,7 @@ final class AppState: ObservableObject {
 
     private func worldDidChange() {
         savedLevers = savedLevers.filter { desktopWorld.circuit.components[$0]?.kind == .lever }
+        if let generation = desktopWorld.generation { document.generation = generation }
         document.camera = desktopCamera
         document.circuit = desktopWorld.circuit
         document.activeLevers = savedLevers
