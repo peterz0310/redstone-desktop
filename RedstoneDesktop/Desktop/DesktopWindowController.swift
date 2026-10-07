@@ -9,7 +9,11 @@ private final class DesktopWindow: NSWindow {
 
 @MainActor
 final class DesktopWindowController: NSWindowController {
-    init(frame: CGRect) {
+    let scene: DesktopScene
+
+    init(screen: ScreenDescriptor, mapper: CoordinateMapper) {
+        let frame = screen.frame
+        scene = DesktopScene(screen: screen, mapper: mapper)
         let window = DesktopWindow(
             contentRect: frame,
             styleMask: .borderless,
@@ -18,7 +22,7 @@ final class DesktopWindowController: NSWindowController {
         )
         window.title = "Redstone Desktop Checker"
         // Public Core Graphics levels: above the desktop, below desktop icons.
-        // This ordering is provisional until confirmed visually on the owner's Mac.
+        // The owner confirmed this ordering in the Slice 2 manual check.
         window.level = NSWindow.Level(rawValue: Int(CGWindowLevelForKey(.desktopWindow)) + 1)
         window.ignoresMouseEvents = true
         window.hasShadow = false
@@ -33,7 +37,7 @@ final class DesktopWindowController: NSWindowController {
         view.autoresizingMask = [.width, .height]
         view.preferredFramesPerSecond = 30
         window.contentView = view
-        view.presentScene(DesktopScene(size: frame.size))
+        view.presentScene(scene)
         super.init(window: window)
     }
 

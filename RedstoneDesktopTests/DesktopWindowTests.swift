@@ -8,7 +8,9 @@ final class DesktopWindowTests: XCTestCase {
     @MainActor
     func testWindowUsesRequestedFrameAndCannotTakeFinderInput() throws {
         let frame = CGRect(x: -1280, y: -200, width: 1280, height: 800)
-        let controller = DesktopWindowController(frame: frame)
+        let screen = ScreenDescriptor(id: "test", frame: frame, backingScale: 2)
+        let mapper = try CoordinateMapper(canvasFrame: frame, camera: camera)
+        let controller = DesktopWindowController(screen: screen, mapper: mapper)
         let window = try XCTUnwrap(controller.window)
         defer { window.close() }
 
@@ -36,12 +38,14 @@ final class DesktopWindowTests: XCTestCase {
     }
 
     @MainActor
-    func testCheckerRebuildKeepsNodeCountBoundedWhenResized() {
-        let scene = DesktopScene(size: CGSize(width: 1920, height: 1080))
-        XCTAssertEqual(scene.children.count, 2)
+    func testCheckerRebuildKeepsNodeCountBoundedWhenResized() throws {
+        let screen = ScreenDescriptor(id: "test", frame: CGRect(x: 0, y: 0, width: 1920, height: 1080), backingScale: 2)
+        let mapper = try CoordinateMapper(canvasFrame: screen.frame, camera: camera)
+        let scene = DesktopScene(screen: screen, mapper: mapper)
+        XCTAssertEqual(scene.children.count, 3)
         for size in [CGSize(width: 800, height: 600), CGSize(width: 2560, height: 1440)] {
             scene.size = size
-            XCTAssertEqual(scene.children.count, 2)
+            XCTAssertEqual(scene.children.count, 3)
             XCTAssertTrue(scene.children.allSatisfy { $0 is SKShapeNode })
         }
     }
@@ -54,20 +58,27 @@ final class DesktopWindowTests: XCTestCase {
 
     @MainActor
     func testStateCanEnableDisableAndEnableAgain() {
-        let state = AppState(screenFrame: { CGRect(x: -100, y: -100, width: 64, height: 64) })
+        let state = AppState(screenProviding: {
+            ScreenDescriptor(id: "test", frame: CGRect(x: -100, y: -100, width: 64, height: 64), backingScale: 1)
+        })
         for _ in 0..<2 {
             state.toggleDesktopWorld()
             XCTAssertTrue(state.isDesktopWorldEnabled)
             state.toggleDesktopWorld()
             XCTAssertFalse(state.isDesktopWorldEnabled)
+            XCTAssertNil(state.pointer)
         }
     }
 
     @MainActor
     func testUnavailableDisplayLeavesCheckerDisabled() {
-        let state = AppState(screenFrame: { nil })
+        let state = AppState(screenProviding: { nil })
         state.toggleDesktopWorld()
         XCTAssertFalse(state.isDesktopWorldEnabled)
         XCTAssertEqual(state.desktopStatus, "No main display is available.")
+    }
+
+    private var camera: CameraState {
+        CameraState(worldOrigin: WorldPoint(x: 0, y: 0), pointsPerTile: 64)
     }
 }

@@ -1,14 +1,24 @@
 import SpriteKit
 
-/// A window-local diagnostic checker, not a world-space renderer.
-/// World/screen mapping will be introduced through CoordinateMapper in Slice 3.
+/// Diagnostic world tiles and cursor outline, using CoordinateMapper exclusively.
 final class DesktopScene: SKScene {
-    static let checkerSize: CGFloat = 64
+    let screen: ScreenDescriptor
+    let mapper: CoordinateMapper
+    private let highlight = SKShapeNode()
+    private(set) var highlightedTile: WorldCoordinate?
 
-    override init(size: CGSize) {
-        super.init(size: size)
+    init(screen: ScreenDescriptor, mapper: CoordinateMapper) {
+        self.screen = screen
+        self.mapper = mapper
+        super.init(size: screen.frame.size)
         scaleMode = .resizeFill
         backgroundColor = .black
+        highlight.name = "cursor-highlight"
+        highlight.strokeColor = .white.withAlphaComponent(0.75)
+        highlight.fillColor = .white.withAlphaComponent(0.08)
+        highlight.lineWidth = 2
+        highlight.zPosition = 1
+        highlight.isHidden = true
         rebuildChecker()
     }
 
@@ -20,21 +30,28 @@ final class DesktopScene: SKScene {
         rebuildChecker()
     }
 
+    func updateHighlight(_ coordinate: WorldCoordinate?) {
+        guard coordinate != highlightedTile else { return }
+        highlightedTile = coordinate
+        highlight.isHidden = coordinate == nil
+        if let coordinate {
+            let rect = mapper.sceneRect(forTile: coordinate, on: screen).insetBy(dx: 1, dy: 1)
+            highlight.path = CGPath(rect: rect, transform: nil)
+        }
+    }
+
     private func rebuildChecker() {
         removeAllChildren()
-        guard size.width > 0, size.height > 0 else { return }
+        addChild(highlight)
+        guard size.width > 0, size.height > 0,
+              let first = mapper.tile(atScreen: screen.frame.origin),
+              let last = mapper.tile(atScreen: CGPoint(x: screen.frame.minX + size.width, y: screen.frame.minY + size.height)) else { return }
         let paths = [CGMutablePath(), CGMutablePath()]
-        let columns = Int(ceil(size.width / Self.checkerSize))
-        let rows = Int(ceil(size.height / Self.checkerSize))
 
-        for row in 0..<rows {
-            for column in 0..<columns {
-                paths[(row + column) % 2].addRect(CGRect(
-                    x: CGFloat(column) * Self.checkerSize,
-                    y: CGFloat(row) * Self.checkerSize,
-                    width: Self.checkerSize,
-                    height: Self.checkerSize
-                ))
+        for y in first.y...last.y {
+            for x in first.x...last.x {
+                let parity = ((x % 2) + (y % 2) + 2) % 2
+                paths[parity].addRect(mapper.sceneRect(forTile: WorldCoordinate(x: x, y: y), on: screen))
             }
         }
         let colors: [NSColor] = [

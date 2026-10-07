@@ -1964,12 +1964,12 @@ If layering is wrong, investigate before proceeding.
 
 ### Tasks
 
-- [ ] read global pointer
-- [ ] identify active screen
-- [ ] map to tile
-- [ ] draw highlight
-- [ ] hide outside active area
-- [ ] debug screen/world coordinate display
+- [x] read global pointer
+- [x] identify active screen
+- [x] map to tile
+- [x] draw highlight
+- [x] hide outside active area
+- [x] debug screen/world coordinate display
 
 ### Manual acceptance
 
