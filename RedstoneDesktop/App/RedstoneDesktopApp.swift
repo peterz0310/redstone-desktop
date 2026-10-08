@@ -3,17 +3,23 @@ import SwiftUI
 @main
 struct RedstoneDesktopApp: App {
     @StateObject private var appState = AppStartup.makeState()
+    @Environment(\.openWindow) private var openWindow
 
     var body: some Scene {
-        WindowGroup("Redstone Desktop") {
+        WindowGroup("Redstone Desktop", id: "editor") {
             EditorView(appState: appState)
         }
         .defaultSize(width: 1200, height: 820)
         .commands {
             CommandGroup(after: .windowArrangement) {
+                Button(appState.isDesktopBuildMode ? "Exit Desktop Build Mode" : "Enter Desktop Build Mode") {
+                    if appState.isDesktopBuildMode { appState.exitDesktopBuildMode() }
+                    else { appState.enterDesktopBuildMode() }
+                }
                 Button(appState.isDesktopWorldEnabled ? "Disable Desktop World" : "Enable Desktop World") {
                     appState.toggleDesktopWorld()
                 }
+                .disabled(appState.isDesktopBuildMode)
             }
         }
         Window("Desktop Details", id: "desktop-controls") {
@@ -27,6 +33,15 @@ struct RedstoneDesktopApp: App {
             FinderDiagnosticsView(appState: appState)
         }
         .defaultSize(width: 1200, height: 550)
+        MenuBarExtra("Redstone Desktop", systemImage: appState.isDesktopBuildMode ? "hammer.fill" : "square.grid.3x3.fill") {
+            Text(appState.isDesktopBuildMode ? "BUILD MODE · Circuit stopped" : "Redstone Desktop")
+            Button("Open Editor") { openWindow(id: "editor") }
+            Button(appState.isDesktopBuildMode ? "Exit Build Mode" : "Build on Desktop") {
+                if appState.isDesktopBuildMode { appState.exitDesktopBuildMode() }
+                else { appState.enterDesktopBuildMode() }
+            }
+            Button("Quit Redstone Desktop") { appState.shutdown(); NSApplication.shared.terminate(nil) }
+        }
     }
 }
 

@@ -23,7 +23,7 @@ The intended workflow is:
 
 The project is an experiment first and a polished application second.
 
-Current implementation: **Slices 0–27 and the owner-requested 27A appearance follow-up are implemented**, with Debug build and all **304 automated tests passing**. Slices 0–19A, 20–21 and 23–25 have owner-reported acceptance; the 19C bookmark/context-menu follow-up and corrected Slice 22 icon-size/marker checks are also accepted. Detailed earlier 19B/19C runtime/deletion checks and Slice 22's real Output-after-resize check remain pending. The owner accepted local Java texture importing on 2026-10-08; the other specific Slice 26/27 checks and new 27A appearance checks remain pending. Slice 26 adds optional validated folder/ZIP packs with original fallback; Slice 27 imports selected textures from local Java JARs/packs into Application Support without bundling game assets. The actual pack contract and Java mapping/cache lifecycle are documented in docs/RESOURCE_PACKS.md and docs/JAVA_TEXTURE_IMPORT.md. **Slice 28 is next and untouched.** Historical entries record earlier behavior; Sections 3.8, 7.1, 25 and 29 define the world/library contract.
+Current implementation: **Slices 0–28 and the owner-requested 27A appearance follow-up are implemented**, with Debug build and all **313 automated tests passing**. Slice 28's explicit Desktop Build Mode is implemented; its two real Finder/input MANUAL checks remain pending. Slices 0–19A, 20–21 and 23–25 have owner-reported acceptance; the 19C bookmark/context-menu follow-up and corrected Slice 22 icon-size/marker checks are also accepted. Detailed earlier 19B/19C runtime/deletion checks and Slice 22's real Output-after-resize check remain pending. The owner accepted local Java texture importing on 2026-10-08; the other specific Slice 26/27 checks and detailed 27A appearance checks remain pending. Slice 26 adds optional validated folder/ZIP packs with original fallback; Slice 27 imports selected textures from local Java JARs/packs into Application Support without bundling game assets. The actual pack contract and Java mapping/cache lifecycle are documented in docs/RESOURCE_PACKS.md and docs/JAVA_TEXTURE_IMPORT.md. **Slice 29 is next and untouched.** Historical entries record earlier behavior; Sections 3.8, 7.1, 25, 26 and 29 define the world/library/editing contract.
 
 The most important early question is not whether attractive terrain or redstone can be made. Those are comparatively straightforward. The first major feasibility gate is:
 
@@ -1534,6 +1534,18 @@ Requirements:
 
 V1 Build Mode edits circuit only, not terrain.
 
+Slice 28 contract:
+
+- **Build on Desktop** explicitly edits the assigned world and saved area, regardless of editor selection. It stops normal simulation, global input monitoring and pending Output actions before presenting editing windows. Exit leaves Desktop stopped; **Start Desktop** is an explicit subsequent action. No file is opened by placement, selection, rotation or delay changes.
+- Keep the existing click-through SpriteKit world window below Finder icons. A separate transparent input window covers only the target display, above the public desktop-icon level and below ordinary application windows and the Dock. Finder icons remain visually visible, but desktop clicks intentionally edit circuits while Build Mode is active. No Finder mutation, event tap, private API or new permission.
+- A floating SwiftUI hotbar names the captured world/area, says **BUILD MODE / Circuit stopped**, offers six tools, direction/delay and **Exit Build Mode**. Its close button also exits. The menu-bar status item offers Exit, Open Editor and Quit; the app's Window menu offers Exit too. Exit is always available by mouse; keyboard shortcuts are supplementary.
+- Left-click places one component using the same `CircuitPlacement`/`PlacementRules` as the editor; right-click or Erase removes only circuit components. Clicking an occupied repeater selects it for Rotate/Delay; other occupied tiles reject placement. Repeater Rotate/Delay edits the last selected repeater, or prepares the next repeater when no repeater is selected. Normal button/lever clicks do not run during editing.
+- Hotbar buttons work without keyboard permission. With the canvas focused, number keys 1–6 select tools, scroll cycles tools, R rotates, D cycles delay and Escape exits. No global keyboard capture; shortcuts need canvas focus. Fixed assigned camera; no terrain edits, pan/zoom, drag painting or automatic Output-to-Finder snapping in this first Build Mode.
+- Circuit changes update the captured world's library record through the normal autosaver and flush on exit; editor selection, saved cameras and other worlds are preserved. The active world's regular editor tools and active bookmark camera update are locked during Build Mode; desktop reassignment is refused until exit. Inactive worlds remain editable.
+- Teardown invalidates the input session and disables/removes the capture window before closing the palette and renderer. Exit, hotbar close, Quit/shutdown, app hide/deactivation and a display-geometry change all tear down the session. Old input callbacks cannot edit a subsequent session. Finder scale changes do not move the captured editing camera; the next explicit Start uses the latest prepared camera.
+
+Public API basis: [CGWindowLevelKey](https://developer.apple.com/documentation/coregraphics/cgwindowlevelkey), [NSWindow.Level](https://developer.apple.com/documentation/appkit/nswindow/level-swift.struct), and [NSApplication.didResignActiveNotification](https://developer.apple.com/documentation/appkit/nsapplication/didresignactivenotification). Automated window assertions establish requested configuration, not actual WindowServer/Finder behavior; the two Slice 28 owner checks remain necessary. If the transparent capture cannot reliably receive desktop clicks while keeping the promised layering, stop this slice and document the smallest architecture adjustment rather than adding event-routing heuristics.
+
 Possible hotbar:
 
 ```text
@@ -2621,15 +2633,15 @@ Follow-up to completed 26/27 before Slice 28; keep simulation, generation-versio
 
 ## Slice 28 — Desktop Build Mode
 
-- [ ] build-mode controller
-- [ ] visible mode indicator
-- [ ] temporary interactive overlay
-- [ ] hotbar
-- [ ] place
-- [ ] erase
-- [ ] rotate
-- [ ] repeater delay edit
-- [ ] reliable menu/status exit
+- [x] build-mode controller
+- [x] visible mode indicator
+- [x] temporary interactive overlay
+- [x] hotbar
+- [x] place
+- [x] erase
+- [x] rotate
+- [x] repeater delay edit
+- [x] reliable menu/status exit
 
 ### Manual acceptance
 
@@ -3660,3 +3672,15 @@ Expand Java mappings from 11 to 23. Read-only inspection of the local JAR's ston
 Validation: Debug build and all 304 automated tests pass. Four new appearance tests cover stable variant selection including negative/extreme coordinates, family/exact/original fallback and complete texture defaults, distinct component recipes/orientation/opaque bright red material, wider geometry and inactive durable lever art. Updated original synthetic Java fixtures exercise all 23 mappings; existing generator fingerprints, placement, simulation, library and Finder/action tests stay green. Old renderer assertions were updated for deliberate appearance changes; a color-space comparison and an accidentally doubled endpoint expectation in tests were corrected. A real SpriteKit scene capture exposed overlap holes in initial filled junctions; disjoint arm/center geometry and even-odd coverage checks now prevent them. The corrected native scene was inspected separately from owner desktop acceptance. Pure World/Circuit code type-checks without AppKit/SpriteKit.
 
 The actual updated importer successfully produced 23 textures, zero sounds and zero warnings from local 1.21.8 in a temporary cache. A native texture contact sheet was inspected; source SHA-256 remained unchanged and temporary managed removal succeeded. No game art entered repository/app bundles or owner preferences. Guides document new IDs, deterministic variation, fixed circuit recipes and Re-import versus Reload. The new three MANUAL checks remain pending; no physical desktop validation is claimed.
+
+## 2026-10-08 — Slice 28 Desktop Build Mode
+
+Context: the owner responds positively to the appearance follow-up and requests the next slice. Proceed with Slice 28 only. Record general visual approval without inferring the detailed ore/re-import/restart/built-in checks were performed; their existing MANUAL groups stay pending.
+
+Decision: implement the scoped contract in Section 26. A captured DesktopBuildSession owns assigned world/area IDs, a fixed CoordinateMapper, tools and repeater selection. DesktopBuildController composes the existing below-icons SpriteKit renderer, a temporary transparent above-icons/below-ordinary-windows local-input window, and a floating SwiftUI hotbar. Input capture is never added to the normal desktop window. AppState stops normal input/simulation and invalidates pending action sessions before entry; all build mutations use the existing placement evaluator and shared world-record/autosave path. Editor selection, other worlds, terrain and saved cameras stay intact. Exit does not implicitly restart a potentially powered circuit.
+
+Exit is available through the hotbar button/close button, Window menu and a persistent SwiftUI menu-bar item with Open Editor/Quit. Local canvas keyboard shortcuts are supplementary and use no global keyboard hook or Accessibility permission. App deactivation/hide, display changes and shutdown also remove capture; teardown invalidates the session before disabling/closing windows. Active-world editor edits and active camera updates are locked, desktop reassignment is refused until exit, and inactive-world editor edits remain possible. No new demonstration circuits, schema, terrain generation, file actions, resource-pack execution, private API or backend.
+
+Validation: final Debug build and all **313 automated tests pass**, including nine new DesktopBuildTests. Coverage includes negative display/fractional-world/local-screen mapping, bounds and hotbar cycling; explicit entry stopping simulation/actions and refusing regular active-world edits; idempotent exit/explicit restart; old callbacks after exit and re-entry; captured assigned-world edits with a different editor selection and persistence/reopen; shared terrain/decoration/occupied rejection and circuit-only erase; selected/next repeater direction/delay; unavailable-display refusal preserving an existing runtime; deactivation/hide/shutdown and display-change cleanup; transparent native input/window levels, local right-click/Escape dispatch and closed-window input removal. Pure World/Circuit/Persistence type-check without AppKit/SpriteKit, and diff checks pass. Initial test compilation disambiguated CGFloat.infinity; a clear-color assertion now checks alpha instead of comparing different color spaces. These were test issues, not observed desktop API contradictions.
+
+A hidden native SwiftUI hosting layout measured the hotbar at 636 × 139 points within its 660 × 160-point content window. This establishes layout size, not physical Finder routing or interactive acceptance. Actual desktop placement, icon visibility, hotbar/menu exits, app-switch/hide cleanup, normal Finder selection/drag/open after exit and click-through circuit behavior after explicit Start require the owner's Mac walkthrough in README. Both Slice 28 MANUAL checkboxes remain unchecked. Slice 29 is untouched.

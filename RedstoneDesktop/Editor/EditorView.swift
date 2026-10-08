@@ -12,11 +12,16 @@ struct EditorView: View {
             HStack(spacing: 12) {
                 VStack(alignment: .leading, spacing: 3) {
                     Text("Editing: \(appState.selectedDocument.name) / \(appState.selectedArea.name)").font(.headline)
-                    Text("Desktop: \(appState.activeWorldName) / \(appState.library.activeArea!.name) · \(appState.isDesktopWorldEnabled ? "Running" : "Stopped")")
+                    Text("Desktop: \(appState.activeWorldName) / \(appState.library.activeArea!.name) · \(appState.isDesktopBuildMode ? "BUILD MODE" : appState.isDesktopWorldEnabled ? "Running" : "Stopped")")
                         .font(.caption).foregroundStyle(.secondary)
                 }
                 Spacer()
+                Button(appState.isDesktopBuildMode ? "Exit Build Mode" : "Build on Desktop") {
+                    if appState.isDesktopBuildMode { appState.exitDesktopBuildMode() }
+                    else { appState.enterDesktopBuildMode() }
+                }
                 Button(appState.isDesktopWorldEnabled ? "Stop Desktop" : "Start Desktop") { appState.toggleDesktopWorld() }
+                    .disabled(appState.isDesktopBuildMode)
                 Menu {
                     Button("Appearance & Packs…") { openWindow(id: "asset-settings") }
                     Button("Finder Diagnostics…") { openWindow(id: "finder-diagnostics") }
@@ -122,7 +127,7 @@ struct EditorView: View {
                         .disabled((appState.isEditorConfigurationLocked || editor.isPreviewing(appState)) && tool.editsWorld)
                     }
                 }
-                Text(appState.isEditorConfigurationLocked ? "This world is running. Stop Desktop to edit it." : "Choose a component, then click a green tile to place it.")
+                Text(appState.isEditorConfigurationLocked ? (appState.isDesktopBuildMode ? "This world is in Build Mode. Exit Build Mode to edit here." : "This world is running. Stop Desktop to edit it.") : "Choose a component, then click a green tile to place it.")
                     .font(.caption).foregroundStyle(.secondary)
                 if editor.tool == .output {
                     Text("With Show Finder Items enabled, Output snaps within 24 points of an icon center. Red markers mean several items share a tile.")
@@ -163,7 +168,7 @@ struct EditorView: View {
                     Text("Hover (\(tile.x), \(tile.y))").font(.caption.monospaced())
                     if let component = editor.proposedComponent {
                         let result = appState.developerPlacementPreview(component, at: tile)
-                        Text(editor.isPreviewing(appState) ? "Create the world or cancel preview to edit." : (appState.isEditorConfigurationLocked ? "Disable Desktop World to edit." : result.message))
+                        Text(editor.isPreviewing(appState) ? "Create the world or cancel preview to edit." : (appState.isEditorConfigurationLocked ? appState.editorConfigurationLockMessage : result.message))
                             .foregroundStyle(result.isAllowed ? Color.green : Color.red)
                     }
                 }

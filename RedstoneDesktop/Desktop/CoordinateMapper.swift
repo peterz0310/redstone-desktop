@@ -65,6 +65,10 @@ struct CoordinateMapper: Sendable {
         CGPoint(x: point.x - screen.frame.minX, y: point.y - screen.frame.minY)
     }
 
+    func screenPoint(fromScene point: CGPoint, on screen: ScreenDescriptor) -> CGPoint {
+        CGPoint(x: point.x + screen.frame.minX, y: point.y + screen.frame.minY)
+    }
+
     func sceneRect(forTile coordinate: WorldCoordinate, on screen: ScreenDescriptor) -> CGRect {
         let rect = screenRect(forTile: coordinate)
         return CGRect(origin: scenePoint(fromScreen: rect.origin, on: screen), size: rect.size)

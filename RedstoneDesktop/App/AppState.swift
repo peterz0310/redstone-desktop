@@ -24,7 +24,15 @@ final class AppState: ObservableObject {
     var activeWorldName: String { library.world(id: activeWorldID)!.name }
     var selectedArea: SavedArea { library.areas.first { $0.id == selectedAreaID }! }
     var selectedAreaCamera: CameraState { selectedArea.camera }
-    var isEditorConfigurationLocked: Bool { isDesktopWorldEnabled && isEditingActiveWorld }
+    var isEditorConfigurationLocked: Bool { (isDesktopWorldEnabled || isDesktopBuildMode) && isEditingActiveWorld }
+    var editorConfigurationLockMessage: String {
+        isDesktopBuildMode ? "Exit Build Mode before editing this world in the editor." : "Disable Desktop World before editing."
+    }
+    @Published private(set) var buildSession: DesktopBuildSession?
+    var isDesktopBuildMode: Bool { buildSession != nil }
+    private(set) var buildController: (any DesktopBuildPresenting)?
+    private let buildControllerFactory: (DesktopBuildSession, ScreenDescriptor, AppState) -> any DesktopBuildPresenting
+    private var buildExitObservers: [AnyCancellable] = []
     var editorLeverPositions: Set<WorldCoordinate> { selectedDocument.activeLevers }
     var isEditingActiveWorld: Bool { selectedWorldID == activeWorldID }
     var editorOccupancy: DesktopOccupancySnapshot {
@@ -96,6 +104,9 @@ final class AppState: ObservableObject {
        preferences: UserDefaults? = nil,
        soundPlayer: any SoundPlaying = SilentSoundPlayer(),
        assets: AssetLibrary = AssetLibrary(),
+       buildControllerFactory: @escaping (DesktopBuildSession, ScreenDescriptor, AppState) -> any DesktopBuildPresenting = {
+           DesktopBuildController(session: $0, screen: $1, appState: $2)
+       },
        finderReferenceProviding: @escaping () -> ScreenDescriptor? = {
            NSScreen.screens.first.map { ScreenDescriptor(screen: $0) }
        }) {
@@ -118,6 +129,7 @@ final class AppState: ObservableObject {
         self.preferences = preferences
         self.soundPlayer = soundPlayer
         self.assets = assets
+        self.buildControllerFactory = buildControllerFactory
         if let data = preferences?.data(forKey: "audioSettings"),
            let stored = try? JSONDecoder().decode(AudioSettings.self, from: data) {
             audioSettings = AudioSettings(volume: stored.volume.isFinite ? min(1, max(0, stored.volume)) : 0,
@@ -140,6 +152,7 @@ final class AppState: ObservableObject {
                 guard let self else { return }
                 self.soundPlayer.replaceSoundOverrides(self.assets.soundOverrides)
                 self.desktopController?.scene.setAssets(self.assets)
+                self.refreshBuildRenderer()
                 self.objectWillChange.send()
             }
         }
@@ -189,6 +202,11 @@ final class AppState: ObservableObject {
         lastObservedGeometry = DisplayGeometry(target: screenProviding(), finderReference: finderReferenceProviding())
         displayChangeMonitor = DisplayChangeMonitor(center: displayNotificationCenter) { [weak self] in self?.displayParametersDidChange() }
         displayChangeMonitor?.start()
+        for name in [NSApplication.didResignActiveNotification, NSApplication.didHideNotification] {
+            buildExitObservers.append(displayNotificationCenter.publisher(for: name).sink { [weak self] _ in
+                MainActor.assumeIsolated { self?.exitDesktopBuildMode() }
+            })
+        }
         terminationObserver = NotificationCenter.default.publisher(for: NSApplication.willTerminateNotification)
             .sink { [weak self] _ in
                 MainActor.assumeIsolated { self?.shutdown() }
@@ -303,12 +321,12 @@ final class AppState: ObservableObject {
         return true
     }
 
-    var isSelectedAreaRunning: Bool { isDesktopWorldEnabled && selectedAreaID == library.activeAreaID }
+    var isSelectedAreaRunning: Bool { (isDesktopWorldEnabled || isDesktopBuildMode) && selectedAreaID == library.activeAreaID }
 
     @discardableResult
     func updateSelectedArea(camera: CameraState) -> Bool {
         guard !isSelectedAreaRunning else {
-            areaStatus = "Stop Desktop before updating its active area's saved view."
+            areaStatus = isDesktopBuildMode ? "Exit Build Mode before updating its active area's saved view." : "Stop Desktop before updating its active area's saved view."
             return false
         }
         guard !persistenceBlocked, let index = library.areas.firstIndex(where: { $0.id == selectedAreaID }) else {
@@ -347,6 +365,7 @@ final class AppState: ObservableObject {
 
     @discardableResult
     func activateSelectedArea() -> Bool {
+        guard !isDesktopBuildMode else { areaStatus = "Exit Build Mode before changing the desktop assignment."; return false }
         let area = selectedArea
         guard !persistenceBlocked, let world = try? selectedDocument.restoredWorld(),
               (try? area.validate()) != nil, let screen = screenProviding(),
@@ -423,7 +442,7 @@ final class AppState: ObservableObject {
     @discardableResult
     func placeCircuitComponent(_ component: CircuitComponent, at coordinate: WorldCoordinate, audioMapper: CoordinateMapper? = nil) -> PlacementResult {
         guard !isEditorConfigurationLocked else {
-            developerPlacementStatus = "Disable Desktop World before editing."
+            developerPlacementStatus = editorConfigurationLockMessage
             playSound(.invalidPlacement, at: coordinate, mapper: audioMapper)
             return .rejected(.reserved)
         }
@@ -441,7 +460,7 @@ final class AppState: ObservableObject {
     @discardableResult
     func eraseCircuitComponent(at coordinate: WorldCoordinate, audioMapper: CoordinateMapper? = nil) -> Bool {
         guard !isEditorConfigurationLocked else {
-            developerPlacementStatus = "Disable Desktop World before editing."
+            developerPlacementStatus = editorConfigurationLockMessage
             return false
         }
         guard editorWorld.circuit.components[coordinate] != nil else {
@@ -460,7 +479,7 @@ final class AppState: ObservableObject {
     @discardableResult
     func configureRepeater(at coordinate: WorldCoordinate, direction: Direction, delay: RepeaterDelay) -> Bool {
         guard !isEditorConfigurationLocked else {
-            developerPlacementStatus = "Disable Desktop World before editing."
+            developerPlacementStatus = editorConfigurationLockMessage
             return false
         }
         guard var component = editorWorld.circuit.components[coordinate], component.kind == .repeater else {
@@ -483,7 +502,7 @@ final class AppState: ObservableObject {
             return
         }
         guard !isEditorConfigurationLocked else {
-            developerPlacementStatus = "Disable Desktop World before editing."
+            developerPlacementStatus = editorConfigurationLockMessage
             return
         }
         var next = editorWorld
@@ -494,15 +513,116 @@ final class AppState: ObservableObject {
     }
 
     private func worldDidChange() {
-        guard let index = library.worlds.firstIndex(where: { $0.id == selectedWorldID }) else { return }
-        library.worlds[index].circuit = editorWorld.circuit
-        library.worlds[index].activeLevers = library.worlds[index].activeLevers.filter { editorWorld.circuit.components[$0]?.kind == .lever }
-        if isEditingActiveWorld {
-            desktopWorld = editorWorld
+        commitCircuit(editorWorld, worldID: selectedWorldID)
+    }
+
+    private func commitCircuit(_ world: World, worldID: UUID) {
+        guard let index = library.worlds.firstIndex(where: { $0.id == worldID }) else { return }
+        library.worlds[index].circuit = world.circuit
+        library.worlds[index].activeLevers = library.worlds[index].activeLevers.filter { world.circuit.components[$0]?.kind == .lever }
+        if selectedWorldID == worldID { editorWorld = world }
+        if activeWorldID == worldID {
+            desktopWorld = world
             savedLevers = library.worlds[index].activeLevers
             simulator = CircuitSimulator(world: desktopWorld.circuit)
         }
         autosaver?.schedule(library)
+    }
+
+    /// Explicit local editing. Normal simulation and its asynchronous action requests
+    /// are stopped before the temporary capture window can be created.
+    @discardableResult
+    func enterDesktopBuildMode() -> Bool {
+        if isDesktopBuildMode { return true }
+        guard !persistenceBlocked, !isDisplaySettling, !isFinderLayoutSettling,
+              let screen = screenProviding(),
+              let mapper = try? CoordinateMapper(canvasFrame: screen.frame, camera: desktopCamera),
+              !mapper.visibleChunks(on: screen, viewport: CGRect(origin: .zero, size: screen.frame.size)).isEmpty else {
+            desktopStatus = "Build Mode unavailable: check display, settling and library recovery status."
+            return false
+        }
+        shutdown(preserveEditorTracking: true)
+        displayChangeMonitor?.start()
+        let session = DesktopBuildSession(worldID: activeWorldID, areaID: library.activeAreaID, mapper: mapper,
+            title: "\(activeWorldName) / \(library.activeArea!.name)")
+        buildSession = session
+        let controller = buildControllerFactory(session, screen, self)
+        buildController = controller
+        refreshBuildRenderer()
+        controller.show()
+        desktopStatus = "BUILD MODE — editing \(session.title). Circuit stopped. Exit before using Finder."
+        return true
+    }
+
+    func exitDesktopBuildMode() {
+        guard isDesktopBuildMode || buildController != nil else { return }
+        buildSession = nil // invalidate captured input before closing native windows
+        let controller = buildController
+        buildController = nil
+        controller?.close()
+        saveWorldNow()
+        desktopStatus = "Build Mode exited. Desktop stopped; Start Desktop to run your circuit."
+    }
+
+    private func refreshBuildRenderer() {
+        guard buildSession != nil else { return }
+        buildController?.update(world: desktopWorld, levers: savedLevers, assets: assets)
+    }
+
+    func buildClick(at point: CGPoint, erase: Bool = false, sessionID: UUID) {
+        guard let session = buildSession, session.id == sessionID,
+              session.worldID == activeWorldID, session.areaID == library.activeAreaID,
+              let tile = session.tile(at: point) else { return }
+        session.selectedTile = tile
+        if let existing = desktopWorld.circuit.components[tile], existing.kind == .repeater {
+            session.direction = existing.direction
+            session.delay = existing.repeaterDelay
+        }
+        var next = desktopWorld
+        if erase || session.tool == .erase {
+            guard next.circuit.components.removeValue(forKey: tile) != nil else {
+                session.status = "No circuit component here. Terrain is preserved."; return
+            }
+            session.status = "Erased (\(tile.x), \(tile.y)). Terrain preserved."
+            playSound(.removeCircuit, at: tile, mapper: session.mapper)
+        } else if let component = session.component {
+            let result = circuitPlacement.place(component, at: tile, in: &next)
+            guard result.isAllowed else {
+                session.status = result.message + (next.circuit.components[tile]?.kind == .repeater ? " Use Rotate or Delay to edit this repeater." : "")
+                playSound(.invalidPlacement, at: tile, mapper: session.mapper)
+                return
+            }
+            session.status = "Placed \(session.tool.rawValue) at (\(tile.x), \(tile.y)). Circuit stopped."
+            playSound(.placeCircuit, at: tile, mapper: session.mapper)
+        } else { return }
+        commitCircuit(next, worldID: session.worldID)
+        refreshBuildRenderer()
+    }
+
+    func rotateBuildRepeater() {
+        guard let session = buildSession else { return }
+        session.rotateDirection()
+        configureBuildRepeater()
+    }
+
+    func setBuildRepeaterDelay(_ delay: RepeaterDelay) {
+        guard let session = buildSession else { return }
+        session.delay = delay
+        configureBuildRepeater()
+    }
+
+    private func configureBuildRepeater() {
+        guard let session = buildSession else { return }
+        guard let tile = session.selectedTile, var component = desktopWorld.circuit.components[tile], component.kind == .repeater else {
+            session.status = "Next repeater: \(session.direction.rawValue), delay \(session.delay.rawValue)."; return
+        }
+        component.direction = session.direction
+        component.repeaterDelay = session.delay
+        var next = desktopWorld
+        next.circuit.components[tile] = component
+        commitCircuit(next, worldID: session.worldID)
+        refreshBuildRenderer()
+        session.status = "Repeater (\(tile.x), \(tile.y)): \(session.direction.rawValue), delay \(session.delay.rawValue)."
     }
 
     private func desktopLeversDidChange() {
@@ -515,6 +635,7 @@ final class AppState: ObservableObject {
 
     /// Used by both disable and the app's termination notification.
     func shutdown(preserveEditorTracking: Bool = false) {
+        exitDesktopBuildMode()
         soundPlayer.stop()
         if !preserveEditorTracking || !editorFinderItemsVisible {
             displayRefreshTask?.cancel()
@@ -554,6 +675,7 @@ final class AppState: ObservableObject {
     }
 
     func toggleDesktopWorld() {
+        exitDesktopBuildMode()
         displayChangeMonitor?.start()
         if isDesktopWorldEnabled {
             shutdown(preserveEditorTracking: true)
@@ -614,6 +736,7 @@ final class AppState: ObservableObject {
     func displayParametersDidChange() {
         let next = DisplayGeometry(target: screenProviding(), finderReference: finderReferenceProviding())
         guard next != lastObservedGeometry else { return }
+        exitDesktopBuildMode()
         lastObservedGeometry = next
         displayGeometry = next
         displayRefreshGeneration = UUID()
