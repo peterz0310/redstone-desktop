@@ -21,13 +21,16 @@ struct CircuitComponent: Equatable, Codable, Sendable {
     }
 
     /// Shared domain port table for simulation and presentation.
-    func emitsPower(from source: WorldCoordinate, to target: WorldCoordinate) -> Bool {
+    func emitsPower(from source: WorldCoordinate, to target: WorldCoordinate, receiver: CircuitComponent? = nil) -> Bool {
         guard Direction.allCases.contains(where: { $0.neighbor(of: source) == target }) else { return false }
         switch kind {
         case .button, .lever, .dust: return true
         case .repeater: return direction.neighbor(of: source) == target
         case .torch: return direction.opposite.neighbor(of: source) != target
-        case .empty, .output: return false
+        case .output:
+            // Only a directed repeater rear can pick up a powered Output block.
+            return receiver?.kind == .repeater && receiver?.direction.opposite.neighbor(of: target) == source
+        case .empty: return false
         }
     }
 

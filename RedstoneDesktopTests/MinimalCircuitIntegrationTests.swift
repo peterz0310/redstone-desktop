@@ -42,6 +42,106 @@ final class MinimalCircuitIntegrationTests: XCTestCase {
     }
 
     @MainActor
+    private func outputChainState(_ provider: CircuitFixtureProvider, _ opener: FixtureItemOpener, width: CGFloat = 1600) throws -> AppState {
+        let screen = ScreenDescriptor(id: "chain", frame: CGRect(x: 0, y: 0, width: width, height: 900), backingScale: 1)
+        let state = AppState(screenProviding: { screen }, clickEventMonitoring: FakeGlobalMouseEventMonitor(),
+            finderDiagnostics: FinderDiagnosticsModel(provider: provider),
+            desktopInteractionAssessment: { _ in DesktopInteractionAssessment(rejectionReason: nil, details: "fixture") },
+            tickScheduler: ManualCircuitTickScheduler(), itemOpener: opener, finderReferenceProviding: { screen })
+        for (x, kind) in [(10, CircuitComponentKind.button), (11, .dust), (12, .dust), (13, .output), (14, .repeater), (15, .output)] {
+            XCTAssertEqual(state.placeCircuitComponent(CircuitComponent(kind: kind, direction: .east), at: WorldCoordinate(x: x, y: 9)), .allowed)
+        }
+        return state
+    }
+
+    private func chainItem(_ id: String, x: Int) -> DesktopItem {
+        DesktopItem(id: id, url: URL(fileURLWithPath: "/tmp/\(id)"), displayName: id,
+            position: CGPoint(x: x * 64 + 32, y: 900 - (9 * 64 + 32)), estimatedIconSize: nil, kind: .folder)
+    }
+
+    @MainActor
+    func testChainedOutputUsesFreshTargetDespiteEmptyAmbiguousOrDisabledFirstAction() async throws {
+        let button = WorldCoordinate(x: 10, y: 9), a = WorldCoordinate(x: 13, y: 9), b = WorldCoordinate(x: 15, y: 9)
+        for first in ["empty", "ambiguous", "disabled", "invalidScript", "occupied"] {
+            let provider = CircuitFixtureProvider(), opener = FixtureItemOpener()
+            let state = try outputChainState(provider, opener)
+            defer { state.shutdown() }
+            var firstItems: [DesktopItem] = []
+            if first == "ambiguous" { firstItems = [chainItem("a1", x: 13), chainItem("a2", x: 13)] }
+            if ["occupied", "disabled", "invalidScript"].contains(first) { firstItems = [chainItem("a1", x: 13)] }
+            if first == "disabled" { XCTAssertTrue(state.configureOutput(at: a, mode: .none)) }
+            if first == "invalidScript" { XCTAssertTrue(state.configureOutput(at: a, mode: .executeOccupant)) }
+            provider.items = firstItems + [chainItem("old-b", x: 15)]
+            await state.finderDiagnostics.readItems()
+            state.toggleDesktopWorld()
+            state.handleCircuitClick(button)
+            await state.activationTask?.value
+            state.advanceCircuitTick()
+            await state.activationTask?.value
+            XCTAssertEqual(state.simulator.power(at: a), PowerLevel(14))
+            provider.items = firstItems + [chainItem("current-b", x: 15)]
+            for _ in 0..<2 { state.advanceCircuitTick(); await state.activationTask?.value }
+            XCTAssertEqual(state.simulator.power(at: b), .full)
+            let expected = (first == "occupied" ? [chainItem("a1", x: 13).url] : []) + [chainItem("current-b", x: 15).url]
+            XCTAssertEqual(opener.urls, expected)
+            // Refresh/movement and renderer appearance updates must not replay either edge.
+            provider.items = firstItems + [chainItem("later-b", x: 15)]
+            await state.finderDiagnostics.readItems()
+            state.desktopController?.scene.updateWorld(state.desktopWorld, poweredTiles: state.simulator.poweredTiles)
+            for _ in 0..<30 { state.advanceCircuitTick(); await state.activationTask?.value }
+            XCTAssertEqual(opener.urls, expected)
+            XCTAssertTrue(state.simulator.power.isEmpty)
+            state.handleCircuitClick(button)
+            await state.activationTask?.value
+            for _ in 0..<3 { state.advanceCircuitTick(); await state.activationTask?.value }
+            XCTAssertEqual(opener.urls.last, chainItem("later-b", x: 15).url)
+        }
+    }
+
+    @MainActor
+    func testOffscreenChainedOutputGetsPowerWithoutLaunchingItsOccupant() async throws {
+        let provider = CircuitFixtureProvider(), opener = FixtureItemOpener()
+        let state = try outputChainState(provider, opener, width: 960)
+        defer { state.shutdown() }
+        provider.items = [chainItem("a", x: 13), chainItem("offscreen-b", x: 15)]
+        await state.finderDiagnostics.readItems()
+        state.toggleDesktopWorld()
+        state.handleCircuitClick(WorldCoordinate(x: 10, y: 9))
+        await state.activationTask?.value
+        for _ in 0..<3 { state.advanceCircuitTick(); await state.activationTask?.value }
+        XCTAssertEqual(state.simulator.power(at: WorldCoordinate(x: 15, y: 9)), .full)
+        XCTAssertEqual(opener.urls, [chainItem("a", x: 13).url])
+    }
+
+    @MainActor
+    func testStopDuringFirstOutputReadDropsQueuedDownstreamAction() async throws {
+        let provider = CircuitFixtureProvider(), opener = FixtureItemOpener()
+        let state = try outputChainState(provider, opener)
+        defer { state.shutdown() }
+        provider.items = [chainItem("a", x: 13), chainItem("b", x: 15)]
+        await state.finderDiagnostics.readItems()
+        state.toggleDesktopWorld()
+        state.handleCircuitClick(WorldCoordinate(x: 10, y: 9))
+        await state.activationTask?.value
+        let started = expectation(description: "First Output read suspended")
+        var continuation: CheckedContinuation<[DesktopItem], any Error>?
+        provider.operation = { try await withCheckedThrowingContinuation { continuation = $0; started.fulfill() } }
+        state.advanceCircuitTick()
+        let pending = state.activationTask
+        await fulfillment(of: [started], timeout: 2)
+        state.advanceCircuitTick(); state.advanceCircuitTick()
+        XCTAssertEqual(state.simulator.power(at: WorldCoordinate(x: 15, y: 9)), .full)
+        state.shutdown()
+        provider.operation = nil
+        continuation?.resume(returning: provider.items)
+        await pending?.value
+        state.toggleDesktopWorld()
+        for _ in 0..<10 { state.advanceCircuitTick(); await state.activationTask?.value }
+        XCTAssertTrue(opener.urls.isEmpty)
+        XCTAssertTrue(state.simulator.power.isEmpty)
+    }
+
+    @MainActor
     func testGlobalClickRefreshesTargetAndHoldingDoesNotOpenAgain() async throws {
         let provider = CircuitFixtureProvider(), opener = FixtureItemOpener(), events = FakeGlobalMouseEventMonitor()
         let state = makeState(provider, opener, events: events)

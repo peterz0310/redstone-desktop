@@ -4,7 +4,7 @@ An experimental native macOS app exploring a block world beneath real Finder des
 
 ## Current build and next steps
 
-**Implemented: Slices 0–30 plus the requested appearance/navigation follow-ups (27A/28A/28B/28C/29A/29B).** Debug build and all **372 automated tests** pass. Slice 28 adds explicitly entered Desktop Build Mode with a temporary transparent input window, hotbar and mouse-accessible exits; its real Finder/input checks remain pending. Slices 26/27 add optional validated texture/sound packs and local Minecraft Java texture importing. Original built-in assets remain complete defaults; imported game art stays in local Application Support, outside Git and app bundles. Read the [resource-pack format guide](docs/RESOURCE_PACKS.md) and [Java import guide](docs/JAVA_TEXTURE_IMPORT.md) before making/sharing packs.
+**Implemented: Slices 0–30 plus Slice 30A and the requested appearance/navigation follow-ups (27A/28A/28B/28C/29A/29B).** Debug build and all **384 automated tests** pass. Slice 28 adds explicitly entered Desktop Build Mode with a temporary transparent input window, hotbar and mouse-accessible exits; its real Finder/input checks remain pending. Slices 26/27 add optional validated texture/sound packs and local Minecraft Java texture importing. Original built-in assets remain complete defaults; imported game art stays in local Application Support, outside Git and app bundles. Read the [resource-pack format guide](docs/RESOURCE_PACKS.md) and [Java import guide](docs/JAVA_TEXTURE_IMPORT.md) before making/sharing packs.
 
 Slices 20/21 and 23–25 are owner-accepted, along with corrected Slice 22 icon-size/marker behavior and the 19C bookmark/context-menu follow-up. Earlier detailed 19B/19C checks, Slice 22's real Output-after-resize check and the other specific Slices 26/27 checks and new 27A appearance checks remain pending. Local Java importing is owner-accepted.
 
@@ -16,11 +16,11 @@ Configuration still saves to `~/Library/Application Support/RedstoneDesktop/libr
 
 Finder Diagnostics remains useful for permission/alignment problems, and Desktop Details for input rejection/action results. They moved to **Advanced**. The obsolete Developer Placement window and fixed-demo diagnostic rows are removed; automated tests and migration fixtures remain, and no existing saved circuits were cleared. Shelf previews remain bounded schematic terrain/circuit snapshots. Finder markers now appear separately in the main editor canvas when enabled.
 
-**Next: run the [Slice 30 torch walkthrough](docs/REDSTONE_RULES.md#owner-mac-walkthrough).** Basic Slice 29B click/replacement behavior is owner-accepted. Basic Slice 29A settings/permission behavior is owner-accepted. Basic Slice 29 prompt/run/target-movement behavior is owner-accepted; repeater-specific timing remains pending. Finder responsiveness is owner-accepted; other detailed adapter checks remain pending. Desktop Finder crosshairs are removed. Slice 30A (powered Output pickup) is next and remains untouched.
+**Next: run the [Slice 30A Output-chain walkthrough](docs/REDSTONE_RULES.md#chaining-outputs--slice-30a-mac-walkthrough).** Basic Slice 29B click/replacement behavior is owner-accepted. Basic Slice 29A settings/permission behavior is owner-accepted. Basic Slice 29 prompt/run/target-movement behavior is owner-accepted; repeater-specific timing remains pending. Finder responsiveness is owner-accepted; other detailed adapter checks remain pending. Desktop Finder crosshairs are removed. Slice 30A implements powered Output pickup; Slice 31 (Diagnostics) is next, followed by the planned 31A icon/menu-bar slice.
 
 ## Planned app icon and menu-bar controls
 
-[Slice 31A in SPEC.md](SPEC.md#slice-31a--app-identity-and-menu-bar-controls) schedules an original redstone-dust app icon and matching menu-bar glyph, Start/Stop Desktop, assigned world/area status and grouped desktop-area selection. It also adds Settings/tools/mute while retaining editor/build/quit controls. Area reassignment stops the current circuit; starting the new assignment stays explicit. This slice is planned after Diagnostics (31), before Multi-display (32), and does not change the next slice (30A). No icon/menu changes are implemented yet.
+[Slice 31A in SPEC.md](SPEC.md#slice-31a--app-identity-and-menu-bar-controls) schedules an original redstone-dust app icon and matching menu-bar glyph, Start/Stop Desktop, assigned world/area status and grouped desktop-area selection. It also adds Settings/tools/mute while retaining editor/build/quit controls. Area reassignment stops the current circuit; starting the new assignment stays explicit. This slice is planned after Diagnostics (31), before Multi-display (32), and does not bypass the intervening 30A/31 work. No icon/menu changes are implemented yet.
 
 ## Adopted plan: worlds and saved areas
 
@@ -745,7 +745,7 @@ Quit the previous app with **⌘Q** and reopen `build/Build/Products/Debug/Redst
 
 These two new MANUAL groups await confirmation. If stalls remain, report whether they happen only while exploring new terrain or also over cached terrain/with Finder tracking enabled; the measured terrain-painting issue is fixed, but unrelated main-thread work is not assumed fixed.
 
-**Later circuits:** torches were already planned in Slice 30; SPEC now explicitly includes placement, visuals, persistence and feedback tests. New **Slice 30A** plans `source → Output A → repeater → Output B`, with rear pickup, restored power and existing action protections. That logic is not active in this build: Outputs remain terminal sinks until its dedicated slice. Slice 29 remains next.
+**Later circuits:** torches were already planned in Slice 30; SPEC now explicitly includes placement, visuals, persistence and feedback tests. New **Slice 30A** plans `source → Output A → repeater → Output B`, with rear pickup, restored power and existing action protections. This paragraph records the original plan; Slice 30A now implements the directed repeater pickup described in the current circuit-rules guide.
 
 For contributors, `./scripts/pan-profile.sh` reproduces the unoptimized native pan path using the repository's original synthetic Java fixture. Optionally pass a readable local JAR/pack path as its first argument. It creates/removes a temporary import cache and uses an isolated in-memory library; it never starts desktop input/Finder polling, opens files or changes owner preferences/saves. Output reports initial and per-step milliseconds plus cumulative texture counts. Numbers depend on machine/load/source art; automated tests enforce finite provider work and cache correctness rather than fragile timing thresholds.
 
@@ -800,10 +800,19 @@ Debug build and all **361 tests pass**. These physical Mac checks remain pending
 
 ## Torch/inverter — Slice 30
 
-Torch is now available in the editor and Desktop Build Mode. Its direction points away from the single rear input: rear power turns it OFF, no rear power turns it ON, after a fixed one-redstone-tick delay. An ON torch emits 15 forward and to both sides, never backward. Repeaters retain their own added delay; Outputs still fire only on a rising edge and remain terminal sinks until Slice 30A.
+Torch is now available in the editor and Desktop Build Mode. Its direction points away from the single rear input: rear power turns it OFF, no rear power turns it ON, after a fixed one-redstone-tick delay. An ON torch emits 15 forward and to both sides, never backward. Repeaters retain their own added delay; Outputs still fire only on a rising edge; Slice 30A now permits directed rear pickup by a repeater.
 
 Select a torch in Navigate mode, change Direction and **Apply torch direction**. In Desktop Build Mode, shortcut **7** selects Torch; hover **R** or **Rotate Selected** rotates it. T/Delay stays repeater-only. Erase/placement use the existing surface rules and world saves. Built-in off/on art and optional sound work without a pack. Java Re-import adds optional torch textures (28 mappings total); older packs use original fallback.
 
 **Starting Desktop can immediately power a torch with no rear input and activate its connected Output.** Begin the manual test with the Output empty. Read the [complete circuit rules and step-by-step Mac test](docs/REDSTONE_RULES.md), including a rightward lever → torch → dust → repeater → dust → Output example, save/reopen and direction editing.
 
 Debug build and all **372 automated tests pass**. The Slice 30 Mac acceptance checkbox remains pending.
+
+
+## Chained Outputs — Slice 30A
+
+A correctly oriented repeater can now pick up power from a neighboring Output at its rear, restore the signal to 15 and pass it to another Output after its configured delay. Both ON and OFF edges are delayed. The first Output's file/None/script action and its Finder occupancy do not affect circuit power. No direct Output-to-dust, Output-to-Output or Output-to-torch broadcast is added.
+
+Build `Lever → Dust → Dust → Output A → Repeater → Output B` on a clear strip to the right of existing circuits; face the repeater along the chain and choose four ticks for a visible 400 ms signal delay. Follow the [step-by-step Mac walkthrough](docs/REDSTONE_RULES.md#chaining-outputs--slice-30a-mac-walkthrough) for empty/None, folder replacement, orientation, Stop and save/reopen checks. File actions retain fresh Finder checks and serialized execution, so their timing can be slower than the signal delay.
+
+Debug build and all **384 automated tests pass**. New manual acceptance remains pending; no circuits are injected into existing worlds. Next is Slice 31, Diagnostics completion.

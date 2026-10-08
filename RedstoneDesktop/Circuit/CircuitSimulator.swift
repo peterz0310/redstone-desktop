@@ -78,7 +78,7 @@ struct CircuitSimulator: Equatable, Sendable {
         }
         var events: [CircuitEvent] = []
         for coordinate in coordinates where world.components[coordinate]?.kind == .output {
-            // Outputs sense adjacent sources/dust and never enqueue or relay power.
+            // Outputs sense emitting neighbors without enqueueing dust or feeding other Outputs.
             let strength = world.occupiedCardinalNeighbors(at: coordinate).reduce(PowerLevel.off) { level, neighbor in
                 max(level, deliveredPower(from: neighbor, to: coordinate, snapshot: next))
             }
@@ -107,10 +107,10 @@ struct CircuitSimulator: Equatable, Sendable {
         return events
     }
 
-    /// Shared cardinal port rules; Outputs remain terminal sinks.
+    /// Output pickup is restricted to a receiver repeater rear; all inputs use the completed snapshot.
     private func deliveredPower(from source: WorldCoordinate, to target: WorldCoordinate,
                                 snapshot: [WorldCoordinate: PowerLevel]) -> PowerLevel {
-        guard let component = world.components[source], component.emitsPower(from: source, to: target) else { return .off }
+        guard let component = world.components[source], component.emitsPower(from: source, to: target, receiver: world.components[target]) else { return .off }
         return snapshot[source] ?? .off
     }
 }

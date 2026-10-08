@@ -1,6 +1,6 @@
 # Redstone Desktop circuit rules
 
-This is a deterministic 2D simulation, separate from SpriteKit, Finder and file/script actions. These rules describe the implemented app through Slice 30. They do not promise Minecraft update-order parity. Packs supply validated pixels/audio, never logic. There is no vertical wiring, attachment/support-block simulation, burnout, quasi-connectivity or powered-block relay yet.
+This is a deterministic 2D simulation, separate from SpriteKit, Finder and file/script actions. These rules describe the implemented app through Slice 30A. They do not promise Minecraft update-order parity. Packs supply validated pixels/audio, never logic. There is no vertical wiring, attachment/support-block simulation, burnout, quasi-connectivity or full powered-block conduction.
 
 ## Ports and timing
 
@@ -13,7 +13,7 @@ North is positive world Y. A component's direction points forward; rear is its o
 | Dust | Adjacent emitting sources/dust | Current strength minus one to neighboring dust; current strength to a repeater rear or Output | Settles within the same tick |
 | Repeater | Rear only, positive signal | 15 to front only | Both edges delayed 2/4/6/8 simulation ticks (1–4 redstone ticks) |
 | Torch | Rear only, positive signal inhibits it | 15 to front and both sides while rear is off; never to rear | Both inversion edges delayed 2 simulation ticks (1 redstone tick) |
-| Output | Any adjacent emitting port | None | One action event on an off-to-on edge |
+| Output | Any adjacent emitting port | Current positive strength to an adjacent repeater rear only | One action event on an off-to-on edge; repeater applies its own delay |
 
 Simulation runs at 20 Hz (50 ms per tick); one redstone tick is 100 ms. Every delayed component matures its old history first, then the bounded dust solver runs. Outputs read the completed network and emit rising edges. All torch/repeater rear inputs sample that same completed snapshot to append history for future ticks. Dictionary insertion order cannot change the result. There is no recursive propagation.
 
@@ -40,7 +40,9 @@ A torch is a power source even without a click. **Starting Desktop with an unpow
 
 Held power never repeatedly runs an Output. Moving/changing its occupant does not retrigger it. Wait for power to turn off, then create a new rising edge; the separate action adapter refreshes Finder before resolving the current occupant. Empty, ambiguous and unavailable occupants do nothing. Turning appearance/audio on or off does not mutate circuit logic.
 
-Outputs remain terminal sinks. Repeater pickup from powered Outputs is planned for Slice 30A and is not implemented in this slice.
+Outputs supply only a correctly oriented repeater rear. They never directly power neighboring dust/Outputs or inhibit a torch rear. The Output signal is its strongest supported incoming level; this model merges dust's attenuated “weak” power and valid button/lever/repeater/torch “strong” power into that single level. There are no separate strong/weak flags. File occupancy, action mode/approval/result and visibility do not change that signal. Any positive rear input becomes 15 at the repeater front after its configured delay.
+
+Each solve starts fresh from sources and matured delay history. An open chain clears after the source turns off and delays expire. Intentionally closed repeater/torch feedback may sustain or oscillate, but never runs a recursive or unbounded update. Stop clears runtime history. File actions have separate serialized Finder/approval/process latency; a signal arriving downstream does not guarantee the earlier script has finished.
 
 ## Owner Mac walkthrough
 
@@ -53,3 +55,17 @@ Outputs remain terminal sinks. Repeater pickup from powered Outputs is planned f
 7. Optional: use built-in artwork, then Re-import a local Java version to get torch textures. Older generated packs fall back to the original torch artwork until re-imported. Toggle mute/effects and verify logic remains identical.
 
 Physical Finder interaction, rendered appearance and these owner checks remain manual acceptance work. Automated tests cover ports, both-edge timing, propagation, feedback, persistence, editing, renderer connections, sound transitions and synthetic Java imports.
+
+
+## Chaining Outputs — Slice 30A Mac walkthrough
+
+1. Run the updated app with **⌘R** and Stop Desktop before building. Choose a clear grass/dirt/sand strip **to the right** of existing circuits. Keep it separated from neighboring wires/sources.
+2. Place a Lever, then two Dust tiles, then Output A, a Repeater and Output B, in one straight row. Set the repeater to **East** for a left-to-right chain. Choose **4 redstone ticks** for an easy-to-see 400 ms signal delay. For example, use six clear tiles for `Lever → Dust → Dust → A → Repeater → B`; move the example if any terrain/decoration prevents placement.
+3. Leave both Outputs empty or set A to None for the initial signal test. Save/update and activate an area containing the complete chain, then Start Desktop. Keep the lever and its neighboring tiles clear of Finder icons.
+4. Click the lever ON once: A should power first; the repeater and B follow after 400 ms. A being empty or set to None must not block B's signal. Leaving it ON must not repeatedly activate either Output.
+5. Click the lever OFF. A should turn off first; the repeater and B turn off after 400 ms. Stop Desktop, rotate the repeater sideways and Start again: A may power, but that repeater/B must not pick up its signal. Stop, restore East, and Start to continue.
+6. Put distinct harmless folders on A and B (with action Default/Open); toggle OFF, wait until the whole chain is off, then ON. Each should open once. Signal/flash order is A then B; actual file actions also wait for fresh Finder reads and may take longer than 400 ms.
+7. Replace B's occupant, then create another OFF→ON transition. The current replacement must open; changing it while power is held must not retrigger either Output. Repeat with A empty/None to confirm B can still open independently.
+8. Stop while a refresh/action is pending: nothing queued should open afterward. Quit/reopen and confirm placements/delay persist, Desktop starts stopped and existing circuits work.
+
+The renderer draws repeater connections only at its front and rear. Adjacent Outputs/dust do not gain direct broadcast power from this feature. No demonstration circuit is automatically added to existing saved worlds. Manual acceptance of these physical Mac checks remains pending.

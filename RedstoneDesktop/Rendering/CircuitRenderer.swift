@@ -88,7 +88,8 @@ final class CircuitRenderer {
                         connects = outgoing
                             ? other.direction.opposite.neighbor(of: neighbor) == coordinate
                             : other.emitsPower(from: neighbor, to: coordinate)
-                    case .output: connects = outgoing
+                    case .output:
+                        connects = outgoing || other.emitsPower(from: neighbor, to: coordinate, receiver: component)
                     case .button, .lever: connects = !outgoing
                     case .empty: connects = false
                     }

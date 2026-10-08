@@ -153,15 +153,17 @@ final class RepeaterTests: XCTestCase {
         }
     }
 
-    func testOutputsCannotFeedRearInputs() {
+    func testOutputsFeedRearInputsAfterDelayWithoutRepeatedEdges() {
         let components = [cell(0): CircuitComponent(kind: .lever), cell(1): CircuitComponent(kind: .output),
             cell(2): CircuitComponent(kind: .repeater, direction: .east), cell(3): CircuitComponent(kind: .output)]
         var sim = CircuitSimulator(world: CircuitWorld(components: components))
         sim.toggleLever(at: cell(0))
         XCTAssertEqual(sim.advanceTick(), [.outputActivated(cell(1))])
+        XCTAssertEqual(sim.advanceTick(), [])
+        XCTAssertEqual(sim.advanceTick(), [.outputActivated(cell(3))])
         for _ in 0..<20 { XCTAssertEqual(sim.advanceTick(), []) }
-        XCTAssertEqual(sim.power(at: cell(2)), .off)
-        XCTAssertEqual(sim.power(at: cell(3)), .off)
+        XCTAssertEqual(sim.power(at: cell(2)), .full)
+        XCTAssertEqual(sim.power(at: cell(3)), .full)
     }
 
     func testRepeaterNetworksAreInsertionOrderIndependentAndBoundedOverManyTicks() {
