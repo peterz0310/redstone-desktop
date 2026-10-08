@@ -95,6 +95,7 @@ struct EditorView: View {
             }
         }
         .frame(minWidth: 1060, minHeight: 760)
+        .background(EditorWindowRegistration(windows: appState.editorWindows))
         .onAppear { editor.syncSelectedWorld(appState) }
         .onDisappear { appState.setEditorFinderItemsVisible(false) }
         .sheet(item: $sheet, onDismiss: { if editor.isPreviewing(appState) { editor.cancelPreview(appState) } }) { request in

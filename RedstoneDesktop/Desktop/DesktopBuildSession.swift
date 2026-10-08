@@ -29,6 +29,7 @@ final class DesktopBuildSession: ObservableObject {
     @Published var direction = Direction.east
     @Published var delay = RepeaterDelay.one
     @Published var selectedTile: WorldCoordinate?
+    @Published var hoveredTile: WorldCoordinate?
     @Published var status = "Left-click places; right-click erases. Edits save to this world. Circuit stopped."
 
     init(worldID: UUID, areaID: UUID, mapper: CoordinateMapper, title: String) {

@@ -1,4 +1,5 @@
 import AppKit
+import Combine
 import SpriteKit
 import SwiftUI
 
@@ -38,15 +39,13 @@ final class DesktopBuildController: NSObject, DesktopBuildPresenting, NSWindowDe
         inputWindow.hidesOnDeactivate = true
         inputWindow.collectionBehavior = [.stationary, .ignoresCycle]
         inputWindow.contentView = surface
+        inputWindow.acceptsMouseMovedEvents = true
         surface.click = { [weak appState, weak session] point, erase in
             guard let session else { return }
             appState?.buildClick(at: point, erase: erase, sessionID: session.id)
         }
-        surface.rotate = { [weak appState] in appState?.rotateBuildRepeater() }
-        surface.changeDelay = { [weak appState, weak session] in
-            guard let session else { return }
-            appState?.setBuildRepeaterDelay(RepeaterDelay(rawValue: session.delay.rawValue % 4 + 1)!)
-        }
+        surface.rotate = { [weak appState] tile in appState?.editHoveredBuildRepeater(at: tile, rotate: true) }
+        surface.changeDelay = { [weak appState] tile in appState?.editHoveredBuildRepeater(at: tile, rotate: false) }
         surface.exit = exit
 
         palette = NSPanel(contentRect: CGRect(x: screen.frame.midX - 330, y: screen.frame.maxY - 220, width: 660, height: 160),
@@ -78,6 +77,7 @@ final class DesktopBuildController: NSObject, DesktopBuildPresenting, NSWindowDe
         // Remove capture before any rendering/palette teardown. Safe to repeat.
         inputWindow.ignoresMouseEvents = true
         inputWindow.orderOut(nil)
+        surface.stopFeedback()
         surface.click = nil; surface.rotate = nil; surface.changeDelay = nil; surface.exit = nil
         inputWindow.close()
         palette.delegate = nil
@@ -98,12 +98,13 @@ final class DesktopBuildSurface: SKView {
     let session: DesktopBuildSession
     let screen: ScreenDescriptor
     var click: ((CGPoint, Bool) -> Void)?
-    var rotate: (() -> Void)?
-    var changeDelay: (() -> Void)?
+    var rotate: ((WorldCoordinate?) -> Void)?
+    var changeDelay: ((WorldCoordinate?) -> Void)?
     var exit: (() -> Void)?
     private var tracking: NSTrackingArea?
-    private var hoveredTile: WorldCoordinate?
     private let outline = SKShapeNode()
+    private let boundary = SKShapeNode()
+    private var motionObserver: AnyCancellable?
     override var acceptsFirstResponder: Bool { true }
 
     init(session: DesktopBuildSession, screen: ScreenDescriptor) {
@@ -118,11 +119,51 @@ final class DesktopBuildSurface: SKView {
         outline.lineWidth = 3
         outline.fillColor = .clear
         scene.addChild(outline)
+        boundary.name = "build-mode-boundary"
+        boundary.strokeColor = .systemOrange
+        boundary.fillColor = .clear
+        boundary.lineWidth = 3
+        boundary.zPosition = 10
+        scene.addChild(boundary)
         presentScene(scene)
+        updateBoundaryGeometry()
+        setReducedMotion(NSWorkspace.shared.accessibilityDisplayShouldReduceMotion)
+        motionObserver = NSWorkspace.shared.notificationCenter.publisher(for: NSWorkspace.accessibilityDisplayOptionsDidChangeNotification)
+            .receive(on: RunLoop.main)
+            .sink { [weak self] _ in
+                MainActor.assumeIsolated { self?.setReducedMotion(NSWorkspace.shared.accessibilityDisplayShouldReduceMotion) }
+            }
         preferredFramesPerSecond = 30
     }
 
     required init?(coder: NSCoder) { fatalError("init(coder:) has not been implemented") }
+
+    override func layout() {
+        super.layout()
+        scene?.size = bounds.size
+        updateBoundaryGeometry()
+    }
+
+    private func updateBoundaryGeometry() {
+        boundary.path = CGPath(roundedRect: bounds.insetBy(dx: 5, dy: 5), cornerWidth: 12, cornerHeight: 12, transform: nil)
+    }
+
+    func setReducedMotion(_ reduced: Bool) {
+        boundary.removeAllActions()
+        boundary.alpha = reduced ? 0.2 : 0.12
+        guard !reduced else { return }
+        let brighten = SKAction.fadeAlpha(to: 0.32, duration: 1.4)
+        let dim = SKAction.fadeAlpha(to: 0.12, duration: 1.4)
+        brighten.timingMode = .easeInEaseOut
+        dim.timingMode = .easeInEaseOut
+        boundary.run(.repeatForever(.sequence([brighten, dim])), withKey: "build-pulse")
+    }
+
+    func stopFeedback() {
+        boundary.removeAllActions()
+        motionObserver?.cancel(); motionObserver = nil
+        session.hoveredTile = nil
+    }
 
     override func updateTrackingAreas() {
         super.updateTrackingAreas()
@@ -137,14 +178,19 @@ final class DesktopBuildSurface: SKView {
     }
 
     override func mouseMoved(with event: NSEvent) {
-        hoveredTile = session.tile(at: point(event))
+        session.hoveredTile = session.tile(at: point(event))
+        // Returning to the canvas after a hotbar click makes hover shortcuts usable
+        // without clicking (and inadvertently placing) a component first.
+        window?.makeKey()
+        window?.makeFirstResponder(self)
         refreshHighlight()
     }
 
-    override func mouseExited(with event: NSEvent) { hoveredTile = nil; refreshHighlight() }
+    override func mouseEntered(with event: NSEvent) { mouseMoved(with: event) }
+    override func mouseExited(with event: NSEvent) { session.hoveredTile = nil; refreshHighlight() }
 
     func refreshHighlight() {
-        if let tile = hoveredTile ?? session.selectedTile {
+        if let tile = session.hoveredTile ?? session.selectedTile {
             outline.path = CGPath(rect: session.mapper.sceneRect(forTile: tile, on: screen).insetBy(dx: 2, dy: 2), transform: nil)
         } else { outline.path = nil }
     }
@@ -170,8 +216,8 @@ final class DesktopBuildSurface: SKView {
         guard event.modifierFlags.intersection([.command, .control, .option]).isEmpty else { super.keyDown(with: event); return }
         switch event.charactersIgnoringModifiers?.lowercased() {
         case "\u{1b}": exit?()
-        case "r": rotate?()
-        case "d": changeDelay?()
+        case "r": rotate?(session.hoveredTile)
+        case "t", "d": changeDelay?(session.hoveredTile)
         default:
             if let text = event.charactersIgnoringModifiers, let number = Int(text) {
                 session.selectTool(number: number)
@@ -198,12 +244,12 @@ private struct DesktopBuildHotbar: View {
                 }
             }.pickerStyle(.segmented)
             HStack {
-                Button("Rotate (R)") { appState.rotateBuildRepeater() }
+                Button("Rotate Selected") { appState.rotateBuildRepeater() }
                 Text(session.direction.rawValue.capitalized).frame(width: 45)
                 Picker("Delay", selection: Binding(get: { session.delay }, set: { appState.setBuildRepeaterDelay($0) })) {
                     ForEach(RepeaterDelay.allCases, id: \.self) { Text("\($0.rawValue) tick\($0 == .one ? "" : "s")").tag($0) }
                 }.frame(width: 160)
-                Text("Selected repeater or next placement").font(.caption).foregroundStyle(.secondary)
+                Text("Hover: R rotates · T cycles delay").font(.caption).foregroundStyle(.secondary)
             }
             Text(session.status).font(.caption).lineLimit(2)
         }.padding(12).frame(width: 636)

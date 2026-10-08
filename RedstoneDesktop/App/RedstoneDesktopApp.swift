@@ -35,7 +35,7 @@ struct RedstoneDesktopApp: App {
         .defaultSize(width: 1200, height: 550)
         MenuBarExtra("Redstone Desktop", systemImage: appState.isDesktopBuildMode ? "hammer.fill" : "square.grid.3x3.fill") {
             Text(appState.isDesktopBuildMode ? "BUILD MODE · Circuit stopped" : "Redstone Desktop")
-            Button("Open Editor") { openWindow(id: "editor") }
+            Button("Open Editor") { appState.exitDesktopBuildMode(); openWindow(id: "editor") }
             Button(appState.isDesktopBuildMode ? "Exit Build Mode" : "Build on Desktop") {
                 if appState.isDesktopBuildMode { appState.exitDesktopBuildMode() }
                 else { appState.enterDesktopBuildMode() }

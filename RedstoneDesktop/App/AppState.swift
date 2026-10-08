@@ -33,6 +33,7 @@ final class AppState: ObservableObject {
     private(set) var buildController: (any DesktopBuildPresenting)?
     private let buildControllerFactory: (DesktopBuildSession, ScreenDescriptor, AppState) -> any DesktopBuildPresenting
     private var buildExitObservers: [AnyCancellable] = []
+    let editorWindows = EditorWindowVisibility()
     var editorLeverPositions: Set<WorldCoordinate> { selectedDocument.activeLevers }
     var isEditingActiveWorld: Bool { selectedWorldID == activeWorldID }
     var editorOccupancy: DesktopOccupancySnapshot {
@@ -550,16 +551,18 @@ final class AppState: ObservableObject {
         buildController = controller
         refreshBuildRenderer()
         controller.show()
+        editorWindows.beginBuild()
         desktopStatus = "BUILD MODE — editing \(session.title). Circuit stopped. Exit before using Finder."
         return true
     }
 
-    func exitDesktopBuildMode() {
+    func exitDesktopBuildMode(restoreEditor: Bool = true) {
         guard isDesktopBuildMode || buildController != nil else { return }
         buildSession = nil // invalidate captured input before closing native windows
         let controller = buildController
         buildController = nil
         controller?.close()
+        editorWindows.endBuild(restore: restoreEditor)
         saveWorldNow()
         desktopStatus = "Build Mode exited. Desktop stopped; Start Desktop to run your circuit."
     }
@@ -611,6 +614,23 @@ final class AppState: ObservableObject {
         configureBuildRepeater()
     }
 
+    /// Keyboard editing targets hover only; never falls back to a previously
+    /// selected repeater when the pointer leaves it or moves over another tile.
+    func editHoveredBuildRepeater(at tile: WorldCoordinate?, rotate: Bool) {
+        guard let session = buildSession else { return }
+        guard let tile, tile == session.hoveredTile,
+              let component = desktopWorld.circuit.components[tile], component.kind == .repeater else {
+            session.status = "Hover a repeater, then press R to rotate or T to cycle its delay."
+            return
+        }
+        session.selectedTile = tile
+        session.direction = component.direction
+        session.delay = component.repeaterDelay
+        if rotate { session.rotateDirection() }
+        else { session.delay = RepeaterDelay(rawValue: component.repeaterDelay.rawValue % 4 + 1)! }
+        configureBuildRepeater()
+    }
+
     private func configureBuildRepeater() {
         guard let session = buildSession else { return }
         guard let tile = session.selectedTile, var component = desktopWorld.circuit.components[tile], component.kind == .repeater else {
@@ -635,7 +655,7 @@ final class AppState: ObservableObject {
 
     /// Used by both disable and the app's termination notification.
     func shutdown(preserveEditorTracking: Bool = false) {
-        exitDesktopBuildMode()
+        exitDesktopBuildMode(restoreEditor: preserveEditorTracking)
         soundPlayer.stop()
         if !preserveEditorTracking || !editorFinderItemsVisible {
             displayRefreshTask?.cancel()
