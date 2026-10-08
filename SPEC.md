@@ -23,7 +23,7 @@ The intended workflow is:
 
 The project is an experiment first and a polished application second.
 
-Current implementation: Slices 0–19A have owner-confirmed acceptance. **Slices 19B–21 are implemented.** The 19C bookmark/context-menu follow-up is owner-accepted; earlier specific 19B/19C runtime/deletion checks and Slices 20–21 Mac validation remain pending. The owner requested 19C usability cleanup after tentative 19B feedback. Worlds now have a sidebar; area previews sit below the canvas; creation/rename/save/deletion use focused sheets. Atomic deletion protects active/final records and preserves configuration on failure. Library, fixed-seed world and explicit saved-area activation contracts remain intact. Slice 20 adds explicitly enabled Finder projections and Output snapping in the editor; Slice 21 adds primary-display change handling with preserved lower-left camera anchoring. Finder icon-size handling is next in **Slice 22**. Historical entries record earlier behavior; Sections 3.8, 7.1, 25 and 29 define the current contract.
+Current implementation: Slices 0–19A have owner-confirmed acceptance. **Slices 19B–22 are implemented.** The 19C bookmark/context-menu follow-up is owner-accepted; Slices 20–21 now have owner-reported acceptance; earlier specific 19B/19C runtime/deletion checks remain pending. The owner requested 19C usability cleanup after tentative 19B feedback. Worlds now have a sidebar; area previews sit below the canvas; creation/rename/save/deletion use focused sheets. Atomic deletion protects active/final records and preserves configuration on failure. Library, fixed-seed world and explicit saved-area activation contracts remain intact. Slice 20 adds explicitly enabled Finder projections and Output snapping in the editor; Slice 21 adds primary-display change handling with preserved lower-left camera anchoring. Slice 22 adds read-only icon-size detection and settled center refresh; its Mac checks remain pending. Optional synchronized world scale is next in **Slice 23**. Historical entries record earlier behavior; Sections 3.8, 7.1, 25 and 29 define the current contract.
 
 The most important early question is not whether attractive terrain or redstone can be made. Those are comparatively straightforward. The first major feasibility gate is:
 
@@ -750,6 +750,16 @@ When Finder icon size changes:
 3. recompute centers
 4. recompute world occupancy
 5. redraw output states
+
+## 12.0 Slice 22 read-only settings and settled positions
+
+Use Finder's installed public scripting dictionary: `icon size` on `icon view options` of `desktop window`. Capture the setting before/after item positions in the same query, through DesktopItemProviding/FinderScriptRunning. Accept only bounded positive integral settings; unsupported/missing optional values leave item tracking usable. No reading undocumented Finder preference files, private APIs, setting mutations, icon-size offsets or assumptions about grid spacing. `estimatedIconSize` stays nil: the raw setting is not a proven per-item visual/hit rectangle.
+
+The diagnostic model compares successful known size samples. When they differ from the previous setting, or change inside one snapshot, invalidate published positions/occupancy, mark layout settling, and retain the shared read slot while waiting 500 ms and querying again. If size changes again, repeat the wait/read until a stable sample. Do not publish intermediate centers. Cancellation, display invalidation and read failure cannot publish the interrupted layout. Optional settings unavailable means ordinary 2 Hz position refresh continues, without claiming size-change detection.
+
+Track a layout generation so an input/output operation begun before a detected resize cannot activate after that read, even when the final read succeeds. Drop queued/new output edges while settling; no held-output replay. Simulator, active world/area, all saved cameras and editor zoom remain unchanged. Fresh user input after settlement uses actual refreshed occupancy through the existing separate action executor.
+
+Publish current optional view settings and retain the first successful stable setting as an optional **session-only baseline** for future synchronization. Baseline is not stored in world/area/library JSON and does not control zoom in Slice 22. Diagnostics show current setting/baseline, settling/unavailable status and independent world scale. Startup remains disabled/read-free; polling and permission recovery retain the shared adapter/tracker. Persistent synchronization settings and anchor calculations are Slice 23.
 
 ## 12.1 Optional synchronized scale mode
 
@@ -2457,11 +2467,11 @@ Owner-requested usability detour before Finder ghosts; preserve Slice 19B runtim
 
 ### Manual acceptance
 
-- [ ] MANUAL: moving real icon updates editor ghost while opted-in editor tracking is on, including with Desktop stopped.
-- [ ] MANUAL: Output hover/click snaps to the tile under a ghost center, respects blocked placement, opens nothing, and icon movement does not move placed components.
-- [ ] MANUAL: inactive-world/unsaved-view projections leave desktop assignment/circuit unchanged; seed previews hide markers and tracking lifecycle/recovery works.
+- [x] MANUAL: moving real icon updates editor ghost while opted-in editor tracking is on, including with Desktop stopped.
+- [x] MANUAL: Output hover/click snaps to the tile under a ghost center, respects blocked placement, opens nothing, and icon movement does not move placed components.
+- [x] MANUAL: inactive-world/unsaved-view projections leave desktop assignment/circuit unchanged; seed previews hide markers and tracking lifecycle/recovery works.
 
-**Status: implemented; owner Mac validation pending.** Debug build and all 232 tests pass. Pure World/Circuit/Persistence plus Finder projection type-check passes without AppKit/SpriteKit. README contains the View-menu opt-in and exact icon-movement, snapping, scoping and recovery checks. Slice 21 remains untouched.
+**Status: complete; owner-reported Mac acceptance on 2026-10-07.** The owner confirmed the combined Slice 20/21 walkthrough with “All looking good. Continue”. Debug build and all 232 tests passed at implementation. Pure World/Circuit/Persistence plus Finder projection type-check passes without AppKit/SpriteKit. README contains the View-menu opt-in and exact icon-movement, snapping, scoping and recovery checks. Slice 21 is implemented and owner-accepted below.
 
 ---
 
@@ -2475,21 +2485,23 @@ Owner-requested usability detour before Finder ghosts; preserve Slice 19B runtim
 - [x] document camera-anchor policy
 - [x] unit tests with fake screen changes
 
-**Status: implemented; owner Mac validation pending.** Debug build and all 244 tests pass, including 12 new display-change checks. Section 5.4 documents primary-display/lower-left anchor behavior; README has a combined Slice 20/21 walkthrough. The owner explicitly authorized this slice while away; Slice 20 manual checks remain pending rather than being inferred complete.
+**Status: complete; owner-reported Mac acceptance on 2026-10-07.** The owner confirmed the combined walkthrough with “All looking good. Continue”. Debug build and all 244 tests passed at implementation, including 12 display-change checks. Section 5.4 documents primary-display/lower-left anchor behavior; README has a combined Slice 20/21 walkthrough. The owner authorized this slice while away, then reported acceptance after returning; manual completion comes from that report, not automated tests.
 
 ### Manual acceptance
 
-- [ ] MANUAL: display scaling/resolution change remains aligned.
-- [ ] MANUAL: external display unplug/replug does not crash.
+- [x] MANUAL: display scaling/resolution change remains aligned.
+- [x] MANUAL: external display unplug/replug does not crash.
 
 ---
 
 ## Slice 22 — Finder icon-size handling
 
-- [ ] read/detect relevant Finder view settings if practical
-- [ ] refresh icon layout after size change
-- [ ] keep occupancy center-based
-- [ ] store optional baseline values for future sync
+- [x] read/detect relevant Finder view settings if practical
+- [x] refresh icon layout after size change
+- [x] keep occupancy center-based
+- [x] store optional baseline values for future sync
+
+**Status: implemented; owner Mac validation pending.** Debug build and all 256 tests pass, including 12 new icon-size checks. Pure domain/view-settings/Finder projection type-check without AppKit/SpriteKit. Baseline is optional and session-only; synchronization/persistent settings remain Slice 23. Unsupported optional settings retain normal position polling. README contains the desktop View Options, alignment and real-output-target walkthrough.
 
 ### Manual acceptance
 
@@ -3549,3 +3561,14 @@ Decision: adopt Section 5.4's primary-display/lower-left anchor policy. Use the 
 Validation: final Debug application build and all 244 automated tests pass. Twelve DisplayChangeTests cover the public notification adapter lifecycle, negative-origin/logical Retina resize geometry, renderer/window/input recreation and stale callbacks, camera/library/pulse preservation, identical notifications, coalesced refresh and backing-scale-only changes, unavailable/invalid display stop and explicit restart, read-free disabled startup versus opted-in stopped editor, canceled input/output completions, generation rejection of noncancelable diagnostic reads, stop-during-settle tracker ownership, denied-access/error preservation without re-prompting, and full-shutdown cancellation. The additional held-output test initially expected an unrelated exact power strength; it now asserts the property under test (Output remains powered without reopening), while circuit-strength coverage remains in simulator tests. This is a test expectation correction, not a macOS API contradiction. Pure domain/Finder projection type-check and diff checks pass.
 
 Physical resolution/scaling, unplug/replug, primary fallback, click-through window layering and real Finder position settling require the owner's Mac checks; no real display settings or connections were changed during automation. README provides the combined Slice 20/21 walkthrough. Both slices' MANUAL checks remain unchecked; Slice 22 is untouched.
+
+
+## 2026-10-07 — Owner confirms Slices 20/21; Slice 22 Finder icon size
+
+Context: the owner reports “All looking good. Continue” after the combined Finder-projection/display-change walkthrough. Mark the corresponding five MANUAL checks owner-accepted, separately from automated evidence; earlier unreported 19B/19C check groups remain pending. Proceed with Slice 22 only.
+
+Decision: implement Section 12.0. Inspect Finder's installed scripting dictionary and use its public icon-view size property in a structured before/after-size/item snapshot. Optional metadata is read through DesktopItemProviding, with backward-compatible defaults for providers/runners that only supply items. Keep center mapping and world scale unchanged. A single serialized diagnostic read waits/rechecks changing layouts and publishes only stable positions. Layout generations skip old input/output activations; transient circuit state and saved configuration remain intact. Keep an optional session baseline for future Slice 23; no save schema or undocumented preferences access. Diagnostics and the editor's transient caption expose state without adding normal top-bar controls.
+
+Validation: final Debug build and all 256 automated tests pass (12 new icon-size tests), plus Foundation-only domain/view-settings/Finder projection type-check and diff checks. Tests validate bounded settings, structured before/after parsing and unchanged raw centers, optional unsupported/malformed metadata and empty desktop, native snapshot-script compilation without querying Finder plus harmless descriptor execution, changed/mid-query/continuous sizes with stable-only publication, unchanged/no-settings reads without delay, retained optional session baseline, settle failure/recovery, cancellation/display invalidation, old input refusal with successful fresh retry, and old output refusal with a later fresh pulse opening the current fixture occupant. Existing polling, permission, library, coordinate, display and action regression tests remain green. No actual Finder setting was changed in automation; compilation is syntax evidence, not physical icon alignment or setting-availability proof.
+
+Actual setting availability, resizing/alignment and fresh real output targeting require the owner's Mac check. All three Slice 22 MANUAL checkboxes remain unchecked. No schema, terrain, asset, simulator, private API or backend change; Slice 23 remains untouched.

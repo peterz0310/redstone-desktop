@@ -15,11 +15,17 @@ final class FinderDiagnosticsModel: ObservableObject {
     @Published private(set) var isReading = false
     @Published private(set) var hasRead = false
     @Published private(set) var error: String?
+    @Published private(set) var viewSettings: FinderViewSettings?
+    @Published private(set) var baselineViewSettings: FinderViewSettings?
+    @Published private(set) var isLayoutSettling = false
+    private(set) var layoutGeneration = UUID()
+    private let layoutSettleDelay: Duration
     private var geometryGeneration = UUID()
     private let provider: any DesktopItemProviding
 
-    init(provider: any DesktopItemProviding = FinderDesktopItemProvider()) {
+    init(provider: any DesktopItemProviding = FinderDesktopItemProvider(), layoutSettleDelay: Duration = .milliseconds(500)) {
         self.provider = provider
+        self.layoutSettleDelay = layoutSettleDelay
     }
 
     /// Old in-flight results cannot repopulate positions measured before a display change.
@@ -35,14 +41,32 @@ final class FinderDiagnosticsModel: ObservableObject {
         guard !isReading else { return false }
         let generation = geometryGeneration
         isReading = true
-        defer { isReading = false }
+        defer { isLayoutSettling = false; isReading = false }
         // Give SwiftUI a chance to display the reading state before NSAppleScript runs.
         await Task.yield()
         guard !Task.isCancelled, generation == geometryGeneration else { return false }
         do {
-            let result = try await provider.currentDesktopItems()
+            var snapshot = try await provider.currentDesktopSnapshot()
             guard !Task.isCancelled, generation == geometryGeneration else { return false }
-            let sorted = result.sorted { ($0.displayName, $0.url.path) < ($1.displayName, $1.url.path) }
+            let changedSize = viewSettings != nil && snapshot.viewSettings != nil && viewSettings != snapshot.viewSettings
+            if !snapshot.layoutIsStable || changedSize {
+                layoutGeneration = UUID()
+                isLayoutSettling = true
+                hasRead = false
+                items = []
+                var candidate = snapshot.viewSettings
+                repeat {
+                    try await Task.sleep(for: layoutSettleDelay)
+                    guard !Task.isCancelled, generation == geometryGeneration else { return false }
+                    snapshot = try await provider.currentDesktopSnapshot()
+                    guard !Task.isCancelled, generation == geometryGeneration else { return false }
+                    if snapshot.layoutIsStable && (snapshot.viewSettings == nil || snapshot.viewSettings == candidate) { break }
+                    candidate = snapshot.viewSettings
+                } while true
+            }
+            if viewSettings != snapshot.viewSettings { viewSettings = snapshot.viewSettings }
+            if baselineViewSettings == nil, let settings = snapshot.viewSettings { baselineViewSettings = settings }
+            let sorted = snapshot.items.sorted { ($0.displayName, $0.url.path) < ($1.displayName, $1.url.path) }
             if items != sorted { items = sorted }
             error = nil
             permission = .allowed

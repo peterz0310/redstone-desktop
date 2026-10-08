@@ -4,7 +4,7 @@ An experimental native macOS app exploring a block world beneath real Finder des
 
 ## Current build and next steps
 
-**Implemented: Slices 0–21.** Slice 20 adds Finder center markers, proposed-camera occupancy and Output snapping in the editor. Slice 21 rebuilds desktop rendering/input after display changes, retains the saved lower-left origin/tile size and current circuit state, and refreshes Finder after settling. Debug build and all **244 automated tests** pass; the pure domain and Finder projection also type-check without AppKit/SpriteKit. The owner accepted the 19C Update Current Area/context-menu follow-up. Earlier detailed 19B/19C runtime/deletion checks and the combined Slice 20/21 Mac walkthrough remain pending.
+**Implemented: Slices 0–22.** Slice 20 adds Finder center markers, proposed-camera occupancy and Output snapping in the editor. Slice 21 rebuilds desktop rendering/input after display changes, retains the saved lower-left origin/tile size and current circuit state, and refreshes Finder after settling. Slice 22 reads optional Finder icon-size settings, waits for changed layouts to settle and refreshes actual centers without changing world scale. Debug build and all **256 automated tests** pass; the pure domain/view settings and Finder projection also type-check without AppKit/SpriteKit. The owner accepted the 19C Update Current Area/context-menu follow-up. The owner accepted the combined Slice 20/21 walkthrough with “All looking good. Continue”. Earlier detailed 19B/19C runtime/deletion checks and Slice 22 Mac validation remain pending.
 
 The editor now shows **Worlds** in a left sidebar and **Areas in [world]** as a preview shelf below the canvas. Build tools and the inspector sit on the right. The top shows the world/area being edited, the separate desktop assignment, **Start/Stop Desktop** and **Advanced**. New World, Save Current View and rename use focused sheets; seed/creation fields are no longer permanently visible.
 
@@ -14,7 +14,7 @@ Configuration still saves to `~/Library/Application Support/RedstoneDesktop/libr
 
 Finder Diagnostics remains useful for permission/alignment problems, and Desktop Details for input rejection/action results. They moved to **Advanced**. The obsolete Developer Placement window and fixed-demo diagnostic rows are removed; automated tests and migration fixtures remain, and no existing saved circuits were cleared. Shelf previews remain bounded schematic terrain/circuit snapshots. Finder markers now appear separately in the main editor canvas when enabled.
 
-**Next: validate the combined Slice 20/21 walkthrough at the end of this document. Finder icon-size handling is Slice 22.**
+**Next: validate the Slice 22 icon-size walkthrough at the end of this document. Optional synchronized world scale is Slice 23.**
 
 ## Adopted plan: worlds and saved areas
 
@@ -39,7 +39,7 @@ The current flow is:
 
 Inactive worlds remain paused. The active world's whole circuit simulates, including wires outside the visible area; only visible output tiles can dispatch desktop actions. Switching resets transient pulses/delays and cancels pending work from the old session. Saved ON levers resume and can activate outputs when you explicitly enable or switch areas. Re-activating the same world/camera does not restart it.
 
-Real Finder files stay on your actual desktop. They are neither copied into worlds nor repositioned when you switch; their occupancy is recalculated against the active area's camera. Future editor ghosts will show a projection against the selected area's proposed camera.
+Real Finder files stay on your actual desktop. They are neither copied into worlds nor repositioned when you switch; their occupancy is recalculated against the active area's camera. Enabled editor ghosts show a projection against the selected area's proposed camera.
 
 Slice 19A migrates your current world into `~/Library/Application Support/RedstoneDesktop/library.json`, retaining your existing identity, chosen seed, circuit, levers, terrain patches and camera as the first **Desktop** area. The old world.json stays untouched as a backup. New worlds get empty procedural terrain and a default **Home** area rather than your existing demo circuits/grass patches. A valid library takes precedence over the backup; failed/corrupt restoration preserves saved data and blocks writes. Selecting a new world never activates it; use Activate on Desktop to assign its saved area.
 
@@ -585,12 +585,12 @@ The management dropdowns are gone. Update failure keeps the previous saved view 
 4. Choose **Output**, then hover near a circle. The placement outline should snap to the tile containing its center even just across a tile edge (within 24 editor points). Click a green target: Output should appear on that tile, and nothing should open. Red targets remain blocked by terrain, decoration or an existing component. Move the folder again: its circle moves, but your placed Output stays on its original world tile. Use Erase if this was only a test.
 5. Browse another world or pan to an unsaved view. The named projection should follow the selected world/proposed origin; the **Desktop:** assignment and running circuit must stay unchanged. Seed previews hide markers. Start/Stop Desktop should leave opted-in editor markers tracking; hiding them with View stops editor-only polling. Closing/reopening the app resets Show Finder Items to off. To try the real output, save/update the proposed view, explicitly activate that saved area, then Start Desktop and trigger its circuit normally.
 
-Please report whether icon movement/alignment and snapping work on your Mac, including that browsing and placing Outputs leave the desktop assignment and Finder files alone. The three Slice 20 MANUAL checkboxes remain pending until that report. Slice 21 now handles live display reconfiguration; use the combined walkthrough below.
+Please report whether icon movement/alignment and snapping work on your Mac, including that browsing and placing Outputs leave the desktop assignment and Finder files alone. The owner subsequently accepted these checks on 2026-10-07 with “All looking good. Continue”. Slice 21 now handles live display reconfiguration; use the combined walkthrough below.
 
 
 ## Combined Mac validation — Slices 20 and 21
 
-The owner authorized Slice 21 while away, so neither slice's manual checks are marked accepted yet. Final Debug build and **244 tests pass** (12 added display checks). The tests use fake displays, Finder providers, input and file openers; real display switching/Finder alignment still needs the following check.
+The owner authorized Slice 21 while away, then accepted the combined walkthrough with “All looking good. Continue” on 2026-10-07. Its five MANUAL checks are recorded as owner-reported acceptance. Final Debug build and **244 tests pass** (12 added display checks). The tests use fake displays, Finder providers, input and file openers; real display switching/Finder alignment still needs the following check.
 
 1. **Launch the latest app.** Quit the old app with **⌘Q**. Open Terminal and run:
 
@@ -606,4 +606,23 @@ The owner authorized Slice 21 while away, so neither slice's manual checks are m
 6. **Unplug/replug if you have an external display (Slice 21).** Disconnect and reconnect it with the app running. The app should remain responsive and rebuild on the currently reported primary display. If you change which display is primary, the one desktop world should follow that primary; moving only the editor should not move it. If macOS temporarily exposes no usable display, Desktop stops and stays stopped when one returns; explicitly choose **Start Desktop**. This slice still renders only one display. If you have no external display, report this check as unavailable rather than passed.
 7. **Check stopped-editor refresh/recovery.** Stop Desktop but leave **Show Finder Items** on; change scaling once more and verify editor markers return after settling. Turn Show Finder Items off to stop editor-only polling. If Automation is denied, **Advanced → Finder Diagnostics → Read Finder Items** can retry after System Settings → Privacy & Security → Automation allows access; toggle Show Finder Items off/on to resume. A denied permission should remain visible and not prompt repeatedly on display changes. Finally quit/reopen: stored areas/components remain, while Desktop and editor tracking start off.
 
-Please report separately whether **Slice 20 icon movement/snapping** and **Slice 21 scaling/alignment/unplug-replug** pass. Both sets of MANUAL checkboxes remain pending until your report. The lower-left anchor and public notification policy are documented in SPEC.md Section 5.4. No Finder icon-size synchronization, continuous multi-monitor map or resource-pack work is included.
+Please report separately whether **Slice 20 icon movement/snapping** and **Slice 21 scaling/alignment/unplug-replug** pass. Both sets of MANUAL checkboxes are now recorded as owner-accepted from that report. The lower-left anchor and public notification policy are documented in SPEC.md Section 5.4. Finder icon-size synchronization, continuous multi-monitor maps and resource packs remain later work.
+
+
+## Finder icon-size walkthrough — Slice 22
+
+Debug build and **256 automated tests pass**. This slice reads the optional public Finder icon-size setting and rechecks centers after size changes. It preserves your world tile scale, saved camera, component coordinates and running circuit state. Diagnostics keep the first known stable size as a **session baseline** only; this does not change saved world/library data or enable synchronized zoom.
+
+1. **Launch the new build.** Quit the old app with **⌘Q**, then run in Terminal:
+
+   ```sh
+   open /Users/peterzielinski/git/redstone-desktop/build/Build/Products/Debug/RedstoneDesktop.app
+   ```
+
+2. **Enable tracking and check the setting.** Leave Desktop stopped and choose **View → Show Finder Items** below the editor canvas. Open **Advanced → Finder Diagnostics**. It should show **Finder icon size**, **Session baseline** and **independent world scale**. The baseline stays at the first reported stable size for this app session. If optional metadata is unavailable, the diagnostic says so and center-position polling still works; report that exact state.
+3. **Resize the real desktop icons.** Note your current size so you can restore it. Right-click/Control-click a blank spot on your **real Finder desktop → Show View Options**, then drag **Icon size** to another value ([Apple's instructions](https://support.apple.com/guide/mac-help/mchlp2209/mac)). This must be the desktop's options, not a regular Finder folder's options. Wait roughly a second after releasing the slider. The diagnostic size should update, while its baseline and the world's tile scale stay unchanged. Tracking may briefly show settling/unavailable; it should recover automatically without pressing Read Finder Items. If you drag repeatedly, updates should settle on the final layout.
+4. **Check centers after resizing.** Named editor markers should follow the icons' latest centers. Choose **Show Desktop Area → Start Desktop**, then move/minimize the editor to compare the real desktop's pink center crosshairs with a harmless folder. Resize smaller/larger again and verify alignment and normal Finder selection/dragging. Finder may move icons to different tiles; the app must follow those positions rather than keep their old targets. Already-placed circuit components stay at their world coordinates.
+5. **Check the output target.** Wait for settling to finish, then place a harmless folder on a visible existing Output and trigger its button/lever normally. That current folder should open once. Move it off the Output and trigger again: nothing should open. Put a different harmless folder there and trigger a fresh pulse: the new folder should open. A click/output activation caught during detected resizing is intentionally skipped; wait and trigger again afterward. Holding an already-powered Output must not reopen it just because the icon size changes.
+6. **Restore your original Finder icon size.** Confirm automatic alignment/occupancy recovers. Stop Desktop, leaving Show Finder Items on, and repeat a small resize once to verify the editor-only tracker also refreshes. Restore the setting again. Quit/reopen should retain builds/cameras and start integration off; the session baseline is captured anew after the next explicit successful tracking/read.
+
+Please report whether the **size value updates**, **centers stay aligned**, and **the Output opens the current occupant after resizing**. All three Slice 22 MANUAL checks remain pending until your report. This slice does not adjust world zoom to icon size; that optional mode is Slice 23. It does not read undocumented Finder preference files, change Finder's settings, infer grid spacing or request extra permissions beyond existing Finder Automation.

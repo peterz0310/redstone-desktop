@@ -10,7 +10,22 @@ struct FinderDesktopItemProvider: DesktopItemProviding {
     }
 
     func currentDesktopItems() async throws -> [DesktopItem] {
-        try Self.parse(runner.queryDesktopItems())
+        try await currentDesktopSnapshot().items
+    }
+
+    func currentDesktopSnapshot() async throws -> FinderDesktopSnapshot {
+        try Self.parseSnapshot(runner.queryDesktopSnapshot())
+    }
+
+    static func parseSnapshot(_ result: NSAppleEventDescriptor) throws -> FinderDesktopSnapshot {
+        guard result.descriptorType == typeAEList, result.numberOfItems == 3, let rows = result.atIndex(3) else {
+            throw FinderReadError.malformedResponse("Expected icon-size samples and desktop item rows.")
+        }
+        let before = number(result.atIndex(1)).flatMap { FinderViewSettings(iconSize: $0) }
+        let after = number(result.atIndex(2)).flatMap { FinderViewSettings(iconSize: $0) }
+        // Unsupported/invalid optional settings must not hide valid item positions.
+        return FinderDesktopSnapshot(items: try parse(rows), viewSettings: after,
+            layoutIsStable: before == nil || after == nil || before == after)
     }
 
     static func parse(_ result: NSAppleEventDescriptor) throws -> [DesktopItem] {

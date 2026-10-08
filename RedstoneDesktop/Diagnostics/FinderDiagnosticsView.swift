@@ -25,9 +25,17 @@ struct FinderDiagnosticsView: View {
                 Button(tracker.isPolling ? "Stop Polling" : "Start Polling (2 Hz)") {
                     if tracker.isPolling { tracker.stop() } else { tracker.start() }
                 }
-                .disabled(!tracker.isPolling && (!appState.isDesktopWorldEnabled || model.permission != .allowed || model.isReading))
+                .disabled(!tracker.isPolling && (!(appState.isDesktopWorldEnabled || appState.editorFinderItemsVisible) || model.permission != .allowed || model.isReading))
                 Text(tracker.isPolling ? "Live updates enabled" : "Polling paused")
                     .foregroundStyle(.secondary)
+            }
+            HStack {
+                Text(model.viewSettings.map { "Finder icon size: \($0.iconSize)" } ?? "Finder icon size: unavailable (center tracking still works)")
+                Spacer()
+                Text(model.baselineViewSettings.map { "Session baseline: \($0.iconSize) · independent world scale" } ?? "Independent world scale")
+            }.font(.caption).foregroundStyle(.secondary)
+            if model.isLayoutSettling {
+                Text("Finder layout is settling; positions and actions wait for a fresh read.").font(.caption)
             }
             Text("Read-only: asks Finder for desktop item names, paths, and raw positions. The first read may show macOS's Automation permission prompt.")
                 .font(.callout)

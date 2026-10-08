@@ -60,6 +60,8 @@ final class AppState: ObservableObject {
     private var terminationObserver: AnyCancellable?
     private let screenProviding: () -> ScreenDescriptor?
     private let clickEventMonitoring: any GlobalMouseEventMonitoring
+    private var finderLayoutObserver: AnyCancellable?
+    @Published private(set) var isFinderLayoutSettling = false
     private var finderItemsObserver: AnyCancellable?
     private var finderReferenceScreen: ScreenDescriptor?
     private let finderReferenceProviding: () -> ScreenDescriptor?
@@ -109,6 +111,21 @@ final class AppState: ObservableObject {
         desktopItemTracker = DesktopItemTracker(diagnostics: finderDiagnostics)
         finderItemsObserver = Publishers.CombineLatest3(finderDiagnostics.$items, finderDiagnostics.$error, finderDiagnostics.$hasRead).sink { [weak self] items, error, hasRead in
             MainActor.assumeIsolated { self?.updateFinderState(items, error: error, hasRead: hasRead) }
+        }
+        finderLayoutObserver = finderDiagnostics.$isLayoutSettling.sink { [weak self] settling in
+            MainActor.assumeIsolated {
+                guard let self else { return }
+                let wasSettling = self.isFinderLayoutSettling
+                self.isFinderLayoutSettling = settling
+                if settling {
+                    self.pendingOutputs = []
+                    self.lastActionResult = "Finder icon size changed; waiting for fresh positions. Old activations skipped."
+                } else if wasSettling {
+                    self.lastActionResult = self.finderDiagnostics.hasRead && self.finderDiagnostics.error == nil
+                        ? "Finder layout refreshed. Use the input again; old activations were skipped."
+                        : "Finder layout refresh interrupted or unavailable; inspect Finder Diagnostics."
+                }
+            }
         }
         simulator = CircuitSimulator(world: desktopWorld.circuit)
         if let libraryStore {
@@ -625,7 +642,7 @@ final class AppState: ObservableObject {
         if next != simulator { simulator = next }
         if changedPower { desktopController?.scene.updateWorld(desktopWorld, poweredTiles: next.poweredTiles) }
         for case let .outputActivated(coordinate) in events {
-            guard !isDisplaySettling, outputIsVisible(coordinate) else { continue }
+            guard !isDisplaySettling, !isFinderLayoutSettling, outputIsVisible(coordinate) else { continue }
             desktopController?.scene.flashOutput(at: coordinate)
             // Bound pending I/O independently of simulation, rather than accumulating requests.
             if pendingOutputs.count < 32 { pendingOutputs.append(coordinate) }
@@ -641,7 +658,7 @@ final class AppState: ObservableObject {
     }
 
     private func drainOutputActions() {
-        guard isDesktopWorldEnabled, !isDisplaySettling, activationTask == nil, !finderDiagnostics.isReading,
+        guard isDesktopWorldEnabled, !isDisplaySettling, !isFinderLayoutSettling, activationTask == nil, !finderDiagnostics.isReading,
               !pendingOutputs.isEmpty else { return }
         guard finderDiagnostics.permission == .allowed else {
             pendingOutputs = []
@@ -651,11 +668,12 @@ final class AppState: ObservableObject {
         let coordinate = pendingOutputs.removeFirst()
         let session = desktopSession
         let worldID = activeWorldID
+        let layoutGeneration = finderDiagnostics.layoutGeneration
         activationTask = Task { @MainActor [weak self] in
             guard let self else { return }
             defer { if self.desktopSession == session { self.activationTask = nil } }
             let succeeded = await self.finderDiagnostics.readItems()
-            guard !Task.isCancelled, self.desktopSession == session, self.activeWorldID == worldID, self.isDesktopWorldEnabled else { return }
+            guard !Task.isCancelled, self.desktopSession == session, self.finderDiagnostics.layoutGeneration == layoutGeneration, self.activeWorldID == worldID, self.isDesktopWorldEnabled else { return }
             guard succeeded else {
                 self.pendingOutputs = []
                 self.lastActionResult = "Finder could not be refreshed; nothing opened."
@@ -667,7 +685,7 @@ final class AppState: ObservableObject {
     }
 
     func handleCircuitClick(_ tile: WorldCoordinate, identity: MouseEventIdentity = MouseEventIdentity()) {
-        guard isDesktopWorldEnabled, !isDisplaySettling, desktopController != nil,
+        guard isDesktopWorldEnabled, !isDisplaySettling, !isFinderLayoutSettling, desktopController != nil,
               let kind = desktopWorld.circuit.components[tile]?.kind,
               kind == .button || kind == .lever else { return }
         observedPressCount += 1
@@ -691,11 +709,12 @@ final class AppState: ObservableObject {
         lastActionResult = "\(inputTitle) click received; refreshing Finder items…"
         let session = desktopSession
         let worldID = activeWorldID
+        let layoutGeneration = finderDiagnostics.layoutGeneration
         activationTask = Task { @MainActor [weak self] in
             guard let self else { return }
             defer { if self.desktopSession == session { self.activationTask = nil } }
             let succeeded = await self.finderDiagnostics.readItems()
-            guard !Task.isCancelled, self.desktopSession == session, self.activeWorldID == worldID,
+            guard !Task.isCancelled, self.desktopSession == session, self.finderDiagnostics.layoutGeneration == layoutGeneration, self.activeWorldID == worldID,
                   self.isDesktopWorldEnabled, let controller = self.desktopController else { return }
             guard succeeded else {
                 self.lastActionResult = "Finder could not be refreshed; nothing opened."
