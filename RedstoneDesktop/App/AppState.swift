@@ -71,6 +71,16 @@ final class AppState: ObservableObject {
     private let tickScheduler: any CircuitTickScheduling
     private var pendingOutputs: [WorldCoordinate] = []
     private(set) var activationTask: Task<Void, Never>?
+    private enum ActivationPhase { case inputRead, outputRead, script }
+    private var activationPhase: ActivationPhase?
+    private struct PendingInput {
+        let tile: WorldCoordinate
+        let kind: CircuitComponentKind
+        let session: UUID
+        let worldID: UUID
+        let layoutGeneration: UUID
+    }
+    private var pendingInput: PendingInput?
     private let desktopInteractionAssessment: (MouseEventIdentity) -> DesktopInteractionAssessment
     private var desktopSession = UUID()
     private(set) var desktopController: DesktopWindowController?
@@ -177,6 +187,10 @@ final class AppState: ObservableObject {
             }
         }
         if finderScale.enabled { finderScaleStatus = "Experimental sync waiting for a stable Finder icon size." }
+        desktopItemTracker.shouldPoll = { [weak self] in
+            guard let self else { return false }
+            return self.pendingInput == nil && (self.activationPhase == nil || self.activationPhase == .script)
+        }
         finderItemsObserver = Publishers.CombineLatest3(finderDiagnostics.$items, finderDiagnostics.$error, finderDiagnostics.$hasRead).sink { [weak self] items, error, hasRead in
             MainActor.assumeIsolated { self?.updateFinderState(items, error: error, hasRead: hasRead) }
         }
@@ -187,6 +201,7 @@ final class AppState: ObservableObject {
                 self.isFinderLayoutSettling = settling
                 if settling {
                     self.pendingOutputs = []
+                    self.pendingInput = nil
                     self.lastActionResult = "Finder icon size changed; waiting for fresh positions. Old activations skipped."
                 } else if wasSettling {
                     self.lastActionResult = self.finderDiagnostics.hasRead && self.finderDiagnostics.error == nil
@@ -538,6 +553,7 @@ final class AppState: ObservableObject {
         // Leave the task slot occupied until cancellation finishes; no old cleanup can clear a new action.
         activationTask?.cancel()
         pendingOutputs = []
+        pendingInput = nil
         if enabled { requestDesktopScriptAccess() }
     }
 
@@ -738,8 +754,10 @@ final class AppState: ObservableObject {
         desktopSession = UUID()
         activationTask?.cancel()
         activationTask = nil
+        activationPhase = nil
         tickScheduler.stop()
         pendingOutputs = []
+        pendingInput = nil
         lastPressMetadata = ""
         observedPressCount = 0
         simulator = CircuitSimulator(world: desktopWorld.circuit)
@@ -834,7 +852,9 @@ final class AppState: ObservableObject {
         displayRefreshTask?.cancel()
         desktopSession = UUID()
         activationTask?.cancel(); activationTask = nil
+        activationPhase = nil
         pendingOutputs = []
+        pendingInput = nil
         desktopItemTracker.stop()
         isDisplaySettling = true
         finderDiagnostics.invalidateDisplayPositions()
@@ -912,6 +932,7 @@ final class AppState: ObservableObject {
             if pendingOutputs.count < 32 { pendingOutputs.append(coordinate) }
             else { lastActionResult = "Output action queue is full; activation skipped." }
         }
+        drainPendingInput()
         drainOutputActions()
     }
 
@@ -926,6 +947,7 @@ final class AppState: ObservableObject {
               !pendingOutputs.isEmpty else { return }
         guard finderDiagnostics.permission == .allowed else {
             pendingOutputs = []
+            pendingInput = nil
             lastActionResult = "Finder unavailable; output actions skipped."
             return
         }
@@ -934,13 +956,15 @@ final class AppState: ObservableObject {
         let worldID = activeWorldID
         let layoutGeneration = finderDiagnostics.layoutGeneration
         let policyGeneration = outputPolicyGeneration
+        activationPhase = .outputRead
         activationTask = Task { @MainActor [weak self] in
             guard let self else { return }
-            defer { if self.desktopSession == session { self.activationTask = nil } }
+            defer { if self.desktopSession == session { self.activationTask = nil; self.activationPhase = nil } }
             let succeeded = await self.finderDiagnostics.readItems()
             guard !Task.isCancelled, self.desktopSession == session, self.finderDiagnostics.layoutGeneration == layoutGeneration, self.activeWorldID == worldID, self.isDesktopWorldEnabled, self.outputPolicyGeneration == policyGeneration else { return }
             guard succeeded else {
                 self.pendingOutputs = []
+                self.pendingInput = nil
                 self.lastActionResult = "Finder could not be refreshed; nothing opened."
                 return
             }
@@ -952,6 +976,9 @@ final class AppState: ObservableObject {
             case .openOccupant:
                 self.lastActionResult = self.openItemAction.perform(occupancy: self.desktopOccupancy.state(at: coordinate))
             case .executeOccupant:
+                self.activationPhase = .script
+                // Never retain an input to run unexpectedly after a potentially long approval/process.
+                self.pendingInput = nil
                 self.lastActionResult = "Checking script and waiting for approval…"
                 let outcome = await self.executeScriptAction.perform(occupancy: self.desktopOccupancy.state(at: coordinate), isCurrent: {
                     self.desktopSession == session && self.activeWorldID == worldID && self.isDesktopWorldEnabled
@@ -985,23 +1012,64 @@ final class AppState: ObservableObject {
             lastActionResult = "\(inputTitle) click received; not activated: \(reason)"
             return
         }
-        guard activationTask == nil, !finderDiagnostics.isReading else {
-            lastActionResult = "Another action or Finder read is busy; click \(inputTitle) again after it finishes."
-            return
-        }
         guard finderDiagnostics.hasRead, finderDiagnostics.permission == .allowed else {
             lastActionResult = automaticallyRefreshFinder
                 ? "Finder is connecting or unavailable; wait for refresh, or inspect Finder Diagnostics."
                 : "Read Finder Items in Finder Diagnostics before using \(inputTitle)."
             return
         }
-        lastActionResult = "\(inputTitle) click received; refreshing Finder items…"
+        if pendingInput != nil {
+            lastActionResult = "An input click is already queued behind the Output refresh."
+            return
+        }
+        if activationTask != nil {
+            switch activationPhase {
+            case .outputRead:
+                if pendingInput == nil {
+                    pendingInput = PendingInput(tile: tile, kind: kind, session: desktopSession,
+                        worldID: activeWorldID, layoutGeneration: finderDiagnostics.layoutGeneration)
+                }
+                lastActionResult = "\(inputTitle) click received; waiting for the current Output refresh. One input is queued."
+            case .inputRead:
+                lastActionResult = "An input click is already being checked; waiting for Finder."
+            case .script, .none:
+                lastActionResult = "Script approval or execution is busy; use \(inputTitle) again after it finishes."
+            }
+            return
+        }
+        startCircuitInput(tile, kind: kind)
+    }
+
+    private func drainPendingInput() {
+        guard activationTask == nil, let input = pendingInput else { return }
+        pendingInput = nil
+        guard input.session == desktopSession, input.worldID == activeWorldID,
+              input.layoutGeneration == finderDiagnostics.layoutGeneration,
+              isDesktopWorldEnabled, !isDisplaySettling, !isFinderLayoutSettling,
+              finderDiagnostics.hasRead, finderDiagnostics.permission == .allowed else { return }
+        startCircuitInput(input.tile, kind: input.kind)
+    }
+
+    private func startCircuitInput(_ tile: WorldCoordinate, kind: CircuitComponentKind) {
+        let inputTitle = kind == .button ? "PRESS" : "LEVER"
+        lastActionResult = finderDiagnostics.isReading
+            ? "\(inputTitle) click received; waiting for Finder refresh…"
+            : "\(inputTitle) click received; refreshing Finder items…"
         let session = desktopSession
         let worldID = activeWorldID
         let layoutGeneration = finderDiagnostics.layoutGeneration
+        activationPhase = .inputRead
         activationTask = Task { @MainActor [weak self] in
             guard let self else { return }
-            defer { if self.desktopSession == session { self.activationTask = nil } }
+            defer { if self.desktopSession == session { self.activationTask = nil; self.activationPhase = nil } }
+            // Background polling holds the shared read gate for hundreds of milliseconds.
+            // Reserve one input task instead of discarding a valid click during that read.
+            while self.finderDiagnostics.isReading && !Task.isCancelled {
+                try? await Task.sleep(for: .milliseconds(10))
+            }
+            guard !Task.isCancelled, self.desktopSession == session,
+                  self.activeWorldID == worldID, self.isDesktopWorldEnabled,
+                  self.finderDiagnostics.layoutGeneration == layoutGeneration else { return }
             let succeeded = await self.finderDiagnostics.readItems()
             guard !Task.isCancelled, self.desktopSession == session, self.finderDiagnostics.layoutGeneration == layoutGeneration, self.activeWorldID == worldID,
                   self.isDesktopWorldEnabled, let controller = self.desktopController else { return }
@@ -1125,7 +1193,9 @@ final class AppState: ObservableObject {
         guard isDesktopWorldEnabled else { return }
         desktopSession = UUID()
         activationTask?.cancel(); activationTask = nil
+        activationPhase = nil
         pendingOutputs = []
+        pendingInput = nil
         tickScheduler.stop()
         pointerMonitor?.stop(); clickMonitor?.stop()
         desktopController?.disable(); desktopController?.close(); desktopController = nil

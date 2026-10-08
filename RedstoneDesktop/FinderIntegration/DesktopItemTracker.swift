@@ -6,6 +6,8 @@ import Combine
 final class DesktopItemTracker: ObservableObject {
     @Published private(set) var isPolling = false
     let diagnostics: FinderDiagnosticsModel
+    /// Explicit input/output reads take priority over the next periodic poll.
+    var shouldPoll: () -> Bool = { true }
     private var timer: Timer?
     private var pollTask: Task<Void, Never>?
 
@@ -34,10 +36,10 @@ final class DesktopItemTracker: ObservableObject {
     }
 
     func requestPoll() {
-        guard isPolling, pollTask == nil, !diagnostics.isReading else { return }
+        guard isPolling, pollTask == nil, !diagnostics.isReading, shouldPoll() else { return }
         pollTask = Task { @MainActor [weak self] in
             guard let self else { return }
-            await self.diagnostics.readItems()
+            if self.shouldPoll(), !Task.isCancelled { await self.diagnostics.readItems() }
             if !Task.isCancelled, self.diagnostics.error != nil { self.stop() }
             self.pollTask = nil
         }

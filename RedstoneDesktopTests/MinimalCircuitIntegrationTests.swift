@@ -150,6 +150,98 @@ final class MinimalCircuitIntegrationTests: XCTestCase {
     }
 
     @MainActor
+    func testClickDuringBackgroundReadWaitsAndUsesReplacementWithoutRetry() async {
+        let provider = CircuitFixtureProvider(), opener = FixtureItemOpener()
+        let state = makeState(provider, opener)
+        defer { state.shutdown() }
+        provider.items = [item("old")]
+        await state.finderDiagnostics.readItems()
+        state.toggleDesktopWorld()
+        let started = expectation(description: "Background Finder read started")
+        var continuation: CheckedContinuation<[DesktopItem], any Error>?
+        provider.operation = {
+            try await withCheckedThrowingContinuation { continuation = $0; started.fulfill() }
+        }
+        let background = Task { await state.finderDiagnostics.readItems() }
+        await fulfillment(of: [started], timeout: 2)
+        state.handleCircuitClick(DemoCircuit.button)
+        let input = state.activationTask
+        XCTAssertNotNil(input, "A valid click must reserve input even while Finder is reading")
+        XCTAssertTrue(state.lastActionResult.contains("waiting for Finder"))
+        for _ in 0..<10 { state.handleCircuitClick(DemoCircuit.button) }
+        XCTAssertEqual(provider.calls, 2, "Repeated clicks must not create overlapping reads")
+        provider.operation = nil
+        provider.items = [item("replacement")]
+        continuation?.resume(returning: [item("old")])
+        _ = await background.value
+        await input?.value
+        XCTAssertEqual(provider.calls, 3, "Input must perform its own fresh check")
+        state.advanceCircuitTick()
+        await state.activationTask?.value
+        XCTAssertEqual(opener.urls, [item("replacement").url])
+        release(state)
+        XCTAssertEqual(opener.urls.count, 1, "Repeated busy clicks must not replay later")
+    }
+
+    @MainActor
+    func testDisableCancelsInputWaitingForBackgroundRead() async {
+        let provider = CircuitFixtureProvider(), opener = FixtureItemOpener()
+        let state = makeState(provider, opener)
+        defer { state.shutdown() }
+        await state.finderDiagnostics.readItems()
+        state.toggleDesktopWorld()
+        let started = expectation(description: "Background Finder read started")
+        var continuation: CheckedContinuation<[DesktopItem], any Error>?
+        provider.operation = {
+            try await withCheckedThrowingContinuation { continuation = $0; started.fulfill() }
+        }
+        let background = Task { await state.finderDiagnostics.readItems() }
+        await fulfillment(of: [started], timeout: 2)
+        state.handleCircuitClick(DemoCircuit.button)
+        let input = state.activationTask
+        state.shutdown()
+        provider.operation = nil
+        continuation?.resume(returning: [item("late")])
+        _ = await background.value
+        await input?.value
+        XCTAssertEqual(provider.calls, 2)
+        XCTAssertTrue(state.simulator.poweredTiles.isEmpty)
+        XCTAssertTrue(opener.urls.isEmpty)
+    }
+
+    @MainActor
+    func testInputDuringOutputRefreshIsBoundedAndRunsAfterRead() async {
+        let provider = CircuitFixtureProvider(), opener = FixtureItemOpener()
+        let state = makeState(provider, opener)
+        defer { state.shutdown() }
+        await state.finderDiagnostics.readItems()
+        state.toggleDesktopWorld()
+        state.handleCircuitClick(DemoCircuit.button)
+        await state.activationTask?.value
+        let started = expectation(description: "Output Finder read started")
+        var continuation: CheckedContinuation<[DesktopItem], any Error>?
+        provider.operation = {
+            try await withCheckedThrowingContinuation { continuation = $0; started.fulfill() }
+        }
+        state.advanceCircuitTick()
+        let output = state.activationTask
+        await fulfillment(of: [started], timeout: 2)
+        for _ in 0..<10 { state.handleCircuitClick(DemoCircuit.lever) }
+        XCTAssertTrue(state.lastActionResult.contains("queued"))
+        provider.operation = nil
+        continuation?.resume(returning: [])
+        await output?.value
+        state.handleCircuitClick(DemoCircuit.lever) // Coalesce even in the gap before the next tick.
+        XCTAssertNil(state.activationTask)
+        state.advanceCircuitTick()
+        await state.activationTask?.value
+        XCTAssertTrue(state.simulator.activeLevers.contains(DemoCircuit.lever))
+        for _ in 0..<20 { state.advanceCircuitTick() }
+        await state.activationTask?.value
+        XCTAssertTrue(state.simulator.activeLevers.contains(DemoCircuit.lever), "Queued repeats must not toggle back off")
+    }
+
+    @MainActor
     func testLeverHeldPowerOpensOnceAndNewRisingEdgeUsesReplacement() async {
         let provider = CircuitFixtureProvider(), opener = FixtureItemOpener()
         let state = makeState(provider, opener)

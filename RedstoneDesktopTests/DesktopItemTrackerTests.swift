@@ -116,6 +116,27 @@ final class DesktopItemTrackerTests: XCTestCase {
     }
 
     @MainActor
+    func testInputReservationSuppressesPollIncludingAlreadyScheduledTask() async {
+        let provider = TrackerFixtureProvider()
+        let model = FinderDiagnosticsModel(provider: provider)
+        let tracker = DesktopItemTracker(diagnostics: model)
+        defer { tracker.stop() }
+        var reserved = false
+        tracker.shouldPoll = { !reserved }
+        tracker.start() // Schedules a poll task, which has not run yet.
+        reserved = true
+        for _ in 0..<10 { tracker.requestPoll() }
+        for _ in 0..<10 { await Task.yield() }
+        XCTAssertEqual(provider.calls, 0, "A newly reserved input must beat an already scheduled poll")
+        reserved = false
+        let read = expectation(description: "Polling resumes")
+        provider.operation = { read.fulfill(); return [] }
+        tracker.requestPoll()
+        await fulfillment(of: [read], timeout: 2)
+        XCTAssertEqual(provider.calls, 1)
+    }
+
+    @MainActor
     func testPollingPausesOnErrorAndRequiresExplicitRestart() async {
         let provider = TrackerFixtureProvider()
         let model = FinderDiagnosticsModel(provider: provider)

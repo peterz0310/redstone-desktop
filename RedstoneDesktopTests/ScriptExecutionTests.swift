@@ -455,6 +455,43 @@ final class ScriptExecutionTests: XCTestCase {
     }
 
     @MainActor
+    func testInputDuringScriptApprovalDoesNotReplayAfterApproval() async throws {
+        let (root, item) = try fixture()
+        defer { try? FileManager.default.removeItem(at: root) }
+        let screen = ScreenDescriptor(id: "fixture", frame: CGRect(x: 0, y: 0, width: 640, height: 480), backingScale: 1)
+        let provider = ScriptFinderFixture(), authorizer = ScriptFixtureAuthorizer(), executor = ScriptFixtureExecutor()
+        let state = AppState(screenProviding: { screen }, clickEventMonitoring: FakeGlobalMouseEventMonitor(),
+            finderDiagnostics: FinderDiagnosticsModel(provider: provider),
+            desktopInteractionAssessment: { _ in DesktopInteractionAssessment(rejectionReason: nil, details: "fixture") },
+            tickScheduler: ManualCircuitTickScheduler(), scriptExecutor: executor, scriptAuthorizer: authorizer,
+            finderReferenceProviding: { screen })
+        defer { state.shutdown() }
+        provider.items = [DesktopItem(id: item.id, url: item.url, displayName: item.displayName,
+            position: CGPoint(x: 480, y: 256), estimatedIconSize: nil, kind: .file)]
+        await state.finderDiagnostics.readItems()
+        state.setRunScriptsOpenOtherItems(true)
+        state.toggleDesktopWorld()
+        let requested = expectation(description: "Approval pending")
+        var reply: CheckedContinuation<ScriptApproval, Never>?
+        authorizer.operation = { _ in await withCheckedContinuation { reply = $0; requested.fulfill() } }
+        state.handleCircuitClick(DemoCircuit.button)
+        await state.activationTask?.value
+        state.advanceCircuitTick()
+        let pending = state.activationTask
+        await fulfillment(of: [requested], timeout: 2)
+        for _ in 0..<10 { state.handleCircuitClick(DemoCircuit.lever) }
+        XCTAssertTrue(state.lastActionResult.contains("approval or execution is busy"))
+        reply?.resume(returning: .always)
+        await pending?.value
+        XCTAssertEqual(executor.targets.count, 1)
+        for _ in 0..<25 { state.advanceCircuitTick() }
+        await state.activationTask?.value
+        XCTAssertFalse(state.simulator.activeLevers.contains(DemoCircuit.lever))
+        XCTAssertEqual(executor.targets.count, 1)
+        XCTAssertNil(state.activationTask)
+    }
+
+    @MainActor
     func testShutdownRejectsLateAccessResultAndCancelledCheckDoesNotStart() async {
         let access = ScriptAccessFixture(), neverStarted = ScriptAccessFixture()
         let state = AppState(desktopScriptAccess: neverStarted)
