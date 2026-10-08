@@ -23,7 +23,7 @@ The intended workflow is:
 
 The project is an experiment first and a polished application second.
 
-Current implementation: Slices 0–19A have owner-confirmed acceptance. **Slices 19B–25 are implemented.** The 19C bookmark/context-menu follow-up is owner-accepted; Slices 20–21 now have owner-reported acceptance; earlier specific 19B/19C runtime/deletion checks remain pending. The owner requested 19C usability cleanup after tentative 19B feedback. Worlds now have a sidebar; area previews sit below the canvas; creation/rename/save/deletion use focused sheets. Atomic deletion protects active/final records and preserves configuration on failure. Library, fixed-seed world and explicit saved-area activation contracts remain intact. Slice 20 adds explicitly enabled Finder projections and Output snapping in the editor; Slice 21 adds primary-display change handling with preserved lower-left camera anchoring. Slice 22 adds read-only icon-size detection and settled center refresh; its Mac checks remain pending. Slice 23 adds optional, reversible Finder scale synchronization; Mac acceptance remains pending. Slice 24 adds original semantic sound effects and master volume/mute. Slice 25 adds camera-based stereo panning; Mac checks for 22–25 remain pending. Resource packs are next in **Slice 26** and are untouched. Historical entries record earlier behavior; Sections 3.8, 7.1, 25 and 29 define the current contract.
+Current implementation: Slices 0–19A have owner-confirmed acceptance. **Slices 19B–25 are implemented.** The 19C bookmark/context-menu follow-up is owner-accepted; Slices 20–21 now have owner-reported acceptance; earlier specific 19B/19C runtime/deletion checks remain pending. The owner requested 19C usability cleanup after tentative 19B feedback. Worlds now have a sidebar; area previews sit below the canvas; creation/rename/save/deletion use focused sheets. Atomic deletion protects active/final records and preserves configuration on failure. Library, fixed-seed world and explicit saved-area activation contracts remain intact. Slice 20 adds explicitly enabled Finder projections and Output snapping in the editor; Slice 21 adds primary-display change handling with preserved lower-left camera anchoring. Slice 22 adds read-only icon-size detection and settled center refresh; its Mac checks remain pending. Slice 23 adds optional, reversible Finder scale synchronization; Mac acceptance remains pending. Slice 24 adds original semantic sound effects and master volume/mute. Slice 25 adds camera-based stereo panning; The owner accepted Slices 24/25 audio/mute/stereo on 2026-10-08; corrected Finder size/synchronization checks for 22/23 remain pending. Resource packs are next in **Slice 26** and are untouched. Historical entries record earlier behavior; Sections 3.8, 7.1, 25 and 29 define the current contract.
 
 The most important early question is not whether attractive terrain or redstone can be made. Those are comparatively straightforward. The first major feasibility gate is:
 
@@ -753,7 +753,7 @@ When Finder icon size changes:
 
 ## 12.0 Slice 22 read-only settings and settled positions
 
-Use Finder's installed public scripting dictionary: `icon size` on `icon view options` of `desktop window`. Capture the setting before/after item positions in the same query, through DesktopItemProviding/FinderScriptRunning. Accept only bounded positive integral settings; unsupported/missing optional values leave item tracking usable. No reading undocumented Finder preference files, private APIs, setting mutations, icon-size offsets or assumptions about grid spacing. `estimatedIconSize` stays nil: the raw setting is not a proven per-item visual/hit rectangle.
+Use Finder's installed public scripting dictionary: `icon size` on `icon view options` of `window of desktop`. The bare `desktop window` class reference was disproven on 2026-10-08 (-1728); resolving the actual desktop object’s window returns its view options. Capture the setting before/after item positions in the same query, through DesktopItemProviding/FinderScriptRunning. Accept only bounded positive integral settings; unsupported/missing optional values leave item tracking usable. No reading undocumented Finder preference files, private APIs, setting mutations, icon-size offsets or assumptions about grid spacing. `estimatedIconSize` stays nil: the raw setting is not a proven per-item visual/hit rectangle.
 
 The diagnostic model compares successful known size samples. When they differ from the previous setting, or change inside one snapshot, invalidate published positions/occupancy, mark layout settling, and retain the shared read slot while waiting 500 ms and querying again. If size changes again, repeat the wait/read until a stable sample. Do not publish intermediate centers. Cancellation, display invalidation and read failure cannot publish the interrupted layout. Optional settings unavailable means ordinary 2 Hz position refresh continues, without claiming size-change detection.
 
@@ -778,7 +778,7 @@ newPointsPerTile =
 
 Preserve the world point at the physical desktop center via CoordinateMapper. Derive each effective camera from the active saved area camera and the captured baseline, never cumulatively from the previous zoom. Clamp to 16–128 logical points/tile. Turning sync off restores the saved camera exactly. Editor zoom/proposed bookmarks remain independent; the blue active viewport shows the actual transformed camera.
 
-Enabling requires a successful stable Finder read with known size and captures that size as the experiment baseline. Mode and baseline persist in app preferences, separate from world/library JSON; tests inject isolated preferences. Restoring preferences never starts Desktop or reads Finder. Unknown metadata leaves the last safe camera in place. Switching areas uses the new saved camera with the same baseline. Scale changes rebuild renderer/input with the existing simulator, cancel old input/output requests and remap fresh icon centers; they never replay held outputs or save camera changes. Re-enable the experiment to establish a new baseline.
+Enabling requires a successful stable Finder read with known size (ordinary background polling does not block using the last completed stable sample; layout/display settling does) and captures that size as the experiment baseline. Mode and baseline persist in app preferences, separate from world/library JSON; tests inject isolated preferences. Restoring preferences never starts Desktop or reads Finder. Unknown metadata leaves the last safe camera in place. Switching areas uses the new saved camera with the same baseline. Scale changes rebuild renderer/input with the existing simulator, cancel old input/output requests and remap fresh icon centers; they never replay held outputs or save camera changes. Re-enable the experiment to establish a new baseline.
 
 Because Finder may itself rearrange icons when icon size/grid spacing changes, always re-read actual positions afterward.
 
@@ -2548,8 +2548,8 @@ Keep this optional if Finder behavior feels awkward.
 
 ### Manual acceptance
 
-- [ ] MANUAL: overlapping events play acceptably.
-- [ ] MANUAL: mute works.
+- [x] MANUAL: overlapping events play acceptably.
+- [x] MANUAL: mute works.
 
 ---
 
@@ -2564,7 +2564,7 @@ Keep this optional if Finder behavior feels awkward.
 
 ### Manual acceptance
 
-- [ ] MANUAL: left/right controls sound directionally sensible.
+- [x] MANUAL: left/right controls sound directionally sensible.
 
 ---
 
@@ -3599,3 +3599,14 @@ AudioPanning maps a tile center through CoordinateMapper into the event's canvas
 Automated tests cover negative screen origins, endpoints/center/clamps, invalid input, tile-center conversion, both-axis offscreen policy, camera pan/zoom, editor/desktop dispatch and actual offline stereo-channel energy for left/center/right. The scale experiment's same-area reactivation now compares saved cameras rather than its temporary effective camera, avoiding unnecessary runtime restart. A failed Finder refresh cannot opt in using stale metadata. Updating/stopped activation prepares the effective camera without saving its transform; restored sync status clearly waits for metadata.
 
 Debug build and all 277 tests pass. Actual stereo perception on the owner's output device remains MANUAL pending. Slices 22–25 manual checkboxes stay unchecked; no resource pack, backend, private API or bundled Minecraft audio.
+
+
+## 2026-10-08 — Slice 22/23 stopped at incorrect Finder window reference, corrected
+
+Observation: the owner reports other behavior looks good, but synchronization refuses to enable despite successful Finder tracking. Read-only live AppleScript returns error -1728 (“Can’t get icon view options of desktop window”) for the original size expression. Optional failures were swallowed, so item positions continued working while size metadata was nil. Script compilation and fake tests had not established this reference's runtime viability.
+
+Smallest proposed/adopted correction: use Finder's public `window of desktop` object reference, with the same icon-view-options property. A separate read-only live query returned `{desktop window, empty name, 64}` for class/name/icon size, confirming the actual desktop window rather than a normal folder. Stop the old assumption; update Section 12.0 and replace both before/after expressions. No private preferences, heuristics, settings mutation, new permissions or architecture changes. Keep optional failure behavior and distinguish “items connected, size unavailable” from an unsuccessful read. Allow enabling from stable cached metadata during ordinary background polling, while refusing during layout/display settling.
+
+Owner's “All seems good” except synchronization records acceptance of Slices 24/25 audio/mute/direction checks from the preceding walkthrough. Slice 23 remains pending; Slice 22 resize/target checks need revalidation with the corrected live size query. No resource-pack slice started.
+
+Validation of the correction: Debug build and all 279 tests pass. Two new regression checks distinguish successful item reads with missing size metadata and prove stable cached metadata can enable synchronization during an outstanding background poll. A read-only execution of the revised full snapshot script returned before/after size 64/64 and item count 5 (no file names/paths printed). No real Finder settings or saved cameras were changed. Quit/reopen the rebuilt app, verify numeric diagnostic size and repeat the optional zoom/center/occupancy/off checks.

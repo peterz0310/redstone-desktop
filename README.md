@@ -4,7 +4,7 @@ An experimental native macOS app exploring a block world beneath real Finder des
 
 ## Current build and next steps
 
-**Implemented: Slices 0–25.** Slice 22 refreshes real Finder centers after icon-size changes. Slice 23 adds optional synchronized desktop scale, off by default and reversible. Slice 24 adds original semantic sound effects, volume and mute; Slice 25 adds stereo panning through the current camera. Debug build and all **277 automated tests** pass, including offline audio rendering without speaker output. The owner accepted Slices 20/21 and the 19C bookmark/context-menu follow-up; detailed earlier 19B/19C checks and Slices 22–25 Mac validation remain pending.
+**Implemented: Slices 0–25.** Slice 22 refreshes real Finder centers after icon-size changes. Slice 23 adds optional synchronized desktop scale, off by default and reversible. Slice 24 adds original semantic sound effects, volume and mute; Slice 25 adds stereo panning through the current camera. Debug build and all **279 automated tests** pass, including offline audio rendering without speaker output. The owner accepted Slices 20/21 and the 19C bookmark/context-menu follow-up; Slices 24/25 sound/mute/stereo checks are owner-accepted on 2026-10-08. Detailed earlier 19B/19C checks and corrected Slices 22/23 Mac validation remain pending.
 
 The editor now shows **Worlds** in a left sidebar and **Areas in [world]** as a preview shelf below the canvas. Build tools and the inspector sit on the right. The top shows the world/area being edited, the separate desktop assignment, **Start/Stop Desktop** and **Advanced**. New World, Save Current View and rename use focused sheets; seed/creation fields are no longer permanently visible.
 
@@ -657,3 +657,10 @@ Report overlap/volume comfort and whether mute silences all effects. These check
 2. Stop Desktop. Place/erase components near the editor canvas's left/right edges on valid ground. The effects should follow the positions **within that canvas**, including after pan/zoom. Selecting a component, panning it offscreen and using **Erase selected component** should remove it silently.
 3. Start Desktop and try visible buttons/levers toward its left/right sides. The input, release, repeater and Output effects should come from their own tile positions. Optional sync-to-Finder scale is not required; if enabled, sounds should follow the new positions after zoom. Offscreen circuit events are silent and must not replay when they come back into view.
 4. Report whether direction feels sensible. No new demo circuits were inserted above your builds; add any test circuits to the right of existing ones.
+
+
+## Finder scale follow-up — 2026-10-08
+
+The original size query used a class reference that Finder rejected while ordinary item tracking continued. It now resolves `window of desktop` explicitly; a live read-only query returned icon size 64. No Finder setting was changed. Connected item tracking and available icon-size metadata are now distinguished in feedback, and ordinary background polling does not prevent opting in from a completed stable read.
+
+Quit with ⌘Q, reopen the rebuilt app, Start Desktop, then check Advanced → Finder Diagnostics reports a numeric icon size. Enable synchronization in Desktop Details; change Finder's real desktop icon size in Show View Options and verify world zoom/center alignment and fresh Output targeting. Turn synchronization off to restore the saved camera. Leave it off if a stable circuit layout is preferable. Slices 24/25 are owner-accepted; corrected Slice 22/23 behavior remains pending.

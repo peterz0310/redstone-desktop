@@ -813,11 +813,19 @@ final class AppState: ObservableObject {
 
     func setFinderScaleEnabled(_ enabled: Bool) {
         if enabled {
-            guard finderDiagnostics.hasRead, finderDiagnostics.error == nil, !finderDiagnostics.isReading,
-                  let setting = finderDiagnostics.viewSettings else {
-                finderScaleStatus = "Read Finder successfully first; icon size must be available."
+            guard finderDiagnostics.hasRead, finderDiagnostics.error == nil else {
+                finderScaleStatus = "Read Finder successfully first. Check Finder Diagnostics if access failed."
                 return
             }
+            guard !finderDiagnostics.isLayoutSettling, !isDisplaySettling else {
+                finderScaleStatus = "Finder/display layout is settling. Try again when positions have refreshed."
+                return
+            }
+            guard let setting = finderDiagnostics.viewSettings else {
+                finderScaleStatus = "Finder items are connected, but desktop icon size is unavailable. Independent scale still works."
+                return
+            }
+            // Ordinary polling may be in progress; use the last completed stable setting.
             finderScale = FinderScale(enabled: true, baselineIconSize: setting.iconSize)
         } else { finderScale = FinderScale() }
         if let data = try? JSONEncoder().encode(finderScale) { preferences?.set(data, forKey: "finderScale") }

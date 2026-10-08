@@ -40,7 +40,7 @@ struct FinderScriptRunner: FinderScriptRunning {
             set desktopItems to (get every item of desktop)
             set initialSize to missing value
             try
-                set initialSize to icon size of icon view options of desktop window
+                set initialSize to icon size of icon view options of window of desktop
             end try
             set resultRows to {}
             repeat with desktopItem in desktopItems
@@ -51,7 +51,7 @@ struct FinderScriptRunner: FinderScriptRunning {
             end repeat
             set finalSize to missing value
             try
-                set finalSize to icon size of icon view options of desktop window
+                set finalSize to icon size of icon view options of window of desktop
             end try
             return {initialSize, finalSize, resultRows}
         end tell

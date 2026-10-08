@@ -7,10 +7,14 @@ private final class ScaleProvider: DesktopItemProviding {
     var size: Double = 64
     var items: [DesktopItem] = []
     var fails = false
+    var reportsSize = true
+    var hold = false
+    var gate: CheckedContinuation<Void, Never>?
     func currentDesktopItems() async throws -> [DesktopItem] { items }
     func currentDesktopSnapshot() async throws -> FinderDesktopSnapshot {
+        if hold { await withCheckedContinuation { gate = $0 } }
         if fails { throw FinderReadError.scriptFailure(code: -1712, message: "Fixture timeout") }
-        return FinderDesktopSnapshot(items: items, viewSettings: FinderViewSettings(iconSize: size))
+        return FinderDesktopSnapshot(items: items, viewSettings: reportsSize ? FinderViewSettings(iconSize: size) : nil)
     }
 }
 
@@ -80,6 +84,36 @@ final class FinderScaleTests: XCTestCase {
         XCTAssertEqual(app.library, library)
         provider.size = 32; await model.readItems()
         XCTAssertEqual(app.desktopCamera, original)
+    }
+    @MainActor
+    func testConnectedFinderWithUnavailableSizeHasSpecificFeedback() async {
+        let provider = ScaleProvider(); provider.reportsSize = false
+        let model = FinderDiagnosticsModel(provider: provider)
+        let state = AppState(finderDiagnostics: model)
+        defer { state.shutdown() }
+        await model.readItems()
+        XCTAssertTrue(model.hasRead)
+        state.setFinderScaleEnabled(true)
+        XCTAssertFalse(state.finderScale.enabled)
+        XCTAssertTrue(state.finderScaleStatus.contains("items are connected"))
+        XCTAssertTrue(state.finderScaleStatus.contains("icon size is unavailable"))
+    }
+    @MainActor
+    func testOrdinaryBackgroundPollDoesNotBlockEnablingFromStableCachedMetadata() async {
+        let provider = ScaleProvider()
+        let model = FinderDiagnosticsModel(provider: provider)
+        let state = AppState(finderDiagnostics: model)
+        defer { state.shutdown() }
+        await model.readItems()
+        provider.hold = true
+        let poll = Task { await model.readItems() }
+        while provider.gate == nil { await Task.yield() }
+        XCTAssertTrue(model.isReading)
+        state.setFinderScaleEnabled(true)
+        XCTAssertTrue(state.finderScale.enabled)
+        XCTAssertEqual(state.finderScale.baselineIconSize, 64)
+        provider.gate?.resume()
+        await poll.value
     }
     @MainActor
     func testFailedRefreshCannotOptInUsingOldMetadata() async {
