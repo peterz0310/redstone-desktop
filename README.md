@@ -626,3 +626,16 @@ Debug build and **256 automated tests pass**. This slice reads the optional publ
 6. **Restore your original Finder icon size.** Confirm automatic alignment/occupancy recovers. Stop Desktop, leaving Show Finder Items on, and repeat a small resize once to verify the editor-only tracker also refreshes. Restore the setting again. Quit/reopen should retain builds/cameras and start integration off; the session baseline is captured anew after the next explicit successful tracking/read.
 
 Please report whether the **size value updates**, **centers stay aligned**, and **the Output opens the current occupant after resizing**. All three Slice 22 MANUAL checks remain pending until your report. This slice does not adjust world zoom to icon size; that optional mode is Slice 23. It does not read undocumented Finder preference files, change Finder's settings, infer grid spacing or request extra permissions beyond existing Finder Automation.
+
+
+## Optional synchronized scale — Slice 23
+
+1. Quit the old app with **⌘Q**, then open the rebuilt app (command below). Start Desktop, wait for Finder to connect, and open **Advanced → Desktop Details**.
+2. **Synchronize desktop scale to Finder icon size** starts off. Enable it to capture the current icon size as baseline. In Finder, click blank desktop and press **⌘J** for View Options. Change icon size: the desktop world should zoom while its center stays anchored. Scale is limited to 16–128 points/tile. The editor zoom/bookmarks do not change.
+3. Finder may rearrange icons. Check the pink center markers follow their actual new positions and occupancy changes accordingly. Old activations are skipped; click the input again after settling. Only use a harmless folder/file on Output.
+4. Switch synchronization off. The exact saved area's camera returns. Change icon size again: world scale should stay fixed. Leave this experiment off if you dislike it. To reset its baseline, turn it off/on.
+5. The choice/baseline persist after quitting, but Desktop still starts stopped. Saved areas/circuits are unchanged. Report whether zoom, occupancy and independent mode pass.
+
+```sh
+open /Users/peterzielinski/git/redstone-desktop/build/Build/Products/Debug/RedstoneDesktop.app
+```

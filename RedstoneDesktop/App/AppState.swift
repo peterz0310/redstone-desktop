@@ -72,6 +72,9 @@ final class AppState: ObservableObject {
     private var displayRefreshGeneration = UUID()
     private(set) var displayRefreshTask: Task<Void, Never>?
     private let displaySettleDelay: Duration
+    @Published private(set) var finderScale = FinderScale()
+    @Published private(set) var finderScaleStatus = "Independent: saved area scale."
+    private let preferences: UserDefaults?
 
     init(screenProviding: @escaping () -> ScreenDescriptor? = {
         NSScreen.screens.first.map { ScreenDescriptor(screen: $0) }
@@ -85,6 +88,7 @@ final class AppState: ObservableObject {
        autosaveDelay: Duration = .milliseconds(750),
        displayNotificationCenter: NotificationCenter = .default,
        displaySettleDelay: Duration = .milliseconds(500),
+       preferences: UserDefaults? = nil,
        finderReferenceProviding: @escaping () -> ScreenDescriptor? = {
            NSScreen.screens.first.map { ScreenDescriptor(screen: $0) }
        }) {
@@ -104,6 +108,12 @@ final class AppState: ObservableObject {
         self.desktopInteractionAssessment = desktopInteractionAssessment
         openItemAction = OpenItemAction(opener: itemOpener)
         self.displaySettleDelay = displaySettleDelay
+        self.preferences = preferences
+        if let data = preferences?.data(forKey: "finderScale"),
+           let stored = try? JSONDecoder().decode(FinderScale.self, from: data),
+           !stored.enabled || (stored.baselineIconSize.map { (1...4096).contains($0) } ?? false) {
+            finderScale = stored
+        }
         self.screenProviding = screenProviding
         self.clickEventMonitoring = clickEventMonitoring
         self.finderDiagnostics = finderDiagnostics
@@ -537,6 +547,10 @@ final class AppState: ObservableObject {
     }
 
     private func installDesktopRenderer(on screen: ScreenDescriptor) throws {
+        if let effective = finderScale.camera(saved: library.activeArea!.camera,
+            current: finderDiagnostics.viewSettings, frame: screen.frame), finderScale.enabled {
+            desktopCamera = effective
+        }
         let mapper = try CoordinateMapper(canvasFrame: screen.frame, camera: desktopCamera)
         let controller = DesktopWindowController(screen: screen, mapper: mapper)
         let monitor = PointerMonitor(screen: screen, mapper: mapper) { [weak self, weak controller] snapshot in
@@ -744,6 +758,7 @@ final class AppState: ObservableObject {
     private func updateFinderState(_ items: [DesktopItem], error: String?, hasRead: Bool) {
         let read = FinderReadSnapshot(items: items, error: error, hasRead: hasRead)
         if finderReadSnapshot != read { finderReadSnapshot = read }
+        if hasRead, error == nil, !isDisplaySettling { refreshFinderScale() }
         guard let controller = desktopController else { return }
         guard let reference = finderReferenceScreen else {
             desktopOccupancy = .unavailable("The primary display reference is unavailable.")
@@ -768,5 +783,47 @@ final class AppState: ObservableObject {
             desktopOccupancy = snapshot
             controller.scene.updateOccupancy(snapshot)
         }
+    }
+
+    func setFinderScaleEnabled(_ enabled: Bool) {
+        if enabled {
+            guard finderDiagnostics.hasRead, !finderDiagnostics.isReading,
+                  let setting = finderDiagnostics.viewSettings else {
+                finderScaleStatus = "Read Finder successfully first; icon size must be available."
+                return
+            }
+            finderScale = FinderScale(enabled: true, baselineIconSize: setting.iconSize)
+        } else { finderScale = FinderScale() }
+        if let data = try? JSONEncoder().encode(finderScale) { preferences?.set(data, forKey: "finderScale") }
+        refreshFinderScale()
+    }
+
+    private func refreshFinderScale() {
+        guard let screen = desktopScreen,
+              let camera = finderScale.camera(saved: library.activeArea!.camera,
+                current: finderDiagnostics.viewSettings, frame: screen.frame) else {
+            finderScaleStatus = "Synchronization waiting for an available display and Finder icon size."
+            return
+        }
+        finderScaleStatus = finderScale.enabled
+            ? "Experimental sync · baseline \(finderScale.baselineIconSize!) · \(Int(camera.pointsPerTile)) pt/tile · center anchored."
+            : "Independent: saved area scale."
+        guard camera != desktopCamera else { return }
+        guard let mapper = try? CoordinateMapper(canvasFrame: screen.frame, camera: camera),
+              !mapper.visibleChunks(on: screen, viewport: CGRect(origin: .zero, size: screen.frame.size)).isEmpty else {
+            finderScaleStatus = "Scale cannot be mapped safely; previous camera retained."
+            return
+        }
+        desktopCamera = camera
+        guard isDesktopWorldEnabled else { return }
+        desktopSession = UUID()
+        activationTask?.cancel(); activationTask = nil
+        pendingOutputs = []
+        tickScheduler.stop()
+        pointerMonitor?.stop(); clickMonitor?.stop()
+        desktopController?.disable(); desktopController?.close(); desktopController = nil
+        do { try installDesktopRenderer(on: screen); startCircuitTimer() }
+        catch { isDesktopWorldEnabled = false; desktopStatus = "Scale mapping failed; desktop stopped." }
+        lastActionResult = "Desktop scale refreshed; old activations skipped. Use the input again."
     }
 }

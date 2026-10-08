@@ -23,7 +23,7 @@ The intended workflow is:
 
 The project is an experiment first and a polished application second.
 
-Current implementation: Slices 0–19A have owner-confirmed acceptance. **Slices 19B–22 are implemented.** The 19C bookmark/context-menu follow-up is owner-accepted; Slices 20–21 now have owner-reported acceptance; earlier specific 19B/19C runtime/deletion checks remain pending. The owner requested 19C usability cleanup after tentative 19B feedback. Worlds now have a sidebar; area previews sit below the canvas; creation/rename/save/deletion use focused sheets. Atomic deletion protects active/final records and preserves configuration on failure. Library, fixed-seed world and explicit saved-area activation contracts remain intact. Slice 20 adds explicitly enabled Finder projections and Output snapping in the editor; Slice 21 adds primary-display change handling with preserved lower-left camera anchoring. Slice 22 adds read-only icon-size detection and settled center refresh; its Mac checks remain pending. Optional synchronized world scale is next in **Slice 23**. Historical entries record earlier behavior; Sections 3.8, 7.1, 25 and 29 define the current contract.
+Current implementation: Slices 0–19A have owner-confirmed acceptance. **Slices 19B–23 are implemented.** The 19C bookmark/context-menu follow-up is owner-accepted; Slices 20–21 now have owner-reported acceptance; earlier specific 19B/19C runtime/deletion checks remain pending. The owner requested 19C usability cleanup after tentative 19B feedback. Worlds now have a sidebar; area previews sit below the canvas; creation/rename/save/deletion use focused sheets. Atomic deletion protects active/final records and preserves configuration on failure. Library, fixed-seed world and explicit saved-area activation contracts remain intact. Slice 20 adds explicitly enabled Finder projections and Output snapping in the editor; Slice 21 adds primary-display change handling with preserved lower-left camera anchoring. Slice 22 adds read-only icon-size detection and settled center refresh; its Mac checks remain pending. Slice 23 adds optional, reversible Finder scale synchronization; Mac acceptance remains pending. Audio foundation is next in **Slice 24**. Historical entries record earlier behavior; Sections 3.8, 7.1, 25 and 29 define the current contract.
 
 The most important early question is not whether attractive terrain or redstone can be made. Those are comparatively straightforward. The first major feasibility gate is:
 
@@ -763,7 +763,7 @@ Publish current optional view settings and retain the first successful stable se
 
 ## 12.1 Optional synchronized scale mode
 
-Later provide:
+Implemented as an optional experiment in Advanced → Desktop Details, off by default:
 
 - Independent world scale
 - Sync world scale to Finder icon size
@@ -776,7 +776,9 @@ newPointsPerTile =
   currentFinderIconSize / baselineFinderIconSize
 ```
 
-Preserve a documented camera anchor, probably desktop center.
+Preserve the world point at the physical desktop center via CoordinateMapper. Derive each effective camera from the active saved area camera and the captured baseline, never cumulatively from the previous zoom. Clamp to 16–128 logical points/tile. Turning sync off restores the saved camera exactly. Editor zoom/proposed bookmarks remain independent; the blue active viewport shows the actual transformed camera.
+
+Enabling requires a successful stable Finder read with known size and captures that size as the experiment baseline. Mode and baseline persist in app preferences, separate from world/library JSON; tests inject isolated preferences. Restoring preferences never starts Desktop or reads Finder. Unknown metadata leaves the last safe camera in place. Switching areas uses the new saved camera with the same baseline. Scale changes rebuild renderer/input with the existing simulator, cancel old input/output requests and remap fresh icon centers; they never replay held outputs or save camera changes. Re-enable the experiment to establish a new baseline.
 
 Because Finder may itself rearrange icons when icon size/grid spacing changes, always re-read actual positions afterward.
 
@@ -2513,12 +2515,12 @@ Owner-requested usability detour before Finder ghosts; preserve Slice 19B runtim
 
 ## Slice 23 — Optional synchronized world scale
 
-- [ ] setting: independent vs sync-to-Finder
-- [ ] baseline Finder icon size
-- [ ] calculate world scale ratio
-- [ ] preserve camera anchor
-- [ ] refresh icons after Finder rearrangement
-- [ ] clamp minimum/maximum world scale
+- [x] setting: independent vs sync-to-Finder
+- [x] baseline Finder icon size
+- [x] calculate world scale ratio
+- [x] preserve camera anchor
+- [x] refresh icons after Finder rearrangement
+- [x] clamp minimum/maximum world scale
 
 ### Manual acceptance
 
@@ -3572,3 +3574,8 @@ Decision: implement Section 12.0. Inspect Finder's installed scripting dictionar
 Validation: final Debug build and all 256 automated tests pass (12 new icon-size tests), plus Foundation-only domain/view-settings/Finder projection type-check and diff checks. Tests validate bounded settings, structured before/after parsing and unchanged raw centers, optional unsupported/malformed metadata and empty desktop, native snapshot-script compilation without querying Finder plus harmless descriptor execution, changed/mid-query/continuous sizes with stable-only publication, unchanged/no-settings reads without delay, retained optional session baseline, settle failure/recovery, cancellation/display invalidation, old input refusal with successful fresh retry, and old output refusal with a later fresh pulse opening the current fixture occupant. Existing polling, permission, library, coordinate, display and action regression tests remain green. No actual Finder setting was changed in automation; compilation is syntax evidence, not physical icon alignment or setting-availability proof.
 
 Actual setting availability, resizing/alignment and fresh real output targeting require the owner's Mac check. All three Slice 22 MANUAL checkboxes remain unchecked. No schema, terrain, asset, simulator, private API or backend change; Slice 23 remains untouched.
+
+
+## Slice 23 implementation evidence
+
+Optional FinderScale camera transform and settings implemented. Unit/integration tests cover independent defaults, missing metadata, ratio/clamps, negative-display center anchoring, drift-free return, live center remapping, unchanged library and isolated persisted settings. No Finder preference mutation or new API permission. Debug build and all 262 tests pass. Mac acceptance remains pending.

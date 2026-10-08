@@ -32,7 +32,7 @@ struct FinderDiagnosticsView: View {
             HStack {
                 Text(model.viewSettings.map { "Finder icon size: \($0.iconSize)" } ?? "Finder icon size: unavailable (center tracking still works)")
                 Spacer()
-                Text(model.baselineViewSettings.map { "Session baseline: \($0.iconSize) · independent world scale" } ?? "Independent world scale")
+                Text(appState.finderScaleStatus)
             }.font(.caption).foregroundStyle(.secondary)
             if model.isLayoutSettling {
                 Text("Finder layout is settling; positions and actions wait for a fresh read.").font(.caption)

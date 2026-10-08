@@ -13,6 +13,13 @@ struct DesktopDetailsView: View {
                     .font(.title3)
                     .foregroundStyle(.secondary)
                 Divider()
+                Text("Optional world scale experiment").font(.headline)
+                Toggle("Synchronize desktop scale to Finder icon size", isOn: Binding(
+                    get: { appState.finderScale.enabled }, set: { appState.setFinderScaleEnabled($0) }))
+                Text(appState.finderScaleStatus).font(.caption)
+                Text("Off by default. Enable after Finder has connected. Turning it off restores the saved area's camera. Saved areas and editor zoom stay independent.")
+                    .font(.caption).foregroundStyle(.secondary)
+                Divider()
                 Text("Desktop controls and diagnostics")
                     .font(.headline)
                 Text("Finder refreshes automatically while the desktop runs. This window shows input rejection details, camera mapping and the last action for troubleshooting.")
