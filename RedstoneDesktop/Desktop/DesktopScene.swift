@@ -2,6 +2,10 @@ import SpriteKit
 
 /// Diagnostic world tiles and cursor outline, using CoordinateMapper exclusively.
 final class DesktopScene: SKScene {
+    private(set) var frameRate = DiagnosticRateMeter()
+    private var diagnosticOverlays = DiagnosticOverlaySettings()
+    private let diagnosticLayer = SKNode()
+    private var diagnosticMappings: [FinderItemMapping] = []
     private let terrainRenderer: TerrainChunkRenderer
     var terrainMetrics: TerrainRenderMetrics { terrainRenderer.metrics }
     private(set) var screen: ScreenDescriptor
@@ -56,6 +60,17 @@ final class DesktopScene: SKScene {
         fatalError("DesktopScene is created programmatically")
     }
 
+    override func update(_ currentTime: TimeInterval) {
+        // Sample real scene callbacks without publishing to SwiftUI each frame.
+        frameRate.record(at: ProcessInfo.processInfo.systemUptime)
+    }
+
+    func setDiagnosticOverlays(_ settings: DiagnosticOverlaySettings) {
+        guard diagnosticOverlays != settings else { return }
+        diagnosticOverlays = settings
+        rebuildDiagnostics()
+    }
+
     override func didChangeSize(_ oldSize: CGSize) {
         rebuildChecker()
         if let world = renderedWorld { updateWorld(world, poweredTiles: renderedPower, leverPositions: renderedLevers, powerLevels: renderedPowerLevels) }
@@ -105,13 +120,15 @@ final class DesktopScene: SKScene {
 
     func updateFinderMarkers(_ mappings: [FinderItemMapping]) {
         finderMarkers.removeAllChildren()
-        // Finder icons provide their own presentation; retain no desktop crosshairs.
+        // Ordinary Finder presentation stays clear; diagnostic markers require explicit opt-in.
+        if diagnosticMappings != mappings { diagnosticMappings = mappings; rebuildDiagnostics() }
     }
 
     func updateOccupancy(_ snapshot: DesktopOccupancySnapshot) {
         renderedOccupancy = snapshot
         rebuildCircuit()
         occupancyLayer.removeAllChildren()
+        rebuildDiagnostics()
     }
 
     func updateWorld(_ world: World, poweredTiles: Set<WorldCoordinate> = [], leverPositions: Set<WorldCoordinate>? = nil,
@@ -147,6 +164,7 @@ final class DesktopScene: SKScene {
             }
         }
         rebuildCircuit()
+        rebuildDiagnostics()
         // Cancel effects for outputs removed from the model; power refreshes keep them.
         for node in outputFlash.children {
             guard let name = node.name,
@@ -218,6 +236,71 @@ final class DesktopScene: SKScene {
             node.strokeColor = .clear
             node.isAntialiased = false
             addChild(node)
+        }
+        rebuildDiagnostics()
+    }
+
+    /// Geometry stays bounded and every world/screen conversion uses the mapper.
+    private func rebuildDiagnostics() {
+        diagnosticLayer.removeAllChildren()
+        guard diagnosticOverlays.enabled else { diagnosticLayer.removeFromParent(); return }
+        diagnosticLayer.name = "diagnostic-overlays"; diagnosticLayer.zPosition = 8
+        if diagnosticLayer.parent == nil { addChild(diagnosticLayer) }
+        let viewport = CGRect(origin: .zero, size: size)
+        func label(_ text: String, at point: CGPoint, color: NSColor = .white) {
+            let node = SKLabelNode(text: text)
+            node.fontName = "Menlo"; node.fontSize = 9; node.fontColor = color
+            node.position = point; diagnosticLayer.addChild(node)
+        }
+        if diagnosticOverlays.tileCoordinates,
+           let first = mapper.tile(atScreen: screen.frame.origin),
+           let last = mapper.tile(atScreen: CGPoint(x: screen.frame.minX + size.width, y: screen.frame.minY + size.height)) {
+            var count = 0
+            tiles: for y in first.y...last.y { for x in first.x...last.x {
+                if count == 128 { break tiles }
+                let rect = mapper.sceneRect(forTile: WorldCoordinate(x: x, y: y), on: screen)
+                if rect.intersects(viewport) { label("\(x),\(y)", at: CGPoint(x: rect.midX, y: rect.midY)); count += 1 }
+            } }
+        }
+        if diagnosticOverlays.chunkBoundaries {
+            for chunk in mapper.visibleChunks(on: screen, viewport: viewport).sorted(by: { ($0.y, $0.x) < ($1.y, $1.x) }).prefix(64) {
+                guard let rect = mapper.sceneRect(forChunk: chunk, on: screen), rect.intersects(viewport) else { continue }
+                let node = SKShapeNode(rect: rect)
+                node.strokeColor = .systemYellow; node.fillColor = .clear; node.lineWidth = 2
+                diagnosticLayer.addChild(node)
+            }
+        }
+        if diagnosticOverlays.rawFinderPoints || diagnosticOverlays.mappedFinderCenters {
+            for mapping in diagnosticMappings.filter({ screen.contains($0.screenCenter) }).prefix(256) {
+                let point = mapper.scenePoint(fromScreen: mapping.screenCenter, on: screen)
+                if diagnosticOverlays.rawFinderPoints {
+                    let node = SKShapeNode(rectOf: CGSize(width: 5, height: 5))
+                    node.name = "diagnostic-raw:\(mapping.id)"
+                    node.fillColor = .systemPink; node.strokeColor = .clear; node.position = point
+                    diagnosticLayer.addChild(node)
+                    label("raw \(mapping.item.position.x),\(mapping.item.position.y)", at: CGPoint(x: point.x, y: point.y + 14), color: .systemPink)
+                }
+                if diagnosticOverlays.mappedFinderCenters {
+                    let node = SKShapeNode(circleOfRadius: 9)
+                    node.name = "diagnostic-center:\(mapping.id)"
+                    node.strokeColor = .systemCyan; node.fillColor = .clear; node.position = point
+                    diagnosticLayer.addChild(node)
+                }
+            }
+        }
+        if diagnosticOverlays.outputOccupancy, let world = renderedWorld {
+            for tile in world.circuit.components.keys.sorted(by: { ($0.y, $0.x) < ($1.y, $1.x) })
+                .filter({ world.circuit.components[$0]?.kind == .output && mapper.sceneRect(forTile: $0, on: screen).intersects(viewport) }).prefix(256) {
+                let rect = mapper.sceneRect(forTile: tile, on: screen)
+                let text: String
+                switch renderedOccupancy.state(at: tile) {
+                case .empty: text = "EMPTY"
+                case .occupied: text = "1 ITEM"
+                case let .ambiguous(items): text = "\(items.count) ITEMS"
+                case .unavailable: text = "UNAVAILABLE"
+                }
+                label(text, at: CGPoint(x: rect.midX, y: rect.midY))
+            }
         }
     }
 }

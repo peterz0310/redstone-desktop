@@ -26,6 +26,8 @@ final class EditorCanvasRenderer {
             lastProjection = nil
         }
         guard let scene else { return nil }
+        appState.editorDiagnosticScene = scene
+        scene.setDiagnosticOverlays(appState.diagnosticOverlays)
         scene.setAssets(appState.assets)
         ghostRenderer.textures.assets = appState.assets
         let world = editor.browsingWorld(appState)
@@ -38,6 +40,9 @@ final class EditorCanvasRenderer {
             lastLevers = levers
         }
         let projection = editor.finderProjection(appState)
+        scene.updateFinderMarkers(projection.markers.map { marker in
+            FinderItemMapping(item: marker.item, screenCenter: mapper.screenPoint(fromWorld: marker.worldCenter), tile: marker.tile)
+        })
         let occupancy = projection.occupancy
         if lastOccupancy != occupancy {
             scene.updateOccupancy(occupancy)

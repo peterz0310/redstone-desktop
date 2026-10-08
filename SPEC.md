@@ -23,7 +23,7 @@ The intended workflow is:
 
 The project is an experiment first and a polished application second.
 
-Current implementation: **Slices 0–30 plus Slice 30A and the owner-requested 27A/28A/28B/28C/29A/29B follow-ups are implemented**, with Debug build and all **384 automated tests passing**. Slice 28's explicit Desktop Build Mode and hover/border/editor-window follow-up are implemented. Slice 28A strengthens the border, polishes terrain/circuit art and consolidates viewport navigation; Slice 28B adds full-tile Output art/occupancy glow, removes ordinary Finder tile boxes and fixes a measured pan stall. Slice 28C moves real Finder polling/metadata work off the UI thread after measuring a remaining periodic stall; the owner accepts responsiveness. Slice 29 adds explicitly configured, separately approved script outputs with asynchronous bounded results; the owner confirms the basic execution/target-movement walkthrough. Slice 29A adds early Desktop-folder access, an optional automatic script/open policy in Settings and remembering checked by default; the owner reports this flow works. Slice 29B retains accepted input during short Finder reads instead of requiring another click. Ordinary desktop Finder crosshairs are removed; editor projections and diagnostic numeric mappings remain. Detailed MANUAL checks and prior unreported Finder/input checks remain pending. Slices 0–19A, 20–21 and 23–25 have owner-reported acceptance; the 19C bookmark/context-menu follow-up and corrected Slice 22 icon-size/marker checks are also accepted. Detailed earlier 19B/19C runtime/deletion checks and Slice 22's real Output-after-resize check remain pending. The owner accepted local Java texture importing on 2026-10-08; the other specific Slice 26/27 checks and detailed 27A appearance checks remain pending. Slice 26 adds optional validated folder/ZIP packs with original fallback; Slice 27 imports selected textures from local Java JARs/packs into Application Support without bundling game assets. The actual pack contract and Java mapping/cache lifecycle are documented in docs/RESOURCE_PACKS.md and docs/JAVA_TEXTURE_IMPORT.md. **Slice 30 implements placed directional NOT torches; Slice 30A implements directed powered-Output pickup. Slice 31 Diagnostics is next, followed by the planned 31A icon/menu-bar controls.** Historical entries record earlier behavior; Sections 3.8, 7.1, 25, 26 and 29 define the world/library/editing contract.
+Current implementation: **Slices 0–31 plus Slice 30A and the owner-requested 27A/28A/28B/28C/29A/29B follow-ups are implemented**, with Debug build and all **394 automated tests passing**. Slice 28's explicit Desktop Build Mode and hover/border/editor-window follow-up are implemented. Slice 28A strengthens the border, polishes terrain/circuit art and consolidates viewport navigation; Slice 28B adds full-tile Output art/occupancy glow, removes ordinary Finder tile boxes and fixes a measured pan stall. Slice 28C moves real Finder polling/metadata work off the UI thread after measuring a remaining periodic stall; the owner accepts responsiveness. Slice 29 adds explicitly configured, separately approved script outputs with asynchronous bounded results; the owner confirms the basic execution/target-movement walkthrough. Slice 29A adds early Desktop-folder access, an optional automatic script/open policy in Settings and remembering checked by default; the owner reports this flow works. Slice 29B retains accepted input during short Finder reads instead of requiring another click. Ordinary desktop Finder crosshairs are removed; editor projections and diagnostic numeric mappings remain. Detailed MANUAL checks and prior unreported Finder/input checks remain pending. Slices 0–19A, 20–21 and 23–25 have owner-reported acceptance; the 19C bookmark/context-menu follow-up and corrected Slice 22 icon-size/marker checks are also accepted. Detailed earlier 19B/19C runtime/deletion checks and Slice 22's real Output-after-resize check remain pending. The owner accepted local Java texture importing on 2026-10-08; the other specific Slice 26/27 checks and detailed 27A appearance checks remain pending. Slice 26 adds optional validated folder/ZIP packs with original fallback; Slice 27 imports selected textures from local Java JARs/packs into Application Support without bundling game assets. The actual pack contract and Java mapping/cache lifecycle are documented in docs/RESOURCE_PACKS.md and docs/JAVA_TEXTURE_IMPORT.md. **Slice 30 implements placed directional NOT torches; Slice 30A implements directed powered-Output pickup. Slice 31 completes cached diagnostics, measured rates and opt-in bounded overlays/pause/freeze controls; Slice 31A icon/menu-bar controls is next and untouched.** Historical entries record earlier behavior; Sections 3.8, 7.1, 25, 26 and 29 define the world/library/editing contract.
 
 The most important early question is not whether attractive terrain or redstone can be made. Those are comparatively straightforward. The first major feasibility gate is:
 
@@ -1749,6 +1749,12 @@ Debug toggles:
 - freeze Finder polling
 - pause simulation
 
+Slice 31 implements these controls in Desktop Details and keeps numeric Finder rows in Finder Diagnostics. Views consume cached state; opening them never prompts, queries Finder, changes saves or dispatches actions. Default overlay/pause/freeze state is OFF and session-only. Tile labels cap at 128, raw/mapped centers at 256, occupancy labels at 256 and chunk outlines at 64. All geometry goes through CoordinateMapper. Raw dots and mapped rings plot the same derived assumed center, not independent exact Finder hit bounds. Ordinary desktop Finder art remains uncluttered until diagnostic opt-in.
+
+Measured simulation and renderer callback rates use constant-space monotonic counters, not configured targets or GPU presentation counts; measurements need a one-second window and expire after two idle seconds. Counter writes never publish every render frame or query Finder. A visible diagnostic TimelineView refreshes readings periodically. Last Output events include source world/area, tile, power and simulation tick independently of action results, including offscreen signal events. Startup clears that session event.
+
+Freeze stops automatic polls and can resume previously active polling; explicit Read and input/action target freshness still work. Pause retains signal/history but invalidates pending action/approval/process sessions and refuses new input; Resume advances retained state without replaying held Output edges. Stop resets runtime/pause. Existing script cancellation limits remain. Accessibility status is explicitly “not used”, rather than querying/requesting a grant that the app does not need. See docs/DIAGNOSTICS.md for the defined controls and limits.
+
 This is not optional polish. It is part of making this unusual integration debuggable.
 
 ---
@@ -2822,35 +2828,43 @@ Implemented owner-requested circuit extension after Slice 30, before diagnostics
 
 ### Manual acceptance
 
-- [ ] MANUAL: two Outputs separated by a correctly oriented repeater activate in sequence; held input does not repeatedly open either occupant, turning off clears the signal after delay, and moving an occupant changes only the action target.
+- [x] MANUAL: two Outputs separated by a correctly oriented repeater activate in sequence; held input does not repeatedly open either occupant, turning off clears the signal after delay, and moving an occupant changes only the action target.
 
 ---
 
 ## Slice 31 — Diagnostics UI completion
 
-- [ ] permissions
-- [ ] editor-selected and active desktop world/area identity
-- [ ] library/migration/save status
-- [ ] screen geometry
-- [ ] raw/mapped Finder positions
-- [ ] item count
-- [ ] pointer coordinates
-- [ ] camera values
-- [ ] FPS
-- [ ] sim tick rate
-- [ ] resource pack
-- [ ] last output/action
-- [ ] debug overlay toggles
+Implemented with Debug build/all 394 tests passing. Desktop Details consolidates cached state; Finder Diagnostics keeps item rows. See docs/DIAGNOSTICS.md for controls, measurement limits, troubleshooting and the Mac walkthrough.
+
+- [x] permissions
+- [x] editor-selected and active desktop world/area identity
+- [x] library/migration/save status
+- [x] screen geometry
+- [x] raw/mapped Finder positions
+- [x] item count
+- [x] pointer coordinates
+- [x] camera values
+- [x] FPS
+- [x] sim tick rate
+- [x] resource pack
+- [x] last output/action
+- [x] debug overlay toggles
 
 Acceptance:
 
-- [ ] “my icon is one tile off” can be investigated without editing source to add print statements.
+- [x] “my icon is one tile off” can be investigated without editing source to add print statements.
+
+### Manual acceptance
+
+- [ ] MANUAL: diagnostic panels show selected versus assigned identity, saves, permissions, geometry/cameras/pointer, pack, measured rates and Output/action results accurately; opening panels does not prompt/start/run anything.
+- [ ] MANUAL: opt-in raw/mapped centers and coordinates align with physical Finder icons, update after movement, and disappear when hidden; output/chunk overlays stay readable while panning and do not change circuits.
+- [ ] MANUAL: freeze/unfreeze controls automatic polling only, fresh action targets still work, Pause cancels pending input/script/Output work and Resume does not replay held power; restart restores diagnostic defaults.
 
 ---
 
 ## Slice 31A — App identity and menu-bar controls
 
-Planned owner-requested slice after Diagnostics (31), before Multi-display (32). App icon work moves here from general Polish (33). This is not implemented yet and does not change the next slice, 30A.
+Planned owner-requested slice after Diagnostics (31), before Multi-display (32). App icon work moves here from general Polish (33). This is not implemented yet; it is next after completed Slice 31.
 
 - [ ] Create an original redstone-dust-inspired glyph for the app icon and menu-bar item; do not copy/bundle Minecraft artwork. Use the same recognizable motif: red in the app icon, a legible macOS template version in the menu bar. Supply the native app-icon asset sizes and configure the build/catalog correctly.
 - [ ] Replace the current grid/hammer menu-bar identity with the dust glyph. Convey Running, Stopped and Build Mode through accessible text/state, without relying only on color or replacing the identity glyph.
@@ -3986,3 +4000,16 @@ Decision: document supported strong/weak input merging and directed pickup in Se
 Validation: Debug build and all **384 tests pass**. Nine OutputPickupTests cover every orientation/delay and both edges, weakest positive dust restored to 15 and all action modes, supported source input table, reversed/sideways refusal and prohibited direct broadcast, serial delay/off clearing, button expiry, bounded insertion-order invariant torch/Output/repeater feedback, coordinate limits and renderer ports. Three new AppState chain integration tests exercise current downstream file replacement, empty/ambiguous/None/invalid-script first actions, held-power and occupancy/appearance changes without replay, offscreen downstream power without launch, and Stop/restart during an upstream refresh dropping pending downstream actions. The one old test prohibiting rear Output pickup is updated to verify the new delayed rule; direct Output/dust prohibitions and all other regressions remain green. Pure World/Circuit Swift 6 type-check and diff checks pass.
 
 No saved-world demo is injected; the owner/contributor guide places examples on clear ground to the right of existing circuits. File actions still run through the unchanged bounded serial adapter and fresh Finder/session/layout/policy/approval guards, so file/script completion timing differs from signal timing. No real owner Desktop file/script/library or OS preference was changed by tests. The new MANUAL checkbox remains pending; Slice 31 is next and untouched.
+
+
+## 2026-10-08 — Slice 31 diagnostics completion
+
+Context: the owner reports the Output-chain slice works and requests the next slice. Mark its provided chain walkthrough owner-accepted. Implement 31 only; the original icon/menu-bar 31A remains next and untouched.
+
+Observation: existing Desktop Details contains input/action/pointer/camera and save fragments; Finder Diagnostics contains raw/mapped rows but stale crosshair prose, no read timing, and runtime-only mappings. Performance labels only state target 20 Hz. No diagnostic overlay controls or simulation pause exist.
+
+Decision: consolidate cached identity/permissions/library/geometry/version/camera/window/pointer/pack/terrain/last-event state in a reusable diagnostic summary behind Advanced. Add read attempts/duration/last-success evidence and mapped rows using the assigned camera even with Desktop stopped. Add bounded, explicitly opted-in labels/rings/chunk/occupancy overlays in desktop and last editor scene. They are absent normally, use CoordinateMapper exclusively and never dispatch actions. Raw positions are displayed at their converted assumed centers, not treated as independent hit regions.
+
+Measure real simulation and scene update callback cadence with constant-size monotonic meters and one-second diagnostic refresh, without per-frame publications or Finder queries. Add session-only automatic polling freeze (fresh explicit/action reads intact) and simulation pause (retained signal/history, invalidated pending actions and late approval, refused input, no held-edge replay on Resume). Stop/start reset relevant runtime counters/state. Keep library schemas/action execution/permission timing unchanged and remove obsolete fixed-demo startup feedback. No private API, new permission, background service, game art, owner data read/write, resource-pack logic or multi-display implementation.
+
+Validation: Debug build and all **394 tests pass**. Nine DiagnosticsTests cover measured/stale/invalid cadence, native diagnostic hosting without side effects, stopped cached mapping and read timing, failed-read last-success evidence, bounded explicit negative-display overlays/removal, retained pause/refused input/no replay, late refresh cancellation, frozen polling with fresh replacement action, and active-versus-browsed identity/library preservation/editor overlay propagation. One additional ScriptExecutionTest proves Pause rejects late authorization without launch/remember/replay after Resume. Full prior regression remains green; pure World/Circuit Swift 6 type-check and diff checks pass. An initial test identified a ring by semantic NSColor equality after SpriteKit conversion; explicit diagnostic node names now identify it reliably and validate mapper position. No physical alignment/FPS/UI acceptance is claimed. Three new MANUAL groups remain pending; guides include an exact Mac walkthrough and one-tile-offset investigation without source prints.

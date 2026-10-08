@@ -10,6 +10,9 @@ enum PermissionStatus: String {
 
 @MainActor
 final class FinderDiagnosticsModel: ObservableObject {
+    @Published private(set) var readAttempts = 0
+    @Published private(set) var lastReadDuration: TimeInterval?
+    @Published private(set) var lastSuccessfulRead: Date?
     @Published private(set) var items: [DesktopItem] = []
     @Published private(set) var permission: PermissionStatus = .notRequested
     @Published private(set) var isReading = false
@@ -40,8 +43,13 @@ final class FinderDiagnosticsModel: ObservableObject {
     func readItems() async -> Bool {
         guard !isReading else { return false }
         let generation = geometryGeneration
+        let started = ProcessInfo.processInfo.systemUptime
+        readAttempts += 1
         isReading = true
-        defer { isLayoutSettling = false; isReading = false }
+        defer {
+            lastReadDuration = ProcessInfo.processInfo.systemUptime - started
+            isLayoutSettling = false; isReading = false
+        }
         // Publish the reading state before awaiting the shared asynchronous provider.
         await Task.yield()
         guard !Task.isCancelled, generation == geometryGeneration else { return false }
@@ -71,6 +79,7 @@ final class FinderDiagnosticsModel: ObservableObject {
             error = nil
             permission = .allowed
             hasRead = true
+            lastSuccessfulRead = Date()
             return true
         } catch {
             guard !Task.isCancelled, generation == geometryGeneration else { return false }

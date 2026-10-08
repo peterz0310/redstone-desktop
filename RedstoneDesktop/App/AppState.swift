@@ -69,6 +69,17 @@ final class AppState: ObservableObject {
     private let executeScriptAction: ExecuteScriptAction
     private let openItemAction: OpenItemAction
     private let tickScheduler: any CircuitTickScheduling
+    @Published private(set) var diagnosticOverlays = DiagnosticOverlaySettings()
+    @Published private(set) var isSimulationPaused = false
+    @Published private(set) var isFinderPollingFrozen = false
+    @Published private(set) var lastOutputActivation: OutputActivationDiagnostic?
+    private(set) var simulationRate = DiagnosticRateMeter()
+    private(set) var simulationTick = 0
+    weak var editorDiagnosticScene: DesktopScene?
+    let libraryLocation: String
+    let legacyLibraryLocation: String?
+    var hasPendingSave: Bool { autosaver?.pending != nil }
+    private var resumePollingAfterFreeze = false
     private var pendingOutputs: [WorldCoordinate] = []
     private(set) var activationTask: Task<Void, Never>?
     private enum ActivationPhase { case inputRead, outputRead, script }
@@ -138,6 +149,8 @@ final class AppState: ObservableObject {
         // Normal app startup injects a library store and creates procedural worlds when absent.
         let initial = libraryStore == nil
             ? try! WorldLibraryDocument(legacy: LegacyWorldDocument()) : WorldLibraryDocument()
+        legacyLibraryLocation = (libraryStore as? WorldLibraryStore)?.legacyFileURL.path
+        libraryLocation = (libraryStore as? WorldLibraryStore)?.fileURL.path ?? "In-memory/custom store"
         library = initial
         let initialID = initial.activeArea!.worldID
         let initialWorld = try! initial.world(id: initialID)!.restoredWorld()
@@ -189,7 +202,7 @@ final class AppState: ObservableObject {
         if finderScale.enabled { finderScaleStatus = "Experimental sync waiting for a stable Finder icon size." }
         desktopItemTracker.shouldPoll = { [weak self] in
             guard let self else { return false }
-            return self.pendingInput == nil && (self.activationPhase == nil || self.activationPhase == .script)
+            return !self.isFinderPollingFrozen && self.pendingInput == nil && (self.activationPhase == nil || self.activationPhase == .script)
         }
         finderItemsObserver = Publishers.CombineLatest3(finderDiagnostics.$items, finderDiagnostics.$error, finderDiagnostics.$hasRead).sink { [weak self] items, error, hasRead in
             MainActor.assumeIsolated { self?.updateFinderState(items, error: error, hasRead: hasRead) }
@@ -252,6 +265,16 @@ final class AppState: ObservableObject {
         if let displayGeometry { return displayGeometry.target }
         return desktopController?.scene.screen ?? screenProviding()
     }
+    var diagnosticFinderReferenceScreen: ScreenDescriptor? {
+        displayGeometry == nil ? finderReferenceProviding() : displayGeometry?.finderReference
+    }
+    var diagnosticFinderMappings: [FinderItemMapping] {
+        guard finderDiagnostics.hasRead, finderDiagnostics.error == nil, !isDisplaySettling,
+              let screen = desktopScreen, let reference = diagnosticFinderReferenceScreen,
+              let mapper = try? CoordinateMapper(canvasFrame: screen.frame, camera: desktopCamera) else { return [] }
+        return finderDiagnostics.items.map { mapper.finderMapping(for: $0, referenceScreen: reference) }
+    }
+
     func setEditorFinderItemsVisible(_ visible: Bool) {
         editorFinderItemsVisible = visible
         if visible { displayChangeMonitor?.start(); startEditorFinderTrackingIfNeeded() }
@@ -259,7 +282,7 @@ final class AppState: ObservableObject {
     }
 
     private func startEditorFinderTrackingIfNeeded() {
-        if editorFinderItemsVisible && !isDisplaySettling && finderDiagnostics.permission != .denied { desktopItemTracker.start() }
+        if editorFinderItemsVisible && !isDisplaySettling && !isFinderPollingFrozen && finderDiagnostics.permission != .denied { desktopItemTracker.start() }
     }
 
     func editorFinderProjection(camera: CameraState, preview: Bool = false) -> EditorFinderProjection {
@@ -758,6 +781,39 @@ final class AppState: ObservableObject {
         autosaver?.schedule(library)
     }
 
+    func setDiagnosticOverlays(_ settings: DiagnosticOverlaySettings) {
+        diagnosticOverlays = settings
+        desktopController?.scene.setDiagnosticOverlays(settings)
+        editorDiagnosticScene?.setDiagnosticOverlays(settings)
+    }
+
+    /// Freeze only automatic polling. Explicit reads/input/action freshness checks remain authoritative.
+    func setFinderPollingFrozen(_ frozen: Bool) {
+        guard frozen != isFinderPollingFrozen else { return }
+        isFinderPollingFrozen = frozen
+        if frozen {
+            resumePollingAfterFreeze = desktopItemTracker.isPolling
+            desktopItemTracker.stop()
+        } else if resumePollingAfterFreeze, (isDesktopWorldEnabled || editorFinderItemsVisible),
+                  !isDisplaySettling, finderDiagnostics.permission == .allowed {
+            desktopItemTracker.start()
+        }
+        if !frozen { resumePollingAfterFreeze = false }
+    }
+
+    /// Pause retains signal/history but invalidates action work; resuming cannot replay old Output edges.
+    func setSimulationPaused(_ paused: Bool) {
+        guard isDesktopWorldEnabled, paused != isSimulationPaused else { return }
+        isSimulationPaused = paused
+        simulationRate = DiagnosticRateMeter()
+        if paused {
+            desktopSession = UUID()
+            activationTask?.cancel(); activationTask = nil; activationPhase = nil
+            pendingOutputs = []; pendingInput = nil
+        }
+        lastActionResult = paused ? "Simulation paused; pending actions cancelled. Inputs wait until Resume." : "Simulation resumed; held Output power is not replayed."
+    }
+
     func saveWorldNow() { autosaver?.flush() }
 
     /// Used by both disable and the app's termination notification.
@@ -782,6 +838,9 @@ final class AppState: ObservableObject {
         activationTask = nil
         activationPhase = nil
         tickScheduler.stop()
+        simulationRate = DiagnosticRateMeter()
+        simulationTick = 0
+        isSimulationPaused = false
         pendingOutputs = []
         pendingInput = nil
         lastPressMetadata = ""
@@ -819,13 +878,17 @@ final class AppState: ObservableObject {
                 return
             }
             do {
+                isSimulationPaused = false
+                simulationRate = DiagnosticRateMeter()
+                simulationTick = 0
+                lastOutputActivation = nil
                 simulator = CircuitSimulator(world: desktopWorld.circuit)
                 for lever in savedLevers { simulator.toggleLever(at: lever) }
                 try installDesktopRenderer(on: screen)
                 isDesktopWorldEnabled = true
-                if automaticallyRefreshFinder && !isDisplaySettling && finderDiagnostics.permission != .denied { desktopItemTracker.start() }
+                if automaticallyRefreshFinder && !isDisplaySettling && !isFinderPollingFrozen && finderDiagnostics.permission != .denied { desktopItemTracker.start() }
                 startCircuitTimer()
-                lastActionResult = "Place a harmless Finder item on OUTPUT (7, 3), then click PRESS (2, 3)."
+                lastActionResult = "Desktop running. Use a visible button/lever to power an Output; its current occupant is refreshed before action."
             } catch {
                 desktopStatus = "Display geometry cannot be mapped. Desktop checker remains disabled."
             }
@@ -844,6 +907,7 @@ final class AppState: ObservableObject {
             controller?.scene.updateHighlight(snapshot.tile)
         }
         desktopController = controller
+        controller.scene.setDiagnosticOverlays(diagnosticOverlays)
         controller.scene.setAssets(assets)
         controller.scene.updateWorld(desktopWorld, poweredTiles: simulator.poweredTiles, leverPositions: simulator.activeLevers, powerLevels: simulator.power)
         finderReferenceScreen = finderReferenceProviding()
@@ -924,7 +988,7 @@ final class AppState: ObservableObject {
             guard !Task.isCancelled, self.displayRefreshGeneration == generation else { return }
             self.isDisplaySettling = false
             if success && ((self.isDesktopWorldEnabled && self.automaticallyRefreshFinder) || self.editorFinderItemsVisible) {
-                self.desktopItemTracker.start()
+                if !self.isFinderPollingFrozen { self.desktopItemTracker.start() }
             }
             self.lastActionResult = success ? "Display refreshed. Finder targets use the new geometry." : "Display refreshed; Finder unavailable or tracking not enabled."
         }
@@ -939,7 +1003,9 @@ final class AppState: ObservableObject {
     }
 
     func advanceCircuitTick() {
-        guard isDesktopWorldEnabled else { return }
+        guard isDesktopWorldEnabled, !isSimulationPaused else { return }
+        simulationTick += 1
+        simulationRate.record(at: ProcessInfo.processInfo.systemUptime)
         var next = simulator
         let events = next.advanceTick()
         if !isDisplaySettling && !isFinderLayoutSettling {
@@ -951,6 +1017,8 @@ final class AppState: ObservableObject {
         if next != simulator { simulator = next }
         if changedPower { desktopController?.scene.updateWorld(desktopWorld, poweredTiles: next.poweredTiles, leverPositions: next.activeLevers, powerLevels: next.power) }
         for case let .outputActivated(coordinate) in events {
+            lastOutputActivation = OutputActivationDiagnostic(worldID: activeWorldID, areaID: library.activeAreaID,
+                tile: coordinate, power: next.power(at: coordinate), tick: simulationTick)
             guard !isDisplaySettling, !isFinderLayoutSettling, outputIsVisible(coordinate) else { continue }
             desktopController?.scene.flashOutput(at: coordinate)
             playSound(.outputActivate, at: coordinate, mapper: desktopController?.scene.mapper)
@@ -1031,6 +1099,7 @@ final class AppState: ObservableObject {
               let kind = desktopWorld.circuit.components[tile]?.kind,
               kind == .button || kind == .lever else { return }
         observedPressCount += 1
+        guard !isSimulationPaused else { lastActionResult = "Simulation paused; Resume before using an input."; return }
         let inputTitle = kind == .button ? "PRESS" : "LEVER"
         let assessment = desktopInteractionAssessment(identity)
         lastPressMetadata = assessment.details

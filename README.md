@@ -4,7 +4,7 @@ An experimental native macOS app exploring a block world beneath real Finder des
 
 ## Current build and next steps
 
-**Implemented: Slices 0–30 plus Slice 30A and the requested appearance/navigation follow-ups (27A/28A/28B/28C/29A/29B).** Debug build and all **384 automated tests** pass. Slice 28 adds explicitly entered Desktop Build Mode with a temporary transparent input window, hotbar and mouse-accessible exits; its real Finder/input checks remain pending. Slices 26/27 add optional validated texture/sound packs and local Minecraft Java texture importing. Original built-in assets remain complete defaults; imported game art stays in local Application Support, outside Git and app bundles. Read the [resource-pack format guide](docs/RESOURCE_PACKS.md) and [Java import guide](docs/JAVA_TEXTURE_IMPORT.md) before making/sharing packs.
+**Implemented: Slices 0–31 plus Slice 30A and the requested appearance/navigation follow-ups (27A/28A/28B/28C/29A/29B).** Debug build and all **394 automated tests** pass. Slice 28 adds explicitly entered Desktop Build Mode with a temporary transparent input window, hotbar and mouse-accessible exits; its real Finder/input checks remain pending. Slices 26/27 add optional validated texture/sound packs and local Minecraft Java texture importing. Original built-in assets remain complete defaults; imported game art stays in local Application Support, outside Git and app bundles. Read the [resource-pack format guide](docs/RESOURCE_PACKS.md) and [Java import guide](docs/JAVA_TEXTURE_IMPORT.md) before making/sharing packs.
 
 Slices 20/21 and 23–25 are owner-accepted, along with corrected Slice 22 icon-size/marker behavior and the 19C bookmark/context-menu follow-up. Earlier detailed 19B/19C checks, Slice 22's real Output-after-resize check and the other specific Slices 26/27 checks and new 27A appearance checks remain pending. Local Java importing is owner-accepted.
 
@@ -16,11 +16,11 @@ Configuration still saves to `~/Library/Application Support/RedstoneDesktop/libr
 
 Finder Diagnostics remains useful for permission/alignment problems, and Desktop Details for input rejection/action results. They moved to **Advanced**. The obsolete Developer Placement window and fixed-demo diagnostic rows are removed; automated tests and migration fixtures remain, and no existing saved circuits were cleared. Shelf previews remain bounded schematic terrain/circuit snapshots. Finder markers now appear separately in the main editor canvas when enabled.
 
-**Next: run the [Slice 30A Output-chain walkthrough](docs/REDSTONE_RULES.md#chaining-outputs--slice-30a-mac-walkthrough).** Basic Slice 29B click/replacement behavior is owner-accepted. Basic Slice 29A settings/permission behavior is owner-accepted. Basic Slice 29 prompt/run/target-movement behavior is owner-accepted; repeater-specific timing remains pending. Finder responsiveness is owner-accepted; other detailed adapter checks remain pending. Desktop Finder crosshairs are removed. Slice 30A implements powered Output pickup; Slice 31 (Diagnostics) is next, followed by the planned 31A icon/menu-bar slice.
+**Next: run the [Slice 31 diagnostics walkthrough](docs/DIAGNOSTICS.md#owner-mac-acceptance).** The Slice 30A Output-chain walkthrough is owner-accepted. Basic Slice 29B click/replacement behavior is owner-accepted. Basic Slice 29A settings/permission behavior is owner-accepted. Basic Slice 29 prompt/run/target-movement behavior is owner-accepted; repeater-specific timing remains pending. Finder responsiveness is owner-accepted; other detailed adapter checks remain pending. Desktop Finder crosshairs are removed. Slice 30A implements powered Output pickup; Slice 31 completes diagnostics; the planned 31A icon/menu-bar slice is next and untouched.
 
 ## Planned app icon and menu-bar controls
 
-[Slice 31A in SPEC.md](SPEC.md#slice-31a--app-identity-and-menu-bar-controls) schedules an original redstone-dust app icon and matching menu-bar glyph, Start/Stop Desktop, assigned world/area status and grouped desktop-area selection. It also adds Settings/tools/mute while retaining editor/build/quit controls. Area reassignment stops the current circuit; starting the new assignment stays explicit. This slice is planned after Diagnostics (31), before Multi-display (32), and does not bypass the intervening 30A/31 work. No icon/menu changes are implemented yet.
+[Slice 31A in SPEC.md](SPEC.md#slice-31a--app-identity-and-menu-bar-controls) schedules an original redstone-dust app icon and matching menu-bar glyph, Start/Stop Desktop, assigned world/area status and grouped desktop-area selection. It also adds Settings/tools/mute while retaining editor/build/quit controls. Area reassignment stops the current circuit; starting the new assignment stays explicit. This slice is planned after Diagnostics (31), before Multi-display (32), and is next after completed Slice 31. No icon/menu changes are implemented yet.
 
 ## Adopted plan: worlds and saved areas
 
@@ -816,3 +816,12 @@ A correctly oriented repeater can now pick up power from a neighboring Output at
 Build `Lever → Dust → Dust → Output A → Repeater → Output B` on a clear strip to the right of existing circuits; face the repeater along the chain and choose four ticks for a visible 400 ms signal delay. Follow the [step-by-step Mac walkthrough](docs/REDSTONE_RULES.md#chaining-outputs--slice-30a-mac-walkthrough) for empty/None, folder replacement, orientation, Stop and save/reopen checks. File actions retain fresh Finder checks and serialized execution, so their timing can be slower than the signal delay.
 
 Debug build and all **384 automated tests pass**. New manual acceptance remains pending; no circuits are injected into existing worlds. Next is Slice 31, Diagnostics completion.
+
+
+## Completed diagnostics — Slice 31
+
+**Advanced → Desktop Details** now shows selected/assigned world and area IDs, library/save state, permissions, display/window geometry, saved/effective/editor cameras, pointer coordinates, measured simulation/scene rates, active pack/cache status and the last Output event/action. **Finder Diagnostics** adds read timing/last-success evidence and cached numeric mapping even while Desktop is stopped. Opening these windows causes no new permission/read/action/save.
+
+Session-only, OFF-by-default controls enable bounded tile/raw-Finder/mapped-center/occupancy/chunk overlays, freeze automatic polling or pause simulation. Freeze leaves fresh explicit/input/action reads active. Pause keeps signal/history but cancels queued actions and refuses input; Resume does not replay held Output edges. Hide overlays restores normal uncluttered Finder presentation.
+
+Read the [diagnostics guide and Mac walkthrough](docs/DIAGNOSTICS.md), including how to investigate an icon one tile off without editing source. Measured rates use actual callbacks; they can be below the 20/30 targets, and hidden/stopped scenes can have no recent sample. Debug build/all **394 tests pass**; new manual checks remain pending. Next is **Slice 31A, app icon and menu-bar controls**.

@@ -7,11 +7,12 @@ struct DesktopDetailsView: View {
     var body: some View {
         ScrollView {
             VStack(alignment: .leading, spacing: 16) {
-                Text("Redstone Desktop")
+                Text("Desktop Diagnostics")
                     .font(.largeTitle)
                 Text("Experimental macOS desktop world")
                     .font(.title3)
                     .foregroundStyle(.secondary)
+                DiagnosticSummaryView(appState: appState)
                 Divider()
                 Text("Optional world scale experiment").font(.headline)
                 Toggle("Synchronize desktop scale to Finder icon size", isOn: Binding(
@@ -54,12 +55,13 @@ struct DesktopDetailsView: View {
                 Button(appState.isDesktopWorldEnabled ? "Disable Desktop World" : "Enable Desktop World") {
                     appState.toggleDesktopWorld()
                 }
+                .disabled(appState.isDesktopBuildMode)
                 Button("Finder Diagnostics…") {
                     openWindow(id: "finder-diagnostics")
                 }
                 Text("Desktop: \(appState.activeWorldName) / \(appState.library.activeArea!.name)")
                     .font(.headline)
-                Text("Input attempts: \(appState.observedPressCount) · Simulation: 20 Hz")
+                Text("Input attempts: \(appState.observedPressCount) · Simulation target: 20 Hz")
                     .font(.caption.monospaced())
                 Text(appState.lastActionResult)
                     .font(.callout)
@@ -100,16 +102,7 @@ struct DesktopDetailsView: View {
                     }
                     .font(.caption.monospaced())
                 }
-                Divider()
-                Text("Library and selection").font(.headline)
-                Text("Editing: \(appState.selectedDocument.name) / \(appState.selectedArea.name)")
-                Text("Assigned camera: (\(appState.desktopCamera.worldOrigin.x, specifier: "%.1f"), \(appState.desktopCamera.worldOrigin.y, specifier: "%.1f")) · \(appState.desktopCamera.pointsPerTile, specifier: "%.0f") pt/tile")
-                Text(appState.persistenceStatus).textSelection(.enabled)
-                Text(appState.libraryStatus).textSelection(.enabled)
-                Text(appState.areaStatus).textSelection(.enabled)
-                Text("Desktop runtime details")
-                    .font(.caption)
-                    .foregroundStyle(.secondary)
+
             }
             .padding(32)
             .frame(minWidth: 480, maxWidth: .infinity, alignment: .leading)
