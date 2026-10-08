@@ -59,7 +59,7 @@ final class EditorCanvasSurface: SKView {
     }
 
     override func mouseMoved(with event: NSEvent) {
-        editor?.hover(at: convert(event.locationInWindow, from: nil), size: bounds.size)
+        editor?.hover(at: convert(event.locationInWindow, from: nil), size: bounds.size, appState: appState)
         refresh()
     }
 
@@ -79,7 +79,7 @@ final class EditorCanvasSurface: SKView {
         let point = convert(event.locationInWindow, from: nil)
         if draggingPan, let last = lastDragPoint {
             editor?.pan(by: CGSize(width: point.x - last.x, height: point.y - last.y), size: bounds.size)
-        } else { editor?.hover(at: point, size: bounds.size) }
+        } else { editor?.hover(at: point, size: bounds.size, appState: appState) }
         lastDragPoint = point
         refresh()
     }
@@ -89,7 +89,7 @@ final class EditorCanvasSurface: SKView {
         let point = convert(event.locationInWindow, from: nil)
         if !draggingPan, let downPoint, hypot(point.x - downPoint.x, point.y - downPoint.y) < 4,
            let editor, let appState { editor.click(at: point, size: bounds.size, appState: appState) }
-        editor?.hover(at: point, size: bounds.size)
+        editor?.hover(at: point, size: bounds.size, appState: appState)
         refresh()
     }
 

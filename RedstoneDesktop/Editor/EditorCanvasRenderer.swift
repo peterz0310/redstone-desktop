@@ -6,6 +6,7 @@ final class EditorCanvasRenderer {
     private(set) var scene: DesktopScene?
     private var lastWorld: World?
     private var lastOccupancy: DesktopOccupancySnapshot?
+    private var lastProjection: EditorFinderProjection?
     private var lastPower: Set<WorldCoordinate> = []
     private var lastLevers: Set<WorldCoordinate> = []
     private let terrainRenderer = TerrainChunkRenderer()
@@ -18,6 +19,7 @@ final class EditorCanvasRenderer {
             scene = DesktopScene(screen: screen, mapper: mapper, terrainRenderer: terrainRenderer)
             lastWorld = nil
             lastOccupancy = nil
+            lastProjection = nil
         }
         guard let scene else { return nil }
         let world = editor.browsingWorld(appState)
@@ -29,8 +31,8 @@ final class EditorCanvasRenderer {
             lastPower = power
             lastLevers = levers
         }
-        // Use already-resolved world occupancy; browsing never moves its targets or queries Finder.
-        let occupancy = editor.isPreviewing(appState) ? DesktopOccupancySnapshot.unavailable("New world preview") : appState.editorOccupancy
+        let projection = editor.finderProjection(appState)
+        let occupancy = projection.occupancy
         if lastOccupancy != occupancy {
             scene.updateOccupancy(occupancy)
             lastOccupancy = occupancy
@@ -48,7 +50,31 @@ final class EditorCanvasRenderer {
                 }
             }
         }
-        // Finder icon ghosts and proposed desktop-camera mapping remain a later slice.
+        if projection != lastProjection {
+            // Hidden ghosts add no scene layer; visible geometry is bounded by the canvas.
+            scene.childNode(withName: "editor-finder")?.removeFromParent()
+            if appState.editorFinderItemsVisible && !editor.isPreviewing(appState) {
+                let layer = overlay("editor-finder", in: scene)
+                layer.zPosition = 4
+                for marker in projection.markers {
+                    let point = mapper.screenPoint(fromWorld: marker.worldCenter)
+                    guard mapper.canvasFrame.contains(point) else { continue }
+                    let node = SKShapeNode(circleOfRadius: 10)
+                    node.name = "finder:\(marker.item.id)"
+                    node.position = mapper.scenePoint(fromScreen: point, on: scene.screen)
+                    if case .ambiguous = projection.occupancy.state(at: marker.tile) { node.strokeColor = .systemRed }
+                    else { node.strokeColor = .systemTeal }
+                    node.fillColor = node.strokeColor.withAlphaComponent(0.25)
+                    node.lineWidth = 2
+                    let label = SKLabelNode(text: String(marker.item.displayName.prefix(32)))
+                    label.fontName = "Menlo"; label.fontSize = 10; label.fontColor = .white
+                    label.position = CGPoint(x: 0, y: 14)
+                    node.addChild(label)
+                    layer.addChild(node)
+                }
+            }
+            lastProjection = projection
+        }
         let selection = overlay("editor-selection", in: scene)
         selection.removeAllChildren()
         if let tile = editor.selectedTile {

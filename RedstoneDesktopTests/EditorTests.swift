@@ -188,7 +188,7 @@ final class EditorTests: XCTestCase {
     }
 
     @MainActor
-    func testCanvasUsesCachedDesktopOccupancyAcrossCameraChangesWithoutFinderReads() async throws {
+    func testHiddenFinderProjectionDoesNotBorrowLiveOccupancyOrReadFinder() async throws {
         let provider = EditorItemProvider(), opener = FixtureItemOpener(), editor = EditorSession()
         let state = state(provider, opener), renderer = EditorCanvasRenderer()
         defer { state.shutdown() }
@@ -203,7 +203,7 @@ final class EditorTests: XCTestCase {
             let badge = scene.childNode(withName: "circuit")?.children.compactMap {
                 $0.childNode(withName: "output-occupancy:14,7") as? SKLabelNode
             }.first
-            XCTAssertEqual(badge?.text, "ITEM")
+            XCTAssertEqual(badge?.text, "N/A")
             editor.zoom(by: 1.05, size: size)
         }
         XCTAssertEqual(provider.calls, 1, "The editor consumes a snapshot; it never starts Finder reads")

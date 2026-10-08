@@ -47,8 +47,16 @@ struct EditorView: View {
                         Text("Pan: drag with Pan · Zoom: scroll").font(.caption).foregroundStyle(.secondary)
                         Spacer()
                         Button("Show Desktop Area") { editor.showDesktopArea(appState) }
-                        Menu("View") { Button("Reset to Origin") { editor.resetCamera() } }
+                        Menu("View") {
+                            Toggle("Show Finder Items", isOn: Binding(get: { appState.editorFinderItemsVisible }, set: { appState.setEditorFinderItemsVisible($0) }))
+                            Divider()
+                            Button("Reset to Origin") { editor.resetCamera() }
+                        }
                     }.padding(8)
+                    if appState.editorFinderItemsVisible {
+                        Text(editor.isPreviewing(appState) ? "Finder projection hidden during seed preview" : "Finder projection: \(appState.selectedDocument.name) · proposed view · desktop assignment unchanged")
+                            .font(.caption).foregroundStyle(.secondary).padding(.horizontal, 8).padding(.bottom, 6)
+                    }
                     Divider()
                     AreaShelfView(appState: appState, editor: editor, sheet: $sheet)
                     HStack {
@@ -82,8 +90,18 @@ struct EditorView: View {
         }
         .frame(minWidth: 1060, minHeight: 760)
         .onAppear { editor.syncSelectedWorld(appState) }
+        .onDisappear { appState.setEditorFinderItemsVisible(false) }
         .sheet(item: $sheet, onDismiss: { if editor.isPreviewing(appState) { editor.cancelPreview(appState) } }) { request in
             LibrarySheetView(kind: request.kind, appState: appState, editor: editor, targetID: request.targetID)
+        }
+    }
+
+    private func occupancyText(at coordinate: WorldCoordinate) -> String {
+        switch editor.finderProjection(appState).occupancy.state(at: coordinate) {
+        case .empty: return "Projected Finder: empty"
+        case let .occupied(item): return "Projected Finder: \(item.displayName)"
+        case let .ambiguous(items): return "Projected Finder: \(items.count) items — ambiguous"
+        case let .unavailable(reason): return "Projected Finder: \(reason)"
         }
     }
 
@@ -105,6 +123,10 @@ struct EditorView: View {
                 }
                 Text(appState.isEditorConfigurationLocked ? "This world is running. Stop Desktop to edit it." : "Choose a component, then click a green tile to place it.")
                     .font(.caption).foregroundStyle(.secondary)
+                if editor.tool == .output {
+                    Text("With Show Finder Items enabled, Output snaps within 24 points of an icon center. Red markers mean several items share a tile.")
+                        .font(.caption).foregroundStyle(.secondary)
+                }
                 Divider()
                 Text("Inspector").font(.headline)
                 if let coordinate = editor.selectedTile {
@@ -112,6 +134,7 @@ struct EditorView: View {
                     Text("Terrain: \(editor.browsingWorld(appState).tile(at: coordinate)?.terrain.rawValue ?? "unspecified")")
                     Text("Decoration: \(editor.browsingWorld(appState).tile(at: coordinate)?.decoration?.rawValue ?? "none")")
                     Text("Component: \(editor.browsingWorld(appState).circuit.components[coordinate]?.kind.rawValue ?? "none")")
+                    Text(occupancyText(at: coordinate)).font(.caption)
                     Text("Power: \((editor.isPreviewing(appState) ? PowerLevel.off : appState.editorPower(at: coordinate)).rawValue)")
                     if editor.browsingWorld(appState).circuit.components[coordinate]?.kind == .repeater {
                         Text("Stored: \(editor.browsingWorld(appState).circuit.components[coordinate]!.direction.rawValue), \(editor.browsingWorld(appState).circuit.components[coordinate]!.repeaterDelay.rawValue)t")
@@ -144,7 +167,7 @@ struct EditorView: View {
                 DisclosureGroup("Technical Details") {
                     Text(appState.developerPlacementStatus).font(.caption).textSelection(.enabled)
                     Text("Terrain: \(editor.terrainMetrics.retainedChunks) cached chunks · \(editor.terrainMetrics.chunkNodes) nodes · \(editor.terrainMetrics.generatedChunks) generated · \(editor.terrainMetrics.textureBuilds) textures").font(.caption)
-                    Text("Slice 19C · Library navigation").font(.caption)
+                    Text("Slice 20 · Finder projections").font(.caption)
                 }
                 Divider()
                 Text("To run a circuit, enable Desktop World and press its input on the real desktop. Editor clicks select/place; they do not open files.")

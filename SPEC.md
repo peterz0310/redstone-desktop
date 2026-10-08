@@ -23,7 +23,7 @@ The intended workflow is:
 
 The project is an experiment first and a polished application second.
 
-Current implementation: Slices 0–19A have owner-confirmed acceptance. **Slices 19B–19C are implemented; their specific Mac checks remain pending.** The owner requested 19C usability cleanup after tentative 19B feedback. Worlds now have a sidebar; area previews sit below the canvas; creation/rename/save/deletion use focused sheets. Atomic deletion protects active/final records and preserves configuration on failure. Library, fixed-seed world and explicit saved-area activation contracts remain intact. Finder ghosts remain **Slice 20**. Historical entries record earlier behavior; Sections 3.8, 7.1, 25 and 29 define the current contract.
+Current implementation: Slices 0–19A have owner-confirmed acceptance. **Slices 19B–20 are implemented.** The 19C bookmark/context-menu follow-up is owner-accepted; earlier specific 19B/19C runtime/deletion checks and Slice 20 Mac validation remain pending. The owner requested 19C usability cleanup after tentative 19B feedback. Worlds now have a sidebar; area previews sit below the canvas; creation/rename/save/deletion use focused sheets. Atomic deletion protects active/final records and preserves configuration on failure. Library, fixed-seed world and explicit saved-area activation contracts remain intact. Slice 20 adds explicitly enabled Finder projections and Output snapping in the editor; display-change resilience is next in **Slice 21**. Historical entries record earlier behavior; Sections 3.8, 7.1, 25 and 29 define the current contract.
 
 The most important early question is not whether attractive terrain or redstone can be made. Those are comparatively straightforward. The first major feasibility gate is:
 
@@ -1490,9 +1490,17 @@ Previews are bounded, disposable schematic terrain/circuit images, not persisted
 
 Deletion is explicit and confirmed in UI, with stable target IDs enforced in domain methods. Deleting an area removes only its bookmark, never components. Deleting a world removes that world and all its areas/components/levers. Refuse deleting the active desktop area or world even while disabled: activate another saved area first. Refuse deleting the final world or a world's final area. No implicit desktop reassignment, runtime restart or automatic replacement bookmark. If editor selection is deleted, browse the first remaining area in that world or the active area after world deletion. Validate and synchronously save the complete proposed library before publishing deletion; load-blocked/save-failed deletion preserves in-memory records, selection and runtime and never queues a destructive retry. Other pending configuration still follows normal retry semantics. The legacy backup is untouched; deletion does not change Finder files.
 
-## 25.4 Output snapping
+## 25.4 Finder projections and Output snapping (Slice 20)
 
-Eventually support:
+View → Show Finder Items is an explicit, session-only opt-in, initially off. It enables the existing serialized 2 Hz DesktopItemTracker while the editor is open, including when Desktop is stopped. Startup still performs no Finder query/action. The editor and desktop share one tracker/read slot; stopping Desktop retains opted-in editor tracking, hiding/closing the editor stops tracking only when the running desktop does not need it, and full shutdown stops both. Denied/error reads pause automatic polling; use Advanced → Finder Diagnostics to retry, then toggle Show Finder Items off/on to resume. No second Finder adapter is introduced.
+
+Publish cached raw Finder read snapshots even when the desktop renderer is absent. Build a pure projection tagged with the selected world UUID and proposed desktop camera: convert Finder centers through CoordinateMapper using the current primary-display reference, filter to the physical target display, then convert projected world centers through the editor mapper. Backing scale does not multiply logical coordinates. Projection is ephemeral and never persists Finder paths/positions. Changing world, proposed origin, editor zoom or cached Finder data refreshes markers. Seed previews hide markers and disable snapping. Display-change observation remains Slice 21.
+
+Label markers and inspector/output occupancy as a projection of the selected world's proposed view, including inactive worlds and unsaved camera changes; never copy the live world's occupancy into another world. Actual desktop occupancy/action dispatch remains tied to its assigned camera/world. Render only centers inside the editor canvas, with names and center rings; red rings mean multiple items in one tile. Output badges show EMPTY/ITEM/MANY/N/A using projected occupancy. No editor interaction reads Finder directly, simulates an inactive circuit or launches a file.
+
+Output snapping uses a 24-logical-point radius around visible ghost centers. Choose the nearest center's containing world tile (floor through CoordinateMapper); exact equal-distance ties across different tiles fall back to the ordinary clicked tile rather than guessing a target. Multiple items on one tile remain ambiguous and retain the existing action refusal. Recompute from the latest cached projection on click, rather than committing stale hover state. Snapping changes only the placement target; shared terrain/decoration/occupied-cell rules and preview/running-active editing guards still apply. Moving an icon never moves an already-placed component.
+
+Interaction:
 
 - select Output tool
 - move near ghosted Finder item
@@ -2421,25 +2429,29 @@ Owner-requested usability detour before Finder ghosts; preserve Slice 19B runtim
 - [ ] MANUAL: delete a disposable inactive world and an extra bookmark; builds survive bookmark deletion, active/final records stay protected, and deletion survives reopen.
 - [ ] MANUAL: editing, desktop activation, Finder opening and Advanced diagnostic recovery still work after rearrangement.
 
-- [ ] MANUAL: Update Current Area keeps one bookmark/name and components, restores its new camera after reselection/restart, and respects running-active versus inactive behavior.
-- [ ] MANUAL: right-click rename/delete targets the clicked world/area, including unselected cards, without moving browsing; confirmation and deletion protections remain.
+- [x] MANUAL: Update Current Area keeps one bookmark/name and components, restores its new camera after reselection/restart, and respects running-active versus inactive behavior.
+- [x] MANUAL: right-click rename/delete targets the clicked world/area, including unselected cards, without moving browsing; confirmation and deletion protections remain.
 
-**Status: implemented; owner Mac checks pending.** Debug build and all 220 tests pass, plus Foundation-only type-check. The owner said “I think it works” for 19B and requested usability cleanup. Record this as tentative feedback; its four specific MANUAL checks remain pending rather than inferring all passed. Slice 20 remains untouched.
+**Status: implemented; owner Mac checks pending.** Debug build and all 220 tests pass, plus Foundation-only type-check. The owner said “I think it works” for 19B and requested usability cleanup. Record this as tentative feedback; its four specific MANUAL checks remain pending rather than inferring all passed. The owner accepted the 19C follow-up with “Great. Lets do the next slice”; its two follow-up checks are recorded complete, while the earlier three cleanup checks remain pending. Slice 20 follows below.
 
 ---
 
 ## Slice 20 — Finder ghosts in editor
 
-- [ ] show real Finder items as ghosts/markers
-- [ ] update when tracker changes
-- [ ] map through the selected world's proposed/saved desktop camera, separately from live occupancy
-- [ ] scope ghosts/occupancy by selected world and label them as a projection when it is inactive
-- [ ] show occupancy state
-- [ ] snap output to tile under Finder icon center
+- [x] show real Finder items as ghosts/markers
+- [x] update when tracker changes
+- [x] map through the selected world's proposed/saved desktop camera, separately from live occupancy
+- [x] scope ghosts/occupancy by selected world and label them as a projection when it is inactive
+- [x] show occupancy state
+- [x] snap output to tile under Finder icon center
 
 ### Manual acceptance
 
-- [ ] MANUAL: moving real icon updates editor ghost.
+- [ ] MANUAL: moving real icon updates editor ghost while opted-in editor tracking is on, including with Desktop stopped.
+- [ ] MANUAL: Output hover/click snaps to the tile under a ghost center, respects blocked placement, opens nothing, and icon movement does not move placed components.
+- [ ] MANUAL: inactive-world/unsaved-view projections leave desktop assignment/circuit unchanged; seed previews hide markers and tracking lifecycle/recovery works.
+
+**Status: implemented; owner Mac validation pending.** Debug build and all 232 tests pass. Pure World/Circuit/Persistence plus Finder projection type-check passes without AppKit/SpriteKit. README contains the View-menu opt-in and exact icon-movement, snapping, scoping and recovery checks. Slice 21 remains untouched.
 
 ---
 
@@ -3503,3 +3515,14 @@ Decision: extend 19C with explicit Update Current Area and captured-ID context m
 
 
 Validation of the 19C follow-up: final Debug build and all 220 tests pass, plus pure World/Circuit/Persistence type-check and diff checks. Seven AreaUpdateTests cover in-place camera replacement/ID/name/count/world/circuit preservation, persisted inactive cameras, stopped-assigned camera preparation/restart/explicit start, held live circuit preservation while updating another bookmark of the same world, running-active refusal, failed proposed update and pending-config flush retry, invalid camera/scale/preview refusal, captured-ID rename without changing selection/camera and active-world rename locks, unavailable-display and damaged-library write preservation. The initial sheet initializer referenced a stored ID inside a closure before State initialization; local target IDs now avoid that Swift initialization-order error. No macOS API contradiction is inferred. Context sheets capture UUIDs; successful deletion resets the editor only when its selected area changes. Native hosted layout capture was inspected; physical context menus remain owner checks. Save Current View remains the create-new-bookmark action, and Update Current Area retains the existing desktop tile scale. No schema, generation, Finder adapter or simulator change. Follow-up implementation tasks are checked, their two MANUAL items remain pending; prior “looks great” records visual approval only, not unreported runtime/deletion checks.
+
+
+## 2026-10-07 — Slice 20 implementation
+
+Context: the owner accepted the 19C Update Current Area/context-menu follow-up and requested the next slice. Record its two manual follow-up checks as accepted; leave unreported earlier 19B/19C runtime/deletion groups pending.
+
+Decision: implement Finder ghosts and Output snapping under Section 25.4. Use one shared tracker with explicit editor opt-in, preserving disabled startup and desktop action ownership. Cached read snapshots publish independently of desktop renderer lifetime. A Foundation/CoreGraphics-only projection resolves selected-world proposed-camera occupancy; SpriteKit draws action-free center rings/names, and editor clicks re-evaluate snapped targets through normal placement transactions. No stored schema, circuit generation, simulation or file-opener behavior changes. No extra demonstration circuits, private APIs, resource packs or backend.
+
+Validation: Debug application build and all 232 automated tests pass (12 new Finder projection tests; prior editor occupancy test now checks that hidden projections do not borrow live occupancy). Pure World/Circuit/Persistence and new projection type-check without AppKit/SpriteKit; diff checks pass. Coverage includes fractional/negative display/world origins and logical Retina geometry, center mapping/world identity, off-display exclusion, ambiguity/unavailable states, near-center/tie snapping, tracker ownership on stop/shutdown, disabled startup, stopped-desktop movement publication, denied-read pause, inactive/proposed-camera isolation, preview/terrain/live editing guards, fresh-click versus stale hover, projected output badges versus actual desktop occupancy, bounded marker replacement and no editor actions. Two initial test expectations were corrected: equal-distance fixtures now lie in different tiles, and a post-movement ordinary click correctly places on its valid unsnapped tile while preserving the existing Output. These were fixture errors, not macOS behavior contradictions.
+
+Real icon alignment/movement, menu interaction and the projection-versus-assigned-desktop walkthrough require the owner's Mac report; all three Slice 20 MANUAL checks remain unchecked. Slice 21 is untouched.

@@ -143,14 +143,14 @@ final class EditorSession: ObservableObject {
         try? CoordinateMapper(canvasFrame: CGRect(origin: .zero, size: size), camera: camera)
     }
 
-    func hover(at point: CGPoint, size: CGSize) {
+    func hover(at point: CGPoint, size: CGSize, appState: AppState? = nil) {
         guard let mapper = mapper(size: size), mapper.canvasFrame.contains(point) else { hoveredTile = nil; return }
-        hoveredTile = mapper.tile(atScreen: point)
+        hoveredTile = appState.flatMap { placementTile(at: point, mapper: mapper, appState: $0) } ?? mapper.tile(atScreen: point)
     }
 
     func click(at point: CGPoint, size: CGSize, appState: AppState) {
         guard tool != .pan, let mapper = mapper(size: size), mapper.canvasFrame.contains(point),
-              let tile = mapper.tile(atScreen: point) else { return }
+              let tile = placementTile(at: point, mapper: mapper, appState: appState) else { return }
         if tool.editsWorld && isPreviewing(appState) {
             status = "Create the new world or cancel its preview before editing the circuit."
             return
@@ -169,6 +169,15 @@ final class EditorSession: ObservableObject {
             appState.placeCircuitComponent(component, at: tile)
             status = appState.developerPlacementStatus
         }
+    }
+
+    func finderProjection(_ appState: AppState) -> EditorFinderProjection {
+        appState.editorFinderProjection(camera: proposedDesktopCamera(appState), preview: isPreviewing(appState))
+    }
+
+    private func placementTile(at point: CGPoint, mapper: CoordinateMapper, appState: AppState) -> WorldCoordinate? {
+        if tool == .output, let snapped = finderProjection(appState).snappedTile(near: point, mapper: mapper) { return snapped }
+        return mapper.tile(atScreen: point)
     }
 
     func pan(by delta: CGSize, size: CGSize) {

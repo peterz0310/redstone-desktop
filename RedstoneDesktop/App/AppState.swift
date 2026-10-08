@@ -40,6 +40,8 @@ final class AppState: ObservableObject {
     var canSaveWorld: Bool { autosaver != nil }
     let finderDiagnostics: FinderDiagnosticsModel
     let desktopItemTracker: DesktopItemTracker
+    @Published private(set) var editorFinderItemsVisible = false
+    @Published private(set) var finderReadSnapshot = FinderReadSnapshot()
     @Published private(set) var finderMappings: [FinderItemMapping] = []
     @Published private(set) var desktopOccupancy: DesktopOccupancySnapshot = .unavailable("Enable Desktop World to resolve occupancy.")
     @Published private(set) var lastPressMetadata = ""
@@ -129,6 +131,21 @@ final class AppState: ObservableObject {
     }
 
     var desktopScreen: ScreenDescriptor? { desktopController?.scene.screen ?? screenProviding() }
+    func setEditorFinderItemsVisible(_ visible: Bool) {
+        editorFinderItemsVisible = visible
+        if visible { startEditorFinderTrackingIfNeeded() }
+        else if !isDesktopWorldEnabled || !automaticallyRefreshFinder { desktopItemTracker.stop() }
+    }
+
+    private func startEditorFinderTrackingIfNeeded() {
+        if editorFinderItemsVisible && finderDiagnostics.permission != .denied { desktopItemTracker.start() }
+    }
+
+    func editorFinderProjection(camera: CameraState, preview: Bool = false) -> EditorFinderProjection {
+        EditorFinderProjection(worldID: selectedWorldID, camera: camera, snapshot: finderReadSnapshot,
+            screen: desktopScreen, reference: finderReferenceProviding(), enabled: editorFinderItemsVisible && !preview)
+    }
+
     @Published private(set) var areaStatus = "Save Area bookmarks the proposed view. Activate on Desktop uses the selected saved view."
 
     @discardableResult
@@ -281,7 +298,7 @@ final class AppState: ObservableObject {
         let sameView = area.worldID == activeWorldID && area.camera == desktopCamera
         let running = isDesktopWorldEnabled
         // Save succeeds before cancelling the old runtime; shutdown has no pending selection to flush.
-        if !sameView { shutdown() }
+        if !sameView { shutdown(preserveEditorTracking: true) }
         library = next
         if !sameView {
             desktopCamera = area.camera
@@ -425,7 +442,7 @@ final class AppState: ObservableObject {
     func saveWorldNow() { autosaver?.flush() }
 
     /// Used by both disable and the app's termination notification.
-    func shutdown() {
+    func shutdown(preserveEditorTracking: Bool = false) {
         saveWorldNow()
         desktopSession = UUID()
         activationTask?.cancel()
@@ -452,11 +469,13 @@ final class AppState: ObservableObject {
         desktopController = nil
         isDesktopWorldEnabled = false
         desktopStatus = "Desktop checker is disabled."
+        if preserveEditorTracking { startEditorFinderTrackingIfNeeded() }
+        else { editorFinderItemsVisible = false }
     }
 
     func toggleDesktopWorld() {
         if isDesktopWorldEnabled {
-            shutdown()
+            shutdown(preserveEditorTracking: true)
         } else {
             guard let screen = screenProviding() else {
                 desktopStatus = "No main display is available."
@@ -614,6 +633,8 @@ final class AppState: ObservableObject {
     }
 
     private func updateFinderState(_ items: [DesktopItem], error: String?, hasRead: Bool) {
+        let read = FinderReadSnapshot(items: items, error: error, hasRead: hasRead)
+        if finderReadSnapshot != read { finderReadSnapshot = read }
         guard let controller = desktopController else { return }
         guard let reference = finderReferenceScreen else {
             desktopOccupancy = .unavailable("The primary display reference is unavailable.")
