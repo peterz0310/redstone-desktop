@@ -6,17 +6,20 @@ final class CircuitRenderer {
     let textures = CircuitTextures()
 
     func render(_ world: CircuitWorld, poweredTiles: Set<WorldCoordinate>, occupancy: DesktopOccupancySnapshot,
-                mapper: CoordinateMapper, screen: ScreenDescriptor, viewport: CGRect, into layer: SKNode, leverPositions: Set<WorldCoordinate>? = nil) {
+                mapper: CoordinateMapper, screen: ScreenDescriptor, viewport: CGRect, into layer: SKNode, leverPositions: Set<WorldCoordinate>? = nil,
+                powerLevels: [WorldCoordinate: PowerLevel]? = nil) {
         layer.removeAllChildren()
         for (coordinate, component) in world.components.sorted(by: { ($0.key.y, $0.key.x) < ($1.key.y, $1.key.x) }) {
             let rect = mapper.sceneRect(forTile: coordinate, on: screen)
             guard component.kind != .empty, rect.intersects(viewport) else { continue }
             let center = CGPoint(x: rect.midX, y: rect.midY)
-            let powered = poweredTiles.contains(coordinate)
+            let level = powerLevels?[coordinate] ?? (powerLevels == nil && poweredTiles.contains(coordinate) ? .full : .off)
+            let powered = level > .off
+            let brightness: CGFloat = powered ? 0.45 + 0.55 * CGFloat(level.rawValue) / 15 : 1
             guard let textureID = CircuitTextureID.id(for: component.kind, powered: component.kind == .lever ? (leverPositions?.contains(coordinate) ?? powered) : powered) else { continue }
             if component.kind == .dust {
                 let wire = CGMutablePath()
-                let radius = rect.width / 8
+                let radius = rect.width / 10
                 wire.addRect(CGRect(x: center.x - radius, y: center.y - radius, width: radius * 2, height: radius * 2))
                 for neighbor in world.occupiedCardinalNeighbors(at: coordinate) {
                     guard let other = world.components[neighbor] else { continue }
@@ -43,15 +46,47 @@ final class CircuitRenderer {
                 let node = SKShapeNode(path: wire)
                 node.name = "dust-path"
                 node.strokeColor = powered ? .red : NSColor(calibratedRed: 0.42, green: 0.05, blue: 0.07, alpha: 1)
-                node.fillColor = .white // Texture supplies color; multiplying it by a UI tint darkens imported art.
+                node.fillColor = NSColor(white: brightness, alpha: 1) // Neutral intensity preserves the pack's hue.
                 node.fillTexture = textures.texture(for: textureID)
                 node.lineWidth = 0
                 node.isAntialiased = false
                 layer.addChild(node)
                 continue
             }
+            if component.kind == .repeater {
+                for port in [component.direction, component.direction.opposite] {
+                    guard let neighbor = port.neighbor(of: coordinate), let other = world.components[neighbor] else { continue }
+                    let outgoing = port == component.direction
+                    let connects: Bool
+                    switch other.kind {
+                    case .dust: connects = true
+                    case .repeater:
+                        connects = (outgoing ? other.direction.opposite : other.direction).neighbor(of: neighbor) == coordinate
+                    case .output: connects = outgoing
+                    case .button, .lever: connects = !outgoing
+                    case .empty: connects = false
+                    }
+                    guard connects else { continue }
+                    let tip = mapper.sceneRect(forTile: neighbor, on: screen)
+                    let horizontal = port == .east || port == .west
+                    let towardPositive = horizontal ? tip.midX > center.x : tip.midY > center.y
+                    let inner = rect.width * 0.40, outer = rect.width / 2, radius = rect.width / 10
+                    let start = towardPositive ? inner : -outer
+                    let pathRect = horizontal
+                        ? CGRect(x: center.x + start, y: center.y - radius, width: outer - inner, height: 2 * radius)
+                        : CGRect(x: center.x - radius, y: center.y + start, width: 2 * radius, height: outer - inner)
+                    let trace = SKShapeNode(rect: pathRect)
+                    trace.name = "repeater-port:\(coordinate.x),\(coordinate.y):\(port.rawValue)"
+                    trace.fillTexture = textures.texture(for: powered ? .dustOn : .dustOff)
+                    trace.fillColor = NSColor(white: brightness, alpha: 1)
+                    trace.lineWidth = 0
+                    trace.isAntialiased = false
+                    layer.addChild(trace)
+                }
+            }
             let title = component.kind == .button ? "PRESS" : component.kind.rawValue.uppercased()
-            let node = SKShapeNode(rect: rect.insetBy(dx: rect.width / 8, dy: rect.height / 8))
+            let inset = component.kind == .repeater ? rect.width * 0.05 : rect.width / 8
+            let node = SKShapeNode(rect: rect.insetBy(dx: inset, dy: inset))
             node.name = title
             node.zPosition = 0.1
             node.fillColor = component.kind == .output ? (powered ? .red : .darkGray) : .clear
@@ -60,8 +95,9 @@ final class CircuitRenderer {
             layer.addChild(node)
             let icon = SKSpriteNode(texture: textures.texture(for: textureID))
             icon.name = "component-icon:\(coordinate.x),\(coordinate.y)"
-            icon.size = CGSize(width: rect.width * 0.62, height: rect.height * 0.62)
-            icon.position = CGPoint(x: center.x, y: center.y + rect.height * 0.09)
+            let iconScale = component.kind == .repeater ? 0.86 : 0.62
+            icon.size = CGSize(width: rect.width * iconScale, height: rect.height * iconScale)
+            icon.position = CGPoint(x: center.x, y: center.y + (component.kind == .repeater ? 0 : rect.height * 0.09))
             icon.zPosition = 0.05
             if component.kind == .repeater {
                 switch component.direction {

@@ -122,7 +122,7 @@ final class DesktopBuildSurface: SKView {
         boundary.name = "build-mode-boundary"
         boundary.strokeColor = .systemOrange
         boundary.fillColor = .clear
-        boundary.lineWidth = 3
+        boundary.lineWidth = 8
         boundary.zPosition = 10
         scene.addChild(boundary)
         presentScene(scene)
@@ -150,10 +150,10 @@ final class DesktopBuildSurface: SKView {
 
     func setReducedMotion(_ reduced: Bool) {
         boundary.removeAllActions()
-        boundary.alpha = reduced ? 0.2 : 0.12
+        boundary.alpha = reduced ? 0.7 : 0.5
         guard !reduced else { return }
-        let brighten = SKAction.fadeAlpha(to: 0.32, duration: 1.4)
-        let dim = SKAction.fadeAlpha(to: 0.12, duration: 1.4)
+        let brighten = SKAction.fadeAlpha(to: 0.9, duration: 1.4)
+        let dim = SKAction.fadeAlpha(to: 0.5, duration: 1.4)
         brighten.timingMode = .easeInEaseOut
         dim.timingMode = .easeInEaseOut
         boundary.run(.repeatForever(.sequence([brighten, dim])), withKey: "build-pulse")

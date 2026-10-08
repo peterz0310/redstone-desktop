@@ -2,7 +2,7 @@ import Foundation
 
 /// Fixed, bounded 2D recipes over validated pixels, never a Java model/code interpreter.
 enum JavaCircuitArt: Sendable {
-    case button(Bool), lever(Bool), repeater(Bool), dust(Bool)
+    case button(Bool), lever(Bool), repeater(Bool), dust(Bool), cactus, output(Bool)
 
     func render(_ source: RasterAsset) -> RasterAsset {
         if case let .dust(on) = self {
@@ -49,6 +49,11 @@ enum JavaCircuitArt: Sendable {
             for y in 0..<16 { for x in 0..<16 { put(x, y, sample(y, 15 - x)) } }
             let pin: [UInt8] = on ? [255, 24, 32, 255] : [100, 18, 22, 255]
             for x in [4, 11] { for y in 7..<9 { put(x, y, pin); put(x + 1, y, pin) } }
+        case .cactus:
+            for y in 3..<13 { for x in 3..<13 { put(x, y, sample((x - 3) * 16 / 10, (y - 3) * 16 / 10)) } }
+        case let .output(on):
+            for y in 0..<16 { for x in 0..<16 { put(x, y, sample(x, y)) } }
+            if on { for y in 12..<15 { for x in 12..<15 { put(x, y, [255, 24, 32, 255]) } } }
         case .dust: break
         }
         return result

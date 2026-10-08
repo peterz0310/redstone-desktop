@@ -41,24 +41,10 @@ struct EditorView: View {
                             : "Unsaved view · Save a new bookmark or Update Current Area")
                             .font(.caption).foregroundStyle(.secondary)
                         Spacer()
-                        if editor.proposedDesktopCamera(appState) != appState.selectedAreaCamera {
-                            Button("Return to Area") { editor.selectArea(appState.selectedAreaID, appState: appState) }
-                        }
                     }.padding(10)
                     EditorCanvasView(appState: appState, editor: editor)
                         .frame(maxWidth: .infinity, maxHeight: .infinity)
-                    HStack {
-                        Button("−") { editor.zoom(by: 0.8) }.help("Zoom out")
-                        Button("+") { editor.zoom(by: 1.25) }.help("Zoom in")
-                        Text("Pan: drag with Pan · Zoom: scroll").font(.caption).foregroundStyle(.secondary)
-                        Spacer()
-                        Button("Show Desktop Area") { editor.showDesktopArea(appState) }
-                        Menu("View") {
-                            Toggle("Show Finder Items", isOn: Binding(get: { appState.editorFinderItemsVisible }, set: { appState.setEditorFinderItemsVisible($0) }))
-                            Divider()
-                            Button("Reset to Origin") { editor.resetCamera() }
-                        }
-                    }.padding(8)
+                        .overlay(alignment: .topTrailing) { viewportControls.padding(10) }
                     if appState.editorFinderItemsVisible {
                         Text(appState.isFinderLayoutSettling ? "Finder icon size changed · waiting for fresh positions…" : appState.isDisplaySettling ? "Display changed · waiting for fresh Finder positions…" : editor.isPreviewing(appState) ? "Finder projection hidden during seed preview" : "Finder projection: \(appState.selectedDocument.name) · proposed view · desktop assignment unchanged")
                             .font(.caption).foregroundStyle(.secondary).padding(.horizontal, 8).padding(.bottom, 6)
@@ -128,7 +114,7 @@ struct EditorView: View {
                         .disabled((appState.isEditorConfigurationLocked || editor.isPreviewing(appState)) && tool.editsWorld)
                     }
                 }
-                Text(appState.isEditorConfigurationLocked ? (appState.isDesktopBuildMode ? "This world is in Build Mode. Exit Build Mode to edit here." : "This world is running. Stop Desktop to edit it.") : "Choose a component, then click a green tile to place it.")
+                Text(appState.isEditorConfigurationLocked ? (appState.isDesktopBuildMode ? "This world is in Build Mode. Exit Build Mode to edit here." : "This world is running. Stop Desktop to edit it.") : editor.tool == .select ? "Click to inspect, drag to pan. Pinch or scroll to zoom." : "Choose a component, then click a green tile to place it.")
                     .font(.caption).foregroundStyle(.secondary)
                 if editor.tool == .output {
                     Text("With Show Finder Items enabled, Output snaps within 24 points of an icon center. Red markers mean several items share a tile.")
@@ -138,8 +124,8 @@ struct EditorView: View {
                 Text("Inspector").font(.headline)
                 if let coordinate = editor.selectedTile {
                     Text("Tile (\(coordinate.x), \(coordinate.y))").font(.body.monospaced())
-                    Text("Terrain: \(editor.browsingWorld(appState).tile(at: coordinate)?.terrain.rawValue ?? "unspecified")")
-                    Text("Decoration: \(editor.browsingWorld(appState).tile(at: coordinate)?.decoration.map { DecorationAppearance.choose($0, at: coordinate, seed: editor.browsingWorld(appState).generation?.seed ?? 0).name } ?? "none")")
+                    Text("Terrain: \(editor.browsingWorld(appState).tile(at: coordinate).map { TerrainAppearance.tile($0, generated: editor.browsingWorld(appState).generation != nil && editor.browsingWorld(appState).tiles[coordinate] == nil).terrain.rawValue } ?? "unspecified")")
+                    Text("Decoration: \(editor.browsingWorld(appState).tile(at: coordinate)?.decoration.map { DecorationAppearance.choose($0, at: coordinate, seed: editor.browsingWorld(appState).generation?.seed ?? 0, terrain: editor.browsingWorld(appState).tile(at: coordinate)?.terrain).name } ?? "none")")
                     Text("Component: \(editor.browsingWorld(appState).circuit.components[coordinate]?.kind.rawValue ?? "none")")
                     Text(occupancyText(at: coordinate)).font(.caption)
                     Text("Power: \((editor.isPreviewing(appState) ? PowerLevel.off : appState.editorPower(at: coordinate)).rawValue)")
@@ -150,7 +136,7 @@ struct EditorView: View {
                         appState.eraseCircuitComponent(at: coordinate, audioMapper: editor.mapper(size: editor.viewport))
                     }
                         .disabled(appState.isEditorConfigurationLocked || editor.isPreviewing(appState) || editor.browsingWorld(appState).circuit.components[coordinate] == nil)
-                } else { Text("Use Select, then click a tile.").foregroundStyle(.secondary) }
+                } else { Text("Navigate: click to inspect, drag to pan. Pinch or scroll to zoom.").foregroundStyle(.secondary) }
                 Divider()
                 if editor.tool == .repeater || editor.selectedTile.flatMap({ editor.browsingWorld(appState).circuit.components[$0]?.kind }) == .repeater {
                     Picker("Direction", selection: $editor.direction) {
@@ -183,5 +169,22 @@ struct EditorView: View {
                     .font(.caption).foregroundStyle(.secondary)
             }.padding(12).frame(maxWidth: .infinity, alignment: .leading)
         }
+    }
+
+    private var viewportControls: some View {
+        VStack(spacing: 8) {
+            Button { editor.showDesktopArea(appState) } label: { Image(systemName: "house.fill") }
+                .help("Show active desktop area (may switch the world you are browsing)").accessibilityLabel("Show active desktop area")
+            Divider().frame(width: 22)
+            Button { editor.zoom(by: 1.25) } label: { Image(systemName: "plus") }.help("Zoom in").accessibilityLabel("Zoom in")
+            Button { editor.zoom(by: 0.8) } label: { Image(systemName: "minus") }.help("Zoom out").accessibilityLabel("Zoom out")
+            Menu {
+                Toggle("Show Finder Items", isOn: Binding(get: { appState.editorFinderItemsVisible }, set: { appState.setEditorFinderItemsVisible($0) }))
+                Button("Return to saved view") { editor.selectArea(appState.selectedAreaID, appState: appState) }
+                Button("Reset to Origin") { editor.resetCamera() }
+            } label: { Image(systemName: "eye") }.menuIndicator(.hidden).help("View options · Return to this area's saved view").accessibilityLabel("View options")
+        }
+        .buttonStyle(.borderless).controlSize(.large)
+        .padding(10).background(.regularMaterial, in: RoundedRectangle(cornerRadius: 12))
     }
 }

@@ -4,7 +4,7 @@ enum TextureAssetID: String, Codable, CaseIterable, Sendable {
     case terrainGrass, terrainDirt, terrainStone, terrainSand, waterShallow, waterDeep
     case decorationTree, decorationFlower, decorationRock, decorationReed
     case decorationDandelion, decorationBlueOrchid, decorationAllium, decorationOxeyeDaisy
-    case decorationCoal, decorationIron
+    case decorationCoal, decorationIron, decorationCactus
     case redstoneDustOff, redstoneDustOn, redstoneButtonUp, redstoneButtonDown
     case redstoneLeverOff, redstoneLeverOn, redstoneRepeaterOff, redstoneRepeaterOn
     case redstoneOutputOff, redstoneOutputOn
@@ -42,6 +42,7 @@ enum TextureAssetID: String, Codable, CaseIterable, Sendable {
         case .coal: .decorationCoal
         case .iron: .decorationIron
         case .reed: .decorationReed
+        case .cactus: .decorationCactus
         }
     }
     var decorationAppearance: DecorationAppearance? {

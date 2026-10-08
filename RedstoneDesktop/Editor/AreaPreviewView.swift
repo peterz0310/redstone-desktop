@@ -29,7 +29,7 @@ enum AreaPreviewRenderer {
                 let rect = CGRect(x: Double(x) * size.width / Double(columns), y: Double(y) * size.height / Double(rows),
                     width: size.width / Double(columns), height: size.height / Double(rows))
                 guard let tile = mapper.tile(atScreen: CGPoint(x: rect.midX, y: rect.midY)) else { continue }
-                let terrain = world.tile(at: tile)
+                let terrain = world.tile(at: tile).map { TerrainAppearance.tile($0, generated: world.generation != nil && world.tiles[tile] == nil) }
                 let color: NSColor
                 switch terrain?.terrain {
                 case .grass: color = NSColor(red: 0.28, green: 0.5, blue: 0.35, alpha: 1)

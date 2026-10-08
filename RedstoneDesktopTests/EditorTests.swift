@@ -232,7 +232,11 @@ final class EditorTests: XCTestCase {
         view.mouseUp(with: try event(.leftMouseUp, center))
         XCTAssertEqual(state.desktopWorld.circuit.components[target]?.kind, .dust)
         let world = state.desktopWorld
-        editor.tool = .pan
+        editor.tool = .select
+        editor.selectedTile = nil
+        view.mouseDown(with: try event(.leftMouseDown, center))
+        view.mouseUp(with: try event(.leftMouseUp, center))
+        XCTAssertEqual(editor.selectedTile, target, "Navigate clicks select; drags pan without editing")
         view.mouseDown(with: try event(.leftMouseDown, CGPoint(x: 300, y: 300)))
         view.mouseDragged(with: try event(.leftMouseDragged, CGPoint(x: 380, y: 260)))
         view.mouseUp(with: try event(.leftMouseUp, CGPoint(x: 380, y: 260)))

@@ -7,7 +7,7 @@ final class EditorCanvasRenderer {
     private var lastWorld: World?
     private var lastOccupancy: DesktopOccupancySnapshot?
     private var lastProjection: EditorFinderProjection?
-    private var lastPower: Set<WorldCoordinate> = []
+    private var lastPower: [WorldCoordinate: PowerLevel] = [:]
     private var lastLevers: Set<WorldCoordinate> = []
     private let terrainRenderer = TerrainChunkRenderer()
     private let ghostRenderer = CircuitRenderer()
@@ -25,10 +25,10 @@ final class EditorCanvasRenderer {
         scene.setAssets(appState.assets)
         ghostRenderer.textures.assets = appState.assets
         let world = editor.browsingWorld(appState)
-        let power: Set<WorldCoordinate> = editor.isPreviewing(appState) ? [] : appState.editorPoweredTiles
+        let power: [WorldCoordinate: PowerLevel] = editor.isPreviewing(appState) || !appState.isEditingActiveWorld ? [:] : appState.simulator.power
         let levers: Set<WorldCoordinate> = editor.isPreviewing(appState) ? [] : appState.editorLeverPositions
         if lastWorld != world || lastPower != power || lastLevers != levers {
-            scene.updateWorld(world, poweredTiles: power, leverPositions: levers)
+            scene.updateWorld(world, poweredTiles: Set(power.keys), leverPositions: levers, powerLevels: power)
             lastWorld = world
             lastPower = power
             lastLevers = levers

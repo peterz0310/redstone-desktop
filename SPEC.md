@@ -23,7 +23,7 @@ The intended workflow is:
 
 The project is an experiment first and a polished application second.
 
-Current implementation: **Slices 0–28 and the owner-requested 27A appearance follow-up are implemented**, with Debug build and all **320 automated tests passing**. Slice 28's explicit Desktop Build Mode and requested hover/border/editor-window follow-up are implemented; its real Finder/input and follow-up MANUAL checks remain pending. Slices 0–19A, 20–21 and 23–25 have owner-reported acceptance; the 19C bookmark/context-menu follow-up and corrected Slice 22 icon-size/marker checks are also accepted. Detailed earlier 19B/19C runtime/deletion checks and Slice 22's real Output-after-resize check remain pending. The owner accepted local Java texture importing on 2026-10-08; the other specific Slice 26/27 checks and detailed 27A appearance checks remain pending. Slice 26 adds optional validated folder/ZIP packs with original fallback; Slice 27 imports selected textures from local Java JARs/packs into Application Support without bundling game assets. The actual pack contract and Java mapping/cache lifecycle are documented in docs/RESOURCE_PACKS.md and docs/JAVA_TEXTURE_IMPORT.md. **Slice 29 is next and untouched.** Historical entries record earlier behavior; Sections 3.8, 7.1, 25, 26 and 29 define the world/library/editing contract.
+Current implementation: **Slices 0–28 and the owner-requested 27A/28A polishing follow-ups are implemented**, with Debug build and all **329 automated tests passing**. Slice 28's explicit Desktop Build Mode and hover/border/editor-window follow-up are implemented. Slice 28A strengthens the border, polishes terrain/circuit art and consolidates viewport navigation; its detailed MANUAL checks and prior unreported Finder/input checks remain pending. Slices 0–19A, 20–21 and 23–25 have owner-reported acceptance; the 19C bookmark/context-menu follow-up and corrected Slice 22 icon-size/marker checks are also accepted. Detailed earlier 19B/19C runtime/deletion checks and Slice 22's real Output-after-resize check remain pending. The owner accepted local Java texture importing on 2026-10-08; the other specific Slice 26/27 checks and detailed 27A appearance checks remain pending. Slice 26 adds optional validated folder/ZIP packs with original fallback; Slice 27 imports selected textures from local Java JARs/packs into Application Support without bundling game assets. The actual pack contract and Java mapping/cache lifecycle are documented in docs/RESOURCE_PACKS.md and docs/JAVA_TEXTURE_IMPORT.md. **Slice 29 is next and untouched.** Historical entries record earlier behavior; Sections 3.8, 7.1, 25, 26 and 29 define the world/library/editing contract.
 
 The most important early question is not whether attractive terrain or redstone can be made. Those are comparatively straightforward. The first major feasibility gate is:
 
@@ -1456,12 +1456,12 @@ No need for full 3D positional audio.
 
 # 25. Editor UX
 
-Current layout after Slice 19C:
+Current layout after Slice 28A:
 
 ```text
-Editing: world / area        Desktop: world / area     Start/Stop | Advanced
+Editing: world / area        Desktop: world / area     Build on Desktop | Start/Stop | Advanced
 Worlds sidebar              World canvas              Build / Inspector
-+ opens New World sheet     Pan / Zoom / Show Desktop
++ opens New World sheet     In-canvas Home / Zoom / View; Navigate click/drag
                             Areas in selected world: preview cards
                             Save Current View… / Update Current Area / Activate
 Right-click world/area cards for Rename / Delete
@@ -1479,6 +1479,14 @@ Editor must support world creation/list/rename, area save/list/rename, pan, zoom
 - Only the enabled active world's configuration is locked for editing. An inactive world can be edited while another world runs. Domain mutation methods enforce this by world ID, not only UI disabling. Disable Desktop World to edit the active world. Browsing and Select remain available at all times.
 - Rendering inactive worlds shows their configuration/durable lever positions without attributing active-world power or occupancy to them. Until Slice 20 adds separately labeled Finder projections, inactive-world occupancy is unavailable rather than copied from the active world. No editor click executes an output or advances simulation.
 - Temporary selection/pan/zoom is not persisted. Reopening selects the saved active area for editing, with Desktop World disabled. **Show Desktop Area** selects that world/area and browses to its origin; **Reset View** returns only editor browsing to origin zero.
+
+## 25.1.1 Viewport navigation (Slice 28A)
+
+One **Navigate** tool combines selection and panning: a click inspects, while a drag beyond four logical points pans without selecting or editing. Native trackpad pinch and existing scroll zoom preserve the world point under the gesture; button zoom remains centered and all zoom is bounded to 16–128 points per tile through CoordinateMapper.
+
+A floating control group inside the viewport contains **Home**, zoom buttons and **View** (eye menu). Home selects/browses the **active desktop area**, potentially switching the browsed world. View → **Return to saved view** restores the **currently selected area's** saved origin; it does not switch to the active area. View also contains Show Finder Items and Reset to Origin. Neither navigation command assigns/starts the desktop or changes the saved bookmark; Update Current Area and Activate remain explicit.
+
+Generated dirt is presented as grass in terrain chunks, shelf summaries and inspector; explicit saved dirt remains dirt. Legacy rock slots on sand (including sandy shores) are displayed as cacti, with coal/iron elsewhere. These are renderer appearance choices: generation version 1, coordinates, capabilities, fingerprints and serialized data are unchanged.
 
 ## 25.2 Seeds belong to worlds
 
@@ -1541,7 +1549,7 @@ Slice 28 contract:
 - A floating SwiftUI hotbar names the captured world/area, says **BUILD MODE / Circuit stopped**, offers six tools, direction/delay and **Exit Build Mode**. Its close button also exits. The menu-bar status item offers Exit, Open Editor and Quit; the app's Window menu offers Exit too. Exit is always available by mouse; keyboard shortcuts are supplementary.
 - Left-click places one component using the same `CircuitPlacement`/`PlacementRules` as the editor; right-click or Erase removes only circuit components. Clicking an occupied repeater selects it for Rotate/Delay; other occupied tiles reject placement. Repeater Rotate/Delay edits the last selected repeater, or prepares the next repeater when no repeater is selected. Normal button/lever clicks do not run during editing.
 - Hotbar buttons work without keyboard permission. Moving over the canvas restores its local key focus. Number keys 1–6 select tools, scroll cycles tools, R rotates the hovered repeater, T cycles its delay 1–4 (D remains an alias) and Escape exits. Hover shortcuts initialize from the actual component, update the hotbar selection and never fall back to an old selection when hovering empty terrain or another component. No global keyboard capture; shortcuts need canvas focus. Fixed assigned camera; no terrain edits, pan/zoom, drag painting or automatic Output-to-Finder snapping in this first Build Mode.
-- A thin, transparent orange border gently pulses around the display edges during editing only (2.8-second cycle, 12–32% alpha). It becomes a steady border when Reduce Motion is enabled, including a setting change during the session; animation/observer teardown occurs on exit.
+- A prominent transparent orange outline pulses around the display edges during editing only (8-point stroke, 2.8-second cycle, 50–90% alpha; steady 70% with Reduce Motion). It becomes a steady border when Reduce Motion is enabled, including a setting change during the session; animation/observer teardown occurs on exit.
 - Explicitly registered editor windows that are visible and not minimized are ordered out after the build palette/input are shown. Exit restores those same windows without activating the app or taking key focus from another app. Already hidden/minimized windows and settings/diagnostic windows are preserved; closed editors are not reopened, and quitting does not flash editors back on screen. This uses public NSWindow orderOut/orderFront, not NSApplication.hide. Open Editor from the status menu first exits Build Mode.
 - Circuit changes update the captured world's library record through the normal autosaver and flush on exit; editor selection, saved cameras and other worlds are preserved. The active world's regular editor tools and active bookmark camera update are locked during Build Mode; desktop reassignment is refused until exit. Inactive worlds remain editable.
 - Teardown invalidates the input session and disables/removes the capture window before closing the palette and renderer. Exit, hotbar close, Quit/shutdown, app hide/deactivation and a display-geometry change all tear down the session. Old input callbacks cannot edit a subsequent session. Finder scale changes do not move the captured editing camera; the next explicit Start uses the latest prepared camera.
@@ -2602,7 +2610,7 @@ Keep this optional if Finder behavior feels awkward.
 - [x] remove/reimport
 - [x] no imported files enter repository
 
-**Status: implemented; local JAR import owner-accepted, other specific checks pending.** See docs/JAVA_TEXTURE_IMPORT.md for the 23 mappings, fixed tint/first-frame limits, source/cache distinction, lifecycle, archive limits and contributor/license guidance. Native local 1.21.8 JAR validation succeeded in a temporary cache; this does not mark the UI checks below accepted.
+**Status: implemented; local JAR import owner-accepted, other specific checks pending.** See docs/JAVA_TEXTURE_IMPORT.md for the 26 mappings, fixed tint/first-frame limits, source/cache distinction, lifecycle, archive limits and contributor/license guidance. Native local 1.21.8 JAR validation succeeded in a temporary cache; this does not mark the UI checks below accepted.
 
 ### Manual acceptance
 
@@ -2657,8 +2665,31 @@ Follow-up to completed 26/27 before Slice 28; keep simulation, generation-versio
 - [x] Hide/restore registered editor windows without hiding the app, affecting unrelated windows or stealing another app's key focus.
 - [x] Follow-up automated tests, Debug build and full suite.
 - [ ] MANUAL: hovering a placed repeater and pressing R/T edits that repeater, including after using the hotbar; hovering elsewhere does not edit an old selection.
-- [ ] MANUAL: subtle border is visible only during Build Mode; Reduce Motion makes it steady.
+- [ ] MANUAL: strong border is visible only during Build Mode; Reduce Motion makes it steady.
 - [ ] MANUAL: editor hides on entry and returns on exit with the same view; hotbar/menu remain usable, and app switching returns Finder focus normally.
+
+---
+
+## Slice 28A — Owner-requested visual/navigation polish
+
+Scoped polish before Slice 29; retain saved worlds, generation version 1, placement rules and action boundaries.
+
+- [x] Strengthen the Build Mode border while preserving Reduce Motion and exit cleanup.
+- [x] Larger repeaters with visible redstone ports between adjacent, directionally connected components; exclude sides and incompatible repeater orientations.
+- [x] Thinner dust, with neutral brightness modulation from actual 0–15 simulator power in desktop/editor snapshots.
+- [x] Present generated dirt as grass, retaining explicit saved dirt overrides and unchanged generation fingerprints/capabilities.
+- [x] Present legacy rock decoration slots on sand as cacti; coal/iron elsewhere, preserving positions and placement blocking.
+- [x] Add original cactus/Output fallback and bounded local Java cactus-top/command-block Output mappings; update sharing/cache documentation.
+- [x] One Navigate tool: click to inspect, drag to pan; pointer-anchored native pinch alongside existing scroll/button zoom.
+- [x] Move Home, zoom and View controls into the viewport; distinguish active-desktop Home from selected-area Return to saved view.
+- [x] Automated renderer/domain/navigation/import regressions, Debug build and full test suite.
+
+### Manual acceptance
+
+- [ ] MANUAL: strong Build Mode border is readable, disappears on exit and becomes steady with Reduce Motion; hover editing/editor restore still work.
+- [ ] MANUAL: aligned adjacent repeaters have continuous ports, side/head-to-head ports are absent, thinner dust visibly fades with power and repeaters restore bright red output.
+- [ ] MANUAL: Re-import produces 26 textures, grass replaces generated dirt, sand decorations are cacti and Outputs use command-block art; Built-In fallback and saved circuits/Finder actions still work.
+- [ ] MANUAL: Navigate selects on click and pans on drag; pinch/scroll/buttons zoom correctly; viewport Home shows the assigned desktop area while Return restores the selected bookmark without activating it.
 
 ---
 
@@ -3710,3 +3741,18 @@ Register editor NSWindows through a small SwiftUI/AppKit view bridge whose hit t
 Validation: Debug application build and all **320 automated tests pass**, including seven new DesktopBuildFollowupTests for hover-versus-selection, direction preservation and delay wrap, absent/non-repeater/stale target refusal, native mapped hover/R/T/modifier/exit dispatch, border geometry/pulse/reduced-motion/resize/cleanup, registered-window-only hiding and idempotent restoration, preserved frame/hidden state/no key-focus takeover, app entry/exit/shutdown/failure handling and closed-window refusal. Pure World/Circuit/Persistence type-check and diff checks pass. No real owner window, display, Reduce Motion preference, Finder file or saved library was changed by these fixture tests. The original two plus three follow-up MANUAL checks remain pending for the updated README walkthrough. No real macOS contradiction is established; physical focus/layering/visibility behavior still requires owner validation.
 
 One verification run was interrupted during an existing MinimalCircuitIntegrationTests case: Xcode reported that the test runner exited with code 0 before completion, without a failed assertion or crash report. Its automatic continuation passed the remaining tests, but that run was treated as failed. A fresh complete suite subsequently passed all 320 tests. No cause for the normal early process exit was established or claimed fixed. The final build/suite also include a regression assertion that the window-registration view cannot intercept editor input.
+
+
+## 2026-10-08 — Slice 28A visual/navigation polish
+
+Context: the owner reports the border is functional but faint and requests additional visual/navigation changes before proceeding. Record that narrow observation without marking unreported hover, Reduce Motion, Finder-routing or window-restore MANUAL groups accepted. Implement the requested polish only; Slice 29 remains untouched.
+
+Decision: raise the existing public SpriteKit border to an 8-point stroke and 50–90% alpha (steady 70% under Reduce Motion). Enlarge repeaters to 86% of a tile with visible short end traces between compatible ports, including aligned adjacent repeaters; incompatible orientations and side neighbors do not gain false ports. Dust is one fifth of a tile wide. Render actual power snapshots using neutral RGB brightness 0.45 + 0.55 × power/15 for positive power, retaining the dark off texture at zero. Public SKShapeNode fillTexture/fillColor blending preserves pack hue/alpha without orange tint; scene rebuilds retain strength and the editor compares full power dictionaries, not just powered sets. Simulation/actions remain separate and unchanged.
+
+Use a pure presentation projection for generated dirt→grass and sand rock-slot→cactus, preserving generation-version-1 data, explicit saved dirt overrides, golden fingerprints and placement blocking. Add decorationCactus as the 27th optional format-1 texture ID with original fallback (no legacy ore-family fallback). Expand Java mappings from 23 to 26 with cactus_top and two command_block_front Output states, including an original powered indicator. Re-import explicitly updates managed caches; no owner cache/preferences are rewritten by validation.
+
+Combine Select/Pan into Navigate with click-versus-drag handling; add public NSEvent magnification to existing anchored/clamped mapper zoom. Move Home/zoom/View into the viewport. Home browses the assigned desktop world/area; Return to saved view restores the selected bookmark. Neither activates, mutates saved views or copies circuits.
+
+Validation: Debug build and all **329 automated tests pass**, including nine new polishing tests and updated geometry/import/border expectations. Tests cover directed ports in four orientations, side/head-to-head exclusions, larger centered repeaters, thinner wire geometry, strength persistence and real native SpriteKit raster brightness, actual simulator→desktop strength delivery, stable grass/cactus projection and placement preservation, cactus fallback isolation, bounded Java recipes, pinch anchor/clamps/invalid deltas/library isolation and distinct Home/Return semantics. Existing generator/simulation/persistence/Finder/action regressions remain green. Pure domain type-check and diff checks pass.
+
+A standalone temporary import from installed local 1.21.8 produced **26 textures, zero sounds and zero warnings**. A native SpriteKit scene with the imported art was captured and inspected; pixel sampling verified progressively decreasing red brightness. Temporary caches/artifacts are outside Git, and no game art or owner preference/library changes were introduced. README and both pack guides describe current mappings, compatibility and Mac checks. All four new MANUAL groups remain pending owner validation.

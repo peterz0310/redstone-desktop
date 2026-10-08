@@ -71,7 +71,7 @@ final class AppearanceTests: XCTestCase {
         scene.updateWorld(world, leverPositions: [])
         XCTAssertFalse((layer.childNode(withName: "LEVER")?.childNode(withName: "component-icon:1,1") as? SKSpriteNode)?.texture === on)
         let wire = try XCTUnwrap(layer.childNode(withName: "dust-path") as? SKShapeNode)
-        XCTAssertEqual(wire.path?.boundingBoxOfPath.height, 16)
+        XCTAssertEqual(wire.path?.boundingBoxOfPath.height ?? 0, 12.8, accuracy: 0.001)
         XCTAssertEqual(wire.fillColor.usingColorSpace(.sRGB)?.redComponent, 1)
         XCTAssertEqual(wire.fillColor.usingColorSpace(.sRGB)?.greenComponent, 1)
         XCTAssertEqual(wire.fillColor.usingColorSpace(.sRGB)?.blueComponent, 1)

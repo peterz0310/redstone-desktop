@@ -31,7 +31,7 @@ final class BuiltInAssetProvider: AssetProvider {
                 switch value {
                 case .tree: .tree
                 case .reed: .reed
-                case .coal, .iron: .rock
+                case .coal, .iron, .cactus: .rock
                 default: .flower
                 }
             }

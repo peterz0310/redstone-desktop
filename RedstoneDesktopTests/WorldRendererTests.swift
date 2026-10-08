@@ -48,7 +48,12 @@ final class WorldRendererTests: XCTestCase {
                 scene.updateWorld(world)
                 XCTAssertEqual((layer.childNode(withName: "repeater-label:2,2") as? SKLabelNode)?.text, "\(arrow) \(delay.rawValue)t")
                 let node = try XCTUnwrap(layer.childNode(withName: "REPEATER") as? SKShapeNode)
-                XCTAssertEqual(node.path?.boundingBoxOfPath, mapper.sceneRect(forTile: coordinate, on: screen).insetBy(dx: 8, dy: 8))
+                let bounds = try XCTUnwrap(node.path?.boundingBoxOfPath)
+                let expected = mapper.sceneRect(forTile: coordinate, on: screen).insetBy(dx: 3.2, dy: 3.2)
+                XCTAssertEqual(bounds.minX, expected.minX, accuracy: 0.000001)
+                XCTAssertEqual(bounds.minY, expected.minY, accuracy: 0.000001)
+                XCTAssertEqual(bounds.width, expected.width, accuracy: 0.000001)
+                XCTAssertEqual(bounds.height, expected.height, accuracy: 0.000001)
                 let icon = try XCTUnwrap(node.childNode(withName: "component-icon:2,2") as? SKSpriteNode)
                 let expectedRotation: CGFloat
                 switch direction {

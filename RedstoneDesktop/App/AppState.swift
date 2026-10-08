@@ -731,7 +731,7 @@ final class AppState: ObservableObject {
         }
         desktopController = controller
         controller.scene.setAssets(assets)
-        controller.scene.updateWorld(desktopWorld, poweredTiles: simulator.poweredTiles, leverPositions: simulator.activeLevers)
+        controller.scene.updateWorld(desktopWorld, poweredTiles: simulator.poweredTiles, leverPositions: simulator.activeLevers, powerLevels: simulator.power)
         finderReferenceScreen = finderReferenceProviding()
         lastObservedGeometry = DisplayGeometry(target: screen, finderReference: finderReferenceScreen)
         if displayGeometry != nil { displayGeometry = lastObservedGeometry }
@@ -833,7 +833,7 @@ final class AppState: ObservableObject {
         }
         let changedPower = next.power != simulator.power
         if next != simulator { simulator = next }
-        if changedPower { desktopController?.scene.updateWorld(desktopWorld, poweredTiles: next.poweredTiles) }
+        if changedPower { desktopController?.scene.updateWorld(desktopWorld, poweredTiles: next.poweredTiles, leverPositions: next.activeLevers, powerLevels: next.power) }
         for case let .outputActivated(coordinate) in events {
             guard !isDisplaySettling, !isFinderLayoutSettling, outputIsVisible(coordinate) else { continue }
             desktopController?.scene.flashOutput(at: coordinate)

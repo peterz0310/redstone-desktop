@@ -59,7 +59,7 @@ final class CircuitTextures {
             let dark = NSColor(calibratedWhite: 0.14, alpha: 1)
             let rim = NSColor(calibratedWhite: 0.65, alpha: 1)
             let hot = NSColor(calibratedRed: 1, green: 0.09, blue: 0.12, alpha: 1)
-            let red = NSColor(calibratedRed: 0.65, green: 0.12, blue: 0.12, alpha: 1)
+            let red = NSColor(calibratedRed: 0.42, green: 0.05, blue: 0.07, alpha: 1)
             switch id {
             case .dustOff, .dustOn:
                 let color = id == .dustOn ? hot : red
@@ -97,11 +97,14 @@ final class CircuitTextures {
                 (id == .repeaterOn ? hot : rim).setFill()
                 path.fill()
             case .outputOff, .outputOn:
-                fill(CGRect(x: 3, y: 3, width: 26, height: 26), rim)
-                fill(CGRect(x: 6, y: 6, width: 20, height: 20), dark)
-                let color = id == .outputOn ? hot : NSColor.gray
-                fill(CGRect(x: 9, y: 10, width: 5, height: 12), color)
-                fill(CGRect(x: 18, y: 10, width: 5, height: 12), color)
+                // Original terminal block motif; Java importing supplies the real command-block face.
+                fill(CGRect(x: 1, y: 1, width: 30, height: 30), .brown)
+                fill(CGRect(x: 4, y: 4, width: 24, height: 24), NSColor(calibratedRed: 0.8, green: 0.57, blue: 0.34, alpha: 1))
+                fill(CGRect(x: 7, y: 7, width: 18, height: 18), dark)
+                for row in 0..<3 { for column in 0..<3 {
+                    fill(CGRect(x: 9 + column * 5, y: 9 + row * 5, width: 3, height: 3), (row + column) % 2 == 0 ? rim : .gray)
+                } }
+                fill(CGRect(x: 23, y: 23, width: 4, height: 4), id == .outputOn ? hot : .darkGray)
             }
             return true
         }

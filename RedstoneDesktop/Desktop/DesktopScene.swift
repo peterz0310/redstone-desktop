@@ -17,6 +17,7 @@ final class DesktopScene: SKScene {
     private let finderMarkers = SKNode()
     private var renderedWorld: World?
     private var renderedPower: Set<WorldCoordinate> = []
+    private var renderedPowerLevels: [WorldCoordinate: PowerLevel]?
     private var renderedLevers: Set<WorldCoordinate>?
     private(set) var highlightedTile: WorldCoordinate?
 
@@ -57,7 +58,7 @@ final class DesktopScene: SKScene {
 
     override func didChangeSize(_ oldSize: CGSize) {
         rebuildChecker()
-        if let world = renderedWorld { updateWorld(world, poweredTiles: renderedPower, leverPositions: renderedLevers) }
+        if let world = renderedWorld { updateWorld(world, poweredTiles: renderedPower, leverPositions: renderedLevers, powerLevels: renderedPowerLevels) }
     }
 
     private var assetProvider: (any AssetProvider)?
@@ -68,7 +69,7 @@ final class DesktopScene: SKScene {
         assetProvider = assets
         terrainRenderer.assets = assets
         circuitRenderer.textures.assets = assets
-        if let world = renderedWorld { updateWorld(world, poweredTiles: renderedPower, leverPositions: renderedLevers) }
+        if let world = renderedWorld { updateWorld(world, poweredTiles: renderedPower, leverPositions: renderedLevers, powerLevels: renderedPowerLevels) }
     }
 
     func updateHighlight(_ coordinate: WorldCoordinate?) {
@@ -124,9 +125,11 @@ final class DesktopScene: SKScene {
         }
     }
 
-    func updateWorld(_ world: World, poweredTiles: Set<WorldCoordinate> = [], leverPositions: Set<WorldCoordinate>? = nil) {
+    func updateWorld(_ world: World, poweredTiles: Set<WorldCoordinate> = [], leverPositions: Set<WorldCoordinate>? = nil,
+                     powerLevels: [WorldCoordinate: PowerLevel]? = nil) {
         renderedWorld = world
         renderedPower = poweredTiles
+        renderedPowerLevels = powerLevels
         renderedLevers = leverPositions
         if world.generation == nil { tileLayer.removeAllChildren() }
         circuitLayer.removeAllChildren()
@@ -145,7 +148,7 @@ final class DesktopScene: SKScene {
             node.strokeColor = .clear
             tileLayer.addChild(node)
             if let decoration = tile.decoration {
-                let appearance = DecorationAppearance.choose(decoration, at: coordinate, seed: world.generation?.seed ?? 0)
+                let appearance = DecorationAppearance.choose(decoration, at: coordinate, seed: world.generation?.seed ?? 0, terrain: tile.terrain)
                 let label = SKLabelNode(text: appearance.name)
                 label.fontName = "Menlo"
                 label.fontSize = 9
@@ -167,7 +170,7 @@ final class DesktopScene: SKScene {
     private func rebuildCircuit() {
         guard let world = renderedWorld else { return }
         circuitRenderer.render(world.circuit, poweredTiles: renderedPower, occupancy: renderedOccupancy,
-            mapper: mapper, screen: screen, viewport: CGRect(origin: .zero, size: size), into: circuitLayer, leverPositions: renderedLevers)
+            mapper: mapper, screen: screen, viewport: CGRect(origin: .zero, size: size), into: circuitLayer, leverPositions: renderedLevers, powerLevels: renderedPowerLevels)
     }
 
     private func terrainColor(_ terrain: TerrainID) -> NSColor {

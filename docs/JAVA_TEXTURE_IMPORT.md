@@ -18,7 +18,7 @@ Discovery checks up to 512 version folders under:
 
 It lists readable, regular, bounded-size JARs; discovery does not import or validate their contents. Version names sort numerically descending, with names starting `1.` first. The importer validates the selected archive when you press Import. Alternative launcher locations are supported through the manual picker.
 
-For this development Mac, read-only discovery found 29 versions, and a temporary import of **1.21.8** successfully produced all 23 mappings with no warnings after the appearance follow-up. Select that version for the first visual check. This observation is local validation, not a promise that every installed/version/modded JAR is supported. No game files are included with this repository.
+For this development Mac, read-only discovery found 29 versions, and a temporary import of **1.21.8** successfully produced all 26 mappings with no warnings after the appearance follow-up. Select that version for the first visual check. This observation is local validation, not a promise that every installed/version/modded JAR is supported. No game files are included with this repository.
 
 ## Import a JAR or Java pack manually
 
@@ -47,6 +47,7 @@ Modern paths below are relative to `assets/minecraft/textures/block/`. Legacy pa
 | `decorationOxeyeDaisy` | `oxeye_daisy.png` | `flower_oxeye_daisy.png` | None |
 | `decorationCoal` | `coal_ore.png` | `coal_ore.png` | None |
 | `decorationIron` | `iron_ore.png` | `iron_ore.png` | None |
+| `decorationCactus` | `cactus_top.png` | `cactus_top.png` | Transparent top-view recipe |
 | `redstoneButtonUp` | `stone.png` | `stone.png` | Raised 2D stone-button recipe |
 | `redstoneButtonDown` | `stone.png` | `stone.png` | Depressed 2D stone-button recipe |
 | `redstoneLeverOff` | `lever.png` | `lever.png` | Off handle recipe |
@@ -55,22 +56,24 @@ Modern paths below are relative to `assets/minecraft/textures/block/`. Legacy pa
 | `redstoneRepeaterOn` | `repeater_on.png` | `repeater_on.png` | East-facing top/indicator recipe |
 | `redstoneDustOff` | `redstone_dust_dot.png` | `redstone_dust_dot.png` | Dark red material recipe |
 | `redstoneDustOn` | `redstone_dust_dot.png` | `redstone_dust_dot.png` | Bright red material recipe |
+| `redstoneOutputOff` | `command_block_front.png` | `command_block_front.png` | Command-block face |
+| `redstoneOutputOn` | `command_block_front.png` | `command_block_front.png` | Face with original red powered indicator |
 
 For rows with numeric tint, each decoded RGB channel is multiplied by the listed channel divided by 255, preserving alpha. This approximates readable grass/leaves/water; it does not reproduce Minecraft biome lighting or colormaps. Already-colored pack art receives the same tint.
 
 Square PNGs are accepted. Vertical strips whose height is an integer multiple of their width contribute **only the first, top square frame**. Other nonsquare images are skipped. Animation metadata is ignored; there is no animated water. Source PNG dimensions must be 1–1024 on each axis and encoded size at most 4 MiB. Generated terrain is sampled at 16 pixels per tile, with nearest filtering.
 
-Tree/flower/reed images are 2D decoration overlays, not 3D models. Dust uses the existing connected wire geometry with the imported material. Output, selection overlays and all sounds retain original built-in assets. Missing individual mappings also use original fallback. Importing textures does not change terrain rules, circuits, Finder targets, world data or cameras.
+Tree/flower/reed images are 2D decoration overlays, not 3D models. Dust uses the existing connected wire geometry with the imported material. Selection overlays and all sounds retain original built-in assets. Outputs use the command-block face with a small original red indicator when powered; occupancy labels remain app UI. Cacti crop the central top face into a transparent 16×16 overlay. Missing individual mappings also use original fallback. Importing textures does not change terrain rules, circuits, Finder targets, world data or cameras.
 
 ### Circuit and decoration appearance
 
 Java stone buttons use the validated stone texture cropped into a raised/depressed 16×16 transparent icon with different face shading. Levers use the known handle UV region `[7,6]–[9,16]` scaled from the source raster onto an original gray base; opposite slopes distinguish on/off. Repeaters rotate the top image from north to the semantic east-facing orientation and add two original red/dark indicator marks. Scene rotation then handles all four directions. These fixed 2D recipes do not read/execute Java models or reproduce 3D geometry; labels still show direction and actual configured delay.
 
-Dust converts source-dot luminance into an **opaque** textured material, dark red when off and bright red when on (base RGB 106/12/18 and 255/24/32, luminance strength 184–255/255). Transparent source corners become continuous material so they cannot cut holes in connected traces. The renderer supplies quarter-tile-wide cardinal strips and square junctions, without an orange tint. Generic Redstone Desktop packs can still override semantic wire materials directly.
+Dust converts source-dot luminance into an **opaque** textured material, dark red when off and bright red when on (base RGB 106/12/18 and 255/24/32, luminance strength 184–255/255). Transparent source corners become continuous material so they cannot cut holes in connected traces. The renderer supplies one-fifth-tile-wide cardinal strips and square junctions, without an orange tint. Positive power applies neutral brightness `0.45 + 0.55 × power/15`, so weak signals fade while strength 15 retains full bright red. Adjacent aligned repeaters have short visible end traces; larger repeater art retains labels and directional port rules. Generic Redstone Desktop packs can still override semantic wire materials directly.
 
-The existing generator's flower and legacy rock positions are preserved. Stable seed/coordinate selection chooses poppy/dandelion/blue orchid/allium/oxeye daisy or coal/iron. Ore art replaces loose rock art; deposits remain placement-blocking decorations, not mineable resources. This is appearance variety, not a generation/save migration.
+The existing generator's flower and legacy rock positions are preserved. Stable seed/coordinate selection chooses poppy/dandelion/blue orchid/allium/oxeye daisy, with cactus on sand (including sandy shores) and coal/iron elsewhere. Generated dirt is presented with the imported grass-block top; explicit saved dirt overrides remain dirt. Ore art replaces loose rock art; deposits remain placement-blocking decorations, not mineable resources. This is appearance variety, not a generation/save migration.
 
-**After upgrading from the initial 11-mapping importer, press Re-import once.** Reload reads the old generated cache and cannot create missing variant/component mappings or update its orange dust image. No automatic rewrite of user caches occurs.
+**After upgrading from an older 11- or 23-mapping importer, press Re-import once to generate the current 26-mapping pack.** Reload reads the old generated cache and cannot create missing variant/component mappings or update its orange dust image. No automatic rewrite of user caches occurs.
 
 ## Cache, reload and removal
 

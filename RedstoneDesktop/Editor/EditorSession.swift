@@ -5,7 +5,7 @@ import Foundation
 @MainActor
 final class EditorSession: ObservableObject {
     enum Tool: String, CaseIterable {
-        case select = "Select", pan = "Pan", dust = "Dust", button = "Button"
+        case select = "Navigate", dust = "Dust", button = "Button"
         case lever = "Lever", repeater = "Repeater", output = "Output", erase = "Erase"
 
         var componentKind: CircuitComponentKind? {
@@ -15,7 +15,7 @@ final class EditorSession: ObservableObject {
             case .lever: return .lever
             case .repeater: return .repeater
             case .output: return .output
-            case .select, .pan, .erase: return nil
+            case .select, .erase: return nil
             }
         }
         var editsWorld: Bool { componentKind != nil || self == .erase }
@@ -27,7 +27,7 @@ final class EditorSession: ObservableObject {
     @Published var delay = RepeaterDelay.one
     @Published var selectedTile: WorldCoordinate?
     @Published var hoveredTile: WorldCoordinate?
-    @Published private(set) var status = "Select a tool. Drag with Pan; use +/− or scroll to zoom."
+    @Published private(set) var status = "Navigate: click to inspect, drag to pan. Pinch or scroll to zoom."
     @Published var seedText = "2026"
     @Published var newWorldName = "New World"
     @Published private(set) var previewGeneration: WorldGenerationSettings?
@@ -149,7 +149,7 @@ final class EditorSession: ObservableObject {
     }
 
     func click(at point: CGPoint, size: CGSize, appState: AppState) {
-        guard tool != .pan, let mapper = mapper(size: size), mapper.canvasFrame.contains(point),
+        guard let mapper = mapper(size: size), mapper.canvasFrame.contains(point),
               let tile = placementTile(at: point, mapper: mapper, appState: appState) else { return }
         if tool.editsWorld && isPreviewing(appState) {
             status = "Create the new world or cancel its preview before editing the circuit."
@@ -196,6 +196,11 @@ final class EditorSession: ObservableObject {
               isRepresentable(next, size: size) else { return }
         camera = next
         hoveredTile = nil
+    }
+
+    func magnify(by delta: Double, anchor: CGPoint, size: CGSize) {
+        guard delta.isFinite, delta > -1 else { return }
+        zoom(by: 1 + delta, anchor: anchor, size: size)
     }
 
     func resetCamera() {

@@ -67,8 +67,9 @@ final class TerrainChunkRenderer {
         for y in 0..<32 {
             for x in 0..<32 {
                 let coordinate = WorldCoordinate(x: origin.x + x, y: origin.y + y)
-                let tile = world.tiles[coordinate] ?? (world.unspecifiedTiles.contains(coordinate) ? nil : chunk.tiles[coordinate])
-                let appearance = tile?.decoration.map { DecorationAppearance.choose($0, at: coordinate, seed: world.generation?.seed ?? 0) }
+                let stored = world.tiles[coordinate] ?? (world.unspecifiedTiles.contains(coordinate) ? nil : chunk.tiles[coordinate])
+                let tile = stored.map { TerrainAppearance.tile($0, generated: world.tiles[coordinate] == nil) }
+                let appearance = tile?.decoration.map { DecorationAppearance.choose($0, at: coordinate, seed: world.generation?.seed ?? 0, terrain: tile?.terrain) }
                 for py in 0..<resolution {
                     for px in 0..<resolution {
                         let color = tile.map { assets.pixel($0, x: px, y: py, appearance: appearance) } ?? (0, 0, 0, 0)
@@ -101,7 +102,7 @@ enum OriginalTerrainPixels {
         case .deepWater: base = (43, 97, 143)
         }
         if let decoration = tile.decoration {
-            let style = appearance ?? DecorationAppearance.choose(decoration, at: WorldCoordinate(x: 0, y: 0), seed: 0)
+            let style = appearance ?? DecorationAppearance.choose(decoration, at: WorldCoordinate(x: 0, y: 0), seed: 0, terrain: tile.terrain)
             switch style {
             case .tree:
                 if x == 4 && (1...5).contains(y) { return (95, 61, 35, 255) }
@@ -125,6 +126,10 @@ enum OriginalTerrainPixels {
                 }
             case .reed:
                 if (x == 2 || x == 4 || x == 6) && (2...5).contains(y) { return (71, 116, 48, 255) }
+            case .cactus:
+                if (2...5).contains(x) && (2...5).contains(y) {
+                    return (x + y) % 3 == 0 ? (26, 82, 30, 255) : (57, 137, 52, 255)
+                }
             }
         }
         let shade: UInt8 = (x + y) % 5 == 0 ? 8 : 0

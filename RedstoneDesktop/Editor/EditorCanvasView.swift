@@ -30,6 +30,7 @@ final class EditorCanvasSurface: SKView {
     private var downPoint: CGPoint?
     private var lastDragPoint: CGPoint?
     private var draggingPan = false
+    private var navigating = false
     override var acceptsFirstResponder: Bool { true }
     override var isFlipped: Bool { false }
 
@@ -72,20 +73,24 @@ final class EditorCanvasSurface: SKView {
         window?.makeFirstResponder(self)
         downPoint = convert(event.locationInWindow, from: nil)
         lastDragPoint = downPoint
-        draggingPan = editor?.tool == .pan
+        navigating = editor?.tool == .select
+        draggingPan = false
     }
 
     override func mouseDragged(with event: NSEvent) {
         let point = convert(event.locationInWindow, from: nil)
-        if draggingPan, let last = lastDragPoint {
+        if navigating, let downPoint,
+           draggingPan || hypot(point.x - downPoint.x, point.y - downPoint.y) >= 4,
+           let last = draggingPan ? lastDragPoint : downPoint {
             editor?.pan(by: CGSize(width: point.x - last.x, height: point.y - last.y), size: bounds.size)
+            draggingPan = true
         } else { editor?.hover(at: point, size: bounds.size, appState: appState) }
         lastDragPoint = point
         refresh()
     }
 
     override func mouseUp(with event: NSEvent) {
-        defer { downPoint = nil; lastDragPoint = nil; draggingPan = false }
+        defer { downPoint = nil; lastDragPoint = nil; draggingPan = false; navigating = false }
         let point = convert(event.locationInWindow, from: nil)
         if !draggingPan, let downPoint, hypot(point.x - downPoint.x, point.y - downPoint.y) < 4,
            let editor, let appState { editor.click(at: point, size: bounds.size, appState: appState) }
@@ -97,6 +102,11 @@ final class EditorCanvasSurface: SKView {
         guard event.scrollingDeltaY != 0 else { return }
         editor?.zoom(by: exp(Double(event.scrollingDeltaY) * 0.02),
                      anchor: convert(event.locationInWindow, from: nil), size: bounds.size)
+        refresh()
+    }
+
+    override func magnify(with event: NSEvent) {
+        editor?.magnify(by: Double(event.magnification), anchor: convert(event.locationInWindow, from: nil), size: bounds.size)
         refresh()
     }
 }
