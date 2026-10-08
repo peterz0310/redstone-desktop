@@ -164,9 +164,14 @@ final class AppState: ObservableObject {
 
     @discardableResult
     func renameSelectedWorld(_ name: String) -> Bool {
+        renameWorld(selectedWorldID, name: name)
+    }
+
+    @discardableResult
+    func renameWorld(_ id: UUID, name: String) -> Bool {
         let name = name.trimmingCharacters(in: .whitespacesAndNewlines)
-        guard !isEditorConfigurationLocked, !name.isEmpty,
-              let index = library.worlds.firstIndex(where: { $0.id == selectedWorldID }) else {
+        guard !(isDesktopWorldEnabled && id == activeWorldID), !name.isEmpty,
+              let index = library.worlds.firstIndex(where: { $0.id == id }) else {
             libraryStatus = "Disable Desktop World and enter a nonempty world name."
             return false
         }
@@ -197,11 +202,61 @@ final class AppState: ObservableObject {
 
     @discardableResult
     func renameSelectedArea(_ name: String) -> Bool {
+        renameArea(selectedAreaID, name: name)
+    }
+
+    @discardableResult
+    func renameArea(_ id: UUID, name: String) -> Bool {
         let name = name.trimmingCharacters(in: .whitespacesAndNewlines)
-        guard !name.isEmpty, let index = library.areas.firstIndex(where: { $0.id == selectedAreaID }) else { return false }
+        guard !name.isEmpty, let index = library.areas.firstIndex(where: { $0.id == id }) else {
+            areaStatus = "Enter a nonempty name for an existing area."
+            return false
+        }
         library.areas[index].name = name
         autosaver?.schedule(library)
         areaStatus = "Area renamed; its saved camera is unchanged."
+        return true
+    }
+
+    var isSelectedAreaRunning: Bool { isDesktopWorldEnabled && selectedAreaID == library.activeAreaID }
+
+    @discardableResult
+    func updateSelectedArea(camera: CameraState) -> Bool {
+        guard !isSelectedAreaRunning else {
+            areaStatus = "Stop Desktop before updating its active area's saved view."
+            return false
+        }
+        guard !persistenceBlocked, let index = library.areas.firstIndex(where: { $0.id == selectedAreaID }) else {
+            areaStatus = "Area update unavailable; check library recovery status."
+            return false
+        }
+        guard camera.pointsPerTile == selectedAreaCamera.pointsPerTile else {
+            areaStatus = "Updating an area keeps its desktop tile scale. Nothing changed."
+            return false
+        }
+        if selectedAreaID == library.activeAreaID {
+            guard let screen = screenProviding(),
+                  let mapper = try? CoordinateMapper(canvasFrame: screen.frame, camera: camera),
+                  mapper.tile(atScreen: screen.frame.origin) != nil,
+                  mapper.tile(atScreen: CGPoint(x: screen.frame.maxX, y: screen.frame.maxY)) != nil,
+                  !mapper.visibleChunks(on: screen, viewport: CGRect(origin: .zero, size: screen.frame.size)).isEmpty else {
+                areaStatus = "The prepared desktop view or display is unavailable. Previous view preserved."
+                return false
+            }
+        }
+        var next = library
+        next.areas[index].camera = camera
+        do { try next.validate() }
+        catch { areaStatus = "Invalid area view: \(error.localizedDescription) Nothing changed."; return false }
+        guard autosaver?.commit(next, operation: "Area update") ?? true else {
+            areaStatus = "Could not save area update. Previous view preserved; check save status and retry Update Current Area."
+            return false
+        }
+        library = next
+        if selectedAreaID == library.activeAreaID { desktopCamera = camera }
+        areaStatus = selectedAreaID == library.activeAreaID
+            ? "Area updated. This saved view is prepared for the next Start Desktop."
+            : "Area updated in place. Desktop assignment is unchanged."
         return true
     }
 

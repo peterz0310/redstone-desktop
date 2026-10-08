@@ -80,6 +80,14 @@ final class EditorSession: ObservableObject {
     }
 
     @discardableResult
+    func updateArea(_ appState: AppState) -> Bool {
+        guard !isPreviewing(appState) else { status = "Create or cancel the preview before updating an area."; return false }
+        let result = appState.updateSelectedArea(camera: proposedDesktopCamera(appState))
+        status = appState.areaStatus
+        return result
+    }
+
+    @discardableResult
     func activateArea(_ appState: AppState) -> Bool {
         guard !isPreviewing(appState) else { status = "Create or cancel the preview before activating an area."; return false }
         let result = appState.activateSelectedArea()

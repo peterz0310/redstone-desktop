@@ -12,11 +12,14 @@ struct LibrarySheetView: View {
     private let areaID: UUID
     private let originalName: String
 
-    init(kind: LibrarySheet, appState: AppState, editor: EditorSession) {
+    init(kind: LibrarySheet, appState: AppState, editor: EditorSession, targetID: UUID? = nil) {
         self.kind = kind; self.appState = appState; self.editor = editor
-        worldID = appState.selectedWorldID; areaID = appState.selectedAreaID
         let isWorld = kind == .renameWorld || kind == .deleteWorld
-        originalName = isWorld ? appState.selectedDocument.name : appState.selectedArea.name
+        let requestedWorldID = isWorld ? targetID ?? appState.selectedWorldID : appState.selectedWorldID
+        let requestedAreaID = !isWorld ? targetID ?? appState.selectedAreaID : appState.selectedAreaID
+        let label = isWorld ? appState.library.world(id: requestedWorldID)?.name ?? "Missing world"
+            : appState.library.areas.first { $0.id == requestedAreaID }?.name ?? "Missing area"
+        worldID = requestedWorldID; areaID = requestedAreaID; originalName = label
         _name = State(initialValue: kind == .newWorld ? "New World" : kind == .saveArea ? "New Area" : originalName)
         _seed = State(initialValue: editor.seedText)
     }
@@ -84,6 +87,7 @@ struct LibrarySheetView: View {
 
     private func submit() {
         let succeeded: Bool
+        let previousArea = appState.selectedAreaID
         switch kind {
         case .newWorld:
             editor.seedText = seed; editor.newWorldName = name
@@ -91,14 +95,14 @@ struct LibrarySheetView: View {
             error = editor.status
         case .saveArea:
             editor.areaName = name; succeeded = editor.saveArea(appState); error = editor.status
-        case .renameWorld: succeeded = appState.renameSelectedWorld(name); error = appState.libraryStatus
-        case .renameArea: succeeded = appState.renameSelectedArea(name); error = appState.areaStatus
+        case .renameWorld: succeeded = appState.renameWorld(worldID, name: name); error = appState.libraryStatus
+        case .renameArea: succeeded = appState.renameArea(areaID, name: name); error = appState.areaStatus
         case .deleteWorld:
             succeeded = appState.deleteWorld(worldID); error = appState.libraryStatus
-            if succeeded { editor.syncSelectedWorld(appState) }
+            if succeeded && appState.selectedAreaID != previousArea { editor.syncSelectedWorld(appState) }
         case .deleteArea:
             succeeded = appState.deleteArea(areaID); error = appState.libraryStatus
-            if succeeded { editor.syncSelectedWorld(appState) }
+            if succeeded && appState.selectedAreaID != previousArea { editor.syncSelectedWorld(appState) }
         }
         if succeeded { dismiss() }
     }

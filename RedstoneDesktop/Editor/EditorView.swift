@@ -5,7 +5,7 @@ struct EditorView: View {
     @StateObject private var editor = EditorSession()
     @Environment(\.openWindow) private var openWindow
 
-    @State private var sheet: LibrarySheet?
+    @State private var sheet: LibrarySheetRequest?
 
     var body: some View {
         VStack(spacing: 0) {
@@ -32,7 +32,7 @@ struct EditorView: View {
                     HStack {
                         Text(editor.proposedDesktopCamera(appState) == appState.selectedAreaCamera
                             ? "Browsing saved area · Orange: proposed view · Blue: desktop"
-                            : "Unsaved view · Save Current View to bookmark it")
+                            : "Unsaved view · Save a new bookmark or Update Current Area")
                             .font(.caption).foregroundStyle(.secondary)
                         Spacer()
                         if editor.proposedDesktopCamera(appState) != appState.selectedAreaCamera {
@@ -67,7 +67,7 @@ struct EditorView: View {
             }
             Divider()
             HStack {
-                Text(appState.isEditorConfigurationLocked ? "Stop Desktop to edit this world." : editor.status)
+                Text(editor.status)
                     .lineLimit(2)
                 Spacer()
                 Text(appState.persistenceStatus).foregroundStyle(.secondary).lineLimit(2).textSelection(.enabled)
@@ -82,8 +82,8 @@ struct EditorView: View {
         }
         .frame(minWidth: 1060, minHeight: 760)
         .onAppear { editor.syncSelectedWorld(appState) }
-        .sheet(item: $sheet, onDismiss: { if editor.isPreviewing(appState) { editor.cancelPreview(appState) } }) { kind in
-            LibrarySheetView(kind: kind, appState: appState, editor: editor)
+        .sheet(item: $sheet, onDismiss: { if editor.isPreviewing(appState) { editor.cancelPreview(appState) } }) { request in
+            LibrarySheetView(kind: request.kind, appState: appState, editor: editor, targetID: request.targetID)
         }
     }
 

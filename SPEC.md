@@ -1453,7 +1453,8 @@ Editing: world / area        Desktop: world / area     Start/Stop | Advanced
 Worlds sidebar              World canvas              Build / Inspector
 + opens New World sheet     Pan / Zoom / Show Desktop
                             Areas in selected world: preview cards
-                            Save Current View… / Manage Area / Activate
+                            Save Current View… / Update Current Area / Activate
+Right-click world/area cards for Rename / Delete
 ```
 
 Editor must support world creation/list/rename, area save/list/rename, pan, zoom, selection, placement/erase, component rotation, repeater delay, shared placement validation, viewport outlines and later Finder ghosts. World/area names must be nonempty after trimming; UUIDs identify records even when names coincide. Show each world's seed, its saved areas and the active desktop badge so the selected editor world cannot be mistaken for the live one. Slice 19C adds an explicit worlds sidebar, selected-world area previews below the canvas, creation/rename/save sheets and confirmed deletion. Circuit duplication, search and editor simulation remain deferred.
@@ -1461,7 +1462,7 @@ Editor must support world creation/list/rename, area save/list/rename, pan, zoom
 ## 25.1 Browsing, saved areas and activation
 
 - Selecting a world or saved area changes only editor selection and temporary browsing camera. Selecting a world starts at its first saved area (Home for a new world); every world must retain at least one area. Selecting an area browses to its saved origin; editor zoom remains independent of desktop points-per-tile.
-- **Save Area…** names and saves a new bookmark in the selected world using the proposed lower-left origin and desktop tile scale. Saving does not activate or replace the existing active bookmark. Area cameras are fixed for this first version; save another area to bookmark a different view. Renaming changes only its label.
+- **Save Area…** names and saves a new bookmark in the selected world using the proposed lower-left origin and desktop tile scale. Saving does not activate or replace the existing active bookmark. **Update Current Area** replaces only the selected bookmark's camera, keeping its UUID/name/world and components. Save Current View still creates a separate bookmark. Renaming changes only its label.
 - Each newly created world receives a default **Home** area at origin (0, 0), 64 logical points per tile. The migrated world's first area uses its existing saved camera, not this default.
 - **Activate on Desktop** targets the selected saved area, using its saved camera, not an unsaved pan/zoom draft. If browsing has moved away, label the saved target clearly and offer Save Area. A seed preview must be created as a world before it can be edited, saved as an area or activated.
 - Orange shows the proposed area in the selected world. Blue shows the active desktop viewport only when that viewport belongs to the selected world; an active area in another world is identified in text, never projected into the wrong map. All outlines use CoordinateMapper and the current display's logical dimensions; an area stores camera, not a frozen display size.
@@ -1480,6 +1481,10 @@ Remove the prototype's apply-new-seed-to-existing-circuit path when Slice 19A la
 ## 25.3 Library navigation and cleanup (Slice 19C)
 
 Make the hierarchy visible: worlds in a sidebar; only the selected world's areas in a horizontal preview shelf below the canvas. World creation is a secondary New World sheet with name/seed/Preview/Random; normal editing has no persistent seed/creation/rename fields. Save Area and rename use focused sheets. Keep one compact desktop status/run control and a separately labeled saved-area activation action. Clearly distinguish browsing from the active desktop. Put debug metrics, Finder Diagnostics and desktop event details behind Advanced/Window menus, retaining permission/error recovery. Retire the developer placement window from app navigation; preserve fixtures needed by migration and automated tests, and never erase migrated user/demo circuits as cleanup.
+
+World and area cards expose Rename/Delete through right-click context menus; remove Manage World and the area dropdown. Context-menu actions capture the clicked record UUID and do not select/pan/activate it. Sheets and domain rename/deletion methods must use that captured ID even if editor selection changes. After deletion, reset the editor camera only if its selected area was removed.
+
+Update Current Area saves the proposed lower-left origin at that area's existing desktop scale into the same record, after complete-library validation and successful synchronous save. It never creates an area or moves circuit components. Failed/load-blocked updates preserve the previous bookmark/prepared desktop camera and are never queued for implicit retry. An inactive bookmark may be updated while the desktop runs another area, including another area of the same world. Refuse updating the active bookmark while running; stop the desktop first. When stopped, preflight the available display/mapper before updating the already-assigned bookmark; success also updates its prepared desktop camera for the next explicit Start Desktop/restart, without enabling or dispatching an action. Updating another bookmark never assigns it to the desktop. Preview candidates cannot update saved areas. Report success/failure in editor status; keep activation labels clear.
 
 Previews are bounded, disposable schematic terrain/circuit images, not persisted assets or simulations. Use CoordinateMapper for their camera projection; regenerate only on world configuration, saved camera or display-size changes, not transient power ticks. No Finder reads/paths or actions in previews. Areas preview their saved viewport; sidebar worlds preview their first area.
 
@@ -2407,13 +2412,19 @@ Owner-requested usability detour before Finder ghosts; preserve Slice 19B runtim
 - [x] Remove developer placement window/navigation and demo-specific desktop diagnostic labels; retain test/migration fixtures and advanced recovery diagnostics.
 - [x] Add deletion/preview/navigation regression tests, build app, run full suite and update README.
 
+- [x] Update Current Area in place with save-failure/live-active guards and durable camera tests.
+- [x] Right-click world/area rename/delete with captured target IDs; remove management dropdowns and preserve browsing for unselected targets.
+
 ### Manual acceptance
 
 - [ ] MANUAL: sidebar worlds and area previews make browsing versus desktop activation clear; create/save/rename sheets work without copying builds.
 - [ ] MANUAL: delete a disposable inactive world and an extra bookmark; builds survive bookmark deletion, active/final records stay protected, and deletion survives reopen.
 - [ ] MANUAL: editing, desktop activation, Finder opening and Advanced diagnostic recovery still work after rearrangement.
 
-**Status: implemented; owner Mac checks pending.** Debug build and all 213 tests pass, plus Foundation-only type-check. The owner said “I think it works” for 19B and requested usability cleanup. Record this as tentative feedback; its four specific MANUAL checks remain pending rather than inferring all passed. Slice 20 remains untouched.
+- [ ] MANUAL: Update Current Area keeps one bookmark/name and components, restores its new camera after reselection/restart, and respects running-active versus inactive behavior.
+- [ ] MANUAL: right-click rename/delete targets the clicked world/area, including unselected cards, without moving browsing; confirmation and deletion protections remain.
+
+**Status: implemented; owner Mac checks pending.** Debug build and all 220 tests pass, plus Foundation-only type-check. The owner said “I think it works” for 19B and requested usability cleanup. Record this as tentative feedback; its four specific MANUAL checks remain pending rather than inferring all passed. Slice 20 remains untouched.
 
 ---
 
@@ -3482,3 +3493,13 @@ Previews sample a fixed 48×30 grid, use CoordinateMapper for saved viewport/wor
 Evidence: Debug build and all 213 tests pass; nine new cleanup tests cover pure guards/unknown IDs, bookmark-only removal/build preservation/restart, inactive world deletion without live restart, failed proposed deletion and failed pending-save retry, unselected deletion/stopped-active guards, damaged-store preservation, bounded aspect/camera/component previews, and native editor/sheet hosting. Bootstrap now hosts the actual editor; the obsolete developer-form hosting test was removed along with its view, while placement/runtime regression tests remain. Native hosted layout/preview capture was inspected in light appearance; NSView bitmap capture omits the SpriteKit GPU canvas and does not establish physical Finder/desktop behavior. Pure domain/persistence type-check and diff checks pass; owner save hashes stayed unchanged during final automated runs.
 
 Consequences: all 19C implementation tasks complete; its three manual checks and 19B's specific runtime checks remain pending owner confirmation. README describes current controls, disposable deletion checks and recovery. No Finder ghosts, resource packs, advanced circuits, private API or backend added.
+
+
+## 2026-10-07 — Slice 19C follow-up: update bookmarks and contextual management
+
+Context: the owner says Save Current View is useful, requests updating the current bookmark without creating another, and prefers right-click Rename/Delete on world and area cards. They report the layout otherwise “looks great” and want these changes before resuming slices.
+
+Decision: extend 19C with explicit Update Current Area and captured-ID context menus as defined in Section 25.3. Supersede the fixed-camera-only restriction. Same-world circuits remain shared; no implicit activation or component movement. A running active bookmark is protected from camera replacement; stopping allows its prepared camera to update. Inactive bookmarks remain independently editable. Record visual approval without inferring deletion/recovery/runtime checks passed. Do not start Slice 20 in this turn.
+
+
+Validation of the 19C follow-up: final Debug build and all 220 tests pass, plus pure World/Circuit/Persistence type-check and diff checks. Seven AreaUpdateTests cover in-place camera replacement/ID/name/count/world/circuit preservation, persisted inactive cameras, stopped-assigned camera preparation/restart/explicit start, held live circuit preservation while updating another bookmark of the same world, running-active refusal, failed proposed update and pending-config flush retry, invalid camera/scale/preview refusal, captured-ID rename without changing selection/camera and active-world rename locks, unavailable-display and damaged-library write preservation. The initial sheet initializer referenced a stored ID inside a closure before State initialization; local target IDs now avoid that Swift initialization-order error. No macOS API contradiction is inferred. Context sheets capture UUIDs; successful deletion resets the editor only when its selected area changes. Native hosted layout capture was inspected; physical context menus remain owner checks. Save Current View remains the create-new-bookmark action, and Update Current Area retains the existing desktop tile scale. No schema, generation, Finder adapter or simulator change. Follow-up implementation tasks are checked, their two MANUAL items remain pending; prior “looks great” records visual approval only, not unreported runtime/deletion checks.
