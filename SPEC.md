@@ -23,7 +23,7 @@ The intended workflow is:
 
 The project is an experiment first and a polished application second.
 
-Current implementation: Slices 0–19A have owner-confirmed acceptance. **Slices 19B–20 are implemented.** The 19C bookmark/context-menu follow-up is owner-accepted; earlier specific 19B/19C runtime/deletion checks and Slice 20 Mac validation remain pending. The owner requested 19C usability cleanup after tentative 19B feedback. Worlds now have a sidebar; area previews sit below the canvas; creation/rename/save/deletion use focused sheets. Atomic deletion protects active/final records and preserves configuration on failure. Library, fixed-seed world and explicit saved-area activation contracts remain intact. Slice 20 adds explicitly enabled Finder projections and Output snapping in the editor; display-change resilience is next in **Slice 21**. Historical entries record earlier behavior; Sections 3.8, 7.1, 25 and 29 define the current contract.
+Current implementation: Slices 0–19A have owner-confirmed acceptance. **Slices 19B–21 are implemented.** The 19C bookmark/context-menu follow-up is owner-accepted; earlier specific 19B/19C runtime/deletion checks and Slices 20–21 Mac validation remain pending. The owner requested 19C usability cleanup after tentative 19B feedback. Worlds now have a sidebar; area previews sit below the canvas; creation/rename/save/deletion use focused sheets. Atomic deletion protects active/final records and preserves configuration on failure. Library, fixed-seed world and explicit saved-area activation contracts remain intact. Slice 20 adds explicitly enabled Finder projections and Output snapping in the editor; Slice 21 adds primary-display change handling with preserved lower-left camera anchoring. Finder icon-size handling is next in **Slice 22**. Historical entries record earlier behavior; Sections 3.8, 7.1, 25 and 29 define the current contract.
 
 The most important early question is not whether attractive terrain or redstone can be made. Those are comparatively straightforward. The first major feasibility gate is:
 
@@ -324,6 +324,16 @@ That is desirable because Finder should still receive clicks.
 Do not make global keyboard shortcuts a V1 requirement. Key monitoring may involve Accessibility permissions.
 
 ## 5.4 Display changes
+
+Slice 21 uses the primary display (`NSScreen.screens.first`), not focus-dependent `NSScreen.main`. Re-read descriptors on the public [screen-parameter notification](https://developer.apple.com/documentation/appkit/nsapplication/didchangescreenparametersnotification); Apple documents the [primary versus focused screen distinction](https://developer.apple.com/documentation/AppKit/NSScreen/screens). V1 still renders one display; choosing arbitrary displays/continuous multi-monitor worlds remains later work.
+
+Anchor policy: preserve the saved CameraState lower-left world origin and logical pointsPerTile exactly on resolution, scaling, origin, primary-display replacement or mirroring changes. Only the visible world extent changes; backing scale affects rendering density, not tile math. Saved area records and editor pan/zoom are unchanged. Finder may rearrange icons, so an icon is not guaranteed to stay on its previous tile.
+
+Handle changed target/reference snapshots immediately: invalidate old Finder results and input/output session work, clear stale occupancy/highlights, recreate the click-through renderer and pointer/click monitors, and rebind the tick scheduler while retaining the current simulator (including pulse/repeater/lever state). Identical geometry notifications are no-ops. Simulation continues during settling, but input/output actions are suppressed and rising edges during that interval are dropped, never replayed. An existing held output is not retriggered by rebuilding the renderer.
+
+Coalesce Finder refreshes for 500 ms after the last change. Preserve the shared read gate, discard earlier in-flight diagnostic/poll/input/output results using a geometry generation, and wait for old noncancelable reads to release it. Refresh only if Desktop is running or editor tracking is explicitly enabled, the display/reference exist, and access was not denied. Resume opted-in serialized polling after a successful refresh; read failures remain unavailable with diagnostics/retry. Display notifications alone never prompt/query Finder at disabled startup.
+
+If no usable display is available, stop the renderer/input/ticks and leave Desktop disabled without changing saves. When a display returns, editor tracking may refresh if enabled, but Desktop requires explicit Start. Ordinary primary-display replacement falls back to the newly reported primary display with the same camera. Full shutdown cancels the delayed refresh/observer. Real resize/unplug/replug/layering/alignment remain owner checks.
 
 Observe `NSApplication.didChangeScreenParametersNotification`.
 
@@ -1494,7 +1504,7 @@ Deletion is explicit and confirmed in UI, with stable target IDs enforced in dom
 
 View → Show Finder Items is an explicit, session-only opt-in, initially off. It enables the existing serialized 2 Hz DesktopItemTracker while the editor is open, including when Desktop is stopped. Startup still performs no Finder query/action. The editor and desktop share one tracker/read slot; stopping Desktop retains opted-in editor tracking, hiding/closing the editor stops tracking only when the running desktop does not need it, and full shutdown stops both. Denied/error reads pause automatic polling; use Advanced → Finder Diagnostics to retry, then toggle Show Finder Items off/on to resume. No second Finder adapter is introduced.
 
-Publish cached raw Finder read snapshots even when the desktop renderer is absent. Build a pure projection tagged with the selected world UUID and proposed desktop camera: convert Finder centers through CoordinateMapper using the current primary-display reference, filter to the physical target display, then convert projected world centers through the editor mapper. Backing scale does not multiply logical coordinates. Projection is ephemeral and never persists Finder paths/positions. Changing world, proposed origin, editor zoom or cached Finder data refreshes markers. Seed previews hide markers and disable snapping. Display-change observation remains Slice 21.
+Publish cached raw Finder read snapshots even when the desktop renderer is absent. Build a pure projection tagged with the selected world UUID and proposed desktop camera: convert Finder centers through CoordinateMapper using the current primary-display reference, filter to the physical target display, then convert projected world centers through the editor mapper. Backing scale does not multiply logical coordinates. Projection is ephemeral and never persists Finder paths/positions. Changing world, proposed origin, editor zoom or cached Finder data refreshes markers. Seed previews hide markers and disable snapping. Display-change observation and settled refresh are implemented in Slice 21.
 
 Label markers and inspector/output occupancy as a projection of the selected world's proposed view, including inactive worlds and unsaved camera changes; never copy the live world's occupancy into another world. Actual desktop occupancy/action dispatch remains tied to its assigned camera/world. Render only centers inside the editor canvas, with names and center rings; red rings mean multiple items in one tile. Output badges show EMPTY/ITEM/MANY/N/A using projected occupancy. No editor interaction reads Finder directly, simulates an inactive circuit or launches a file.
 
@@ -2457,13 +2467,15 @@ Owner-requested usability detour before Finder ghosts; preserve Slice 19B runtim
 
 ## Slice 21 — Display-change resilience
 
-- [ ] observe screen-parameter changes
-- [ ] rebuild screen descriptors
-- [ ] resize/recreate renderer windows
-- [ ] recalculate mapper
-- [ ] refresh Finder after settle delay
-- [ ] document camera-anchor policy
-- [ ] unit tests with fake screen changes
+- [x] observe screen-parameter changes
+- [x] rebuild screen descriptors
+- [x] resize/recreate renderer windows
+- [x] recalculate mapper
+- [x] refresh Finder after settle delay
+- [x] document camera-anchor policy
+- [x] unit tests with fake screen changes
+
+**Status: implemented; owner Mac validation pending.** Debug build and all 244 tests pass, including 12 new display-change checks. Section 5.4 documents primary-display/lower-left anchor behavior; README has a combined Slice 20/21 walkthrough. The owner explicitly authorized this slice while away; Slice 20 manual checks remain pending rather than being inferred complete.
 
 ### Manual acceptance
 
@@ -3526,3 +3538,14 @@ Decision: implement Finder ghosts and Output snapping under Section 25.4. Use on
 Validation: Debug application build and all 232 automated tests pass (12 new Finder projection tests; prior editor occupancy test now checks that hidden projections do not borrow live occupancy). Pure World/Circuit/Persistence and new projection type-check without AppKit/SpriteKit; diff checks pass. Coverage includes fractional/negative display/world origins and logical Retina geometry, center mapping/world identity, off-display exclusion, ambiguity/unavailable states, near-center/tie snapping, tracker ownership on stop/shutdown, disabled startup, stopped-desktop movement publication, denied-read pause, inactive/proposed-camera isolation, preview/terrain/live editing guards, fresh-click versus stale hover, projected output badges versus actual desktop occupancy, bounded marker replacement and no editor actions. Two initial test expectations were corrected: equal-distance fixtures now lie in different tiles, and a post-movement ordinary click correctly places on its valid unsnapped tile while preserving the existing Output. These were fixture errors, not macOS behavior contradictions.
 
 Real icon alignment/movement, menu interaction and the projection-versus-assigned-desktop walkthrough require the owner's Mac report; all three Slice 20 MANUAL checks remain unchecked. Slice 21 is untouched.
+
+
+## 2026-10-07 — Slice 21 display-change resilience
+
+Context: the owner is away and explicitly requested the next slice before manually validating Slice 20, with a combined walkthrough afterward. This authorizes proceeding to Slice 21 without treating Slice 20 as owner-accepted; both slices' MANUAL checks remain pending.
+
+Decision: adopt Section 5.4's primary-display/lower-left anchor policy. Use the public AppKit notification through an injectable DisplayChangeMonitor. Re-read target and primary-reference descriptors, publish geometry to the editor, recreate renderer/input on actual change, preserve simulator/configuration, and invalidate all old-session I/O. FinderDiagnosticsModel rejects reads begun under an older geometry generation, including noncancelable manual reads. A generation-scoped delayed refresh coalesces notifications and waits for the shared read slot. No-display/invalid geometry stops safely without an implicit restart; stopped startup remains read-free. Display handling uses no private API, backend or asset pack.
+
+Validation: final Debug application build and all 244 automated tests pass. Twelve DisplayChangeTests cover the public notification adapter lifecycle, negative-origin/logical Retina resize geometry, renderer/window/input recreation and stale callbacks, camera/library/pulse preservation, identical notifications, coalesced refresh and backing-scale-only changes, unavailable/invalid display stop and explicit restart, read-free disabled startup versus opted-in stopped editor, canceled input/output completions, generation rejection of noncancelable diagnostic reads, stop-during-settle tracker ownership, denied-access/error preservation without re-prompting, and full-shutdown cancellation. The additional held-output test initially expected an unrelated exact power strength; it now asserts the property under test (Output remains powered without reopening), while circuit-strength coverage remains in simulator tests. This is a test expectation correction, not a macOS API contradiction. Pure domain/Finder projection type-check and diff checks pass.
+
+Physical resolution/scaling, unplug/replug, primary fallback, click-through window layering and real Finder position settling require the owner's Mac checks; no real display settings or connections were changed during automation. README provides the combined Slice 20/21 walkthrough. Both slices' MANUAL checks remain unchecked; Slice 22 is untouched.

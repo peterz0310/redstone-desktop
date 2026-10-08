@@ -4,7 +4,7 @@ An experimental native macOS app exploring a block world beneath real Finder des
 
 ## Current build and next steps
 
-**Implemented: Slices 0–20.** Slice 20 adds Finder center markers, proposed-camera occupancy and Output snapping in the editor. Debug build and all **232 automated tests** pass; the pure domain and Finder projection also type-check without AppKit/SpriteKit. The owner accepted the 19C Update Current Area/context-menu follow-up. Earlier detailed 19B/19C runtime/deletion checks and Slice 20's Mac walkthrough remain pending.
+**Implemented: Slices 0–21.** Slice 20 adds Finder center markers, proposed-camera occupancy and Output snapping in the editor. Slice 21 rebuilds desktop rendering/input after display changes, retains the saved lower-left origin/tile size and current circuit state, and refreshes Finder after settling. Debug build and all **244 automated tests** pass; the pure domain and Finder projection also type-check without AppKit/SpriteKit. The owner accepted the 19C Update Current Area/context-menu follow-up. Earlier detailed 19B/19C runtime/deletion checks and the combined Slice 20/21 Mac walkthrough remain pending.
 
 The editor now shows **Worlds** in a left sidebar and **Areas in [world]** as a preview shelf below the canvas. Build tools and the inspector sit on the right. The top shows the world/area being edited, the separate desktop assignment, **Start/Stop Desktop** and **Advanced**. New World, Save Current View and rename use focused sheets; seed/creation fields are no longer permanently visible.
 
@@ -14,7 +14,7 @@ Configuration still saves to `~/Library/Application Support/RedstoneDesktop/libr
 
 Finder Diagnostics remains useful for permission/alignment problems, and Desktop Details for input rejection/action results. They moved to **Advanced**. The obsolete Developer Placement window and fixed-demo diagnostic rows are removed; automated tests and migration fixtures remain, and no existing saved circuits were cleared. Shelf previews remain bounded schematic terrain/circuit snapshots. Finder markers now appear separately in the main editor canvas when enabled.
 
-**Next: validate the Slice 20 Finder projection walkthrough below; display-change resilience is Slice 21.**
+**Next: validate the combined Slice 20/21 walkthrough at the end of this document. Finder icon-size handling is Slice 22.**
 
 ## Adopted plan: worlds and saved areas
 
@@ -555,7 +555,7 @@ This revision builds and passes **213 automated tests**. Nine new cleanup tests 
 5. **Run the existing circuit.** Activate your original circuit area, Start Desktop, then minimize/move the editor to inspect it. Empty output should power without opening anything; a harmless folder on a visible output should open as before. Browse/edit an inactive world while it runs and confirm the desktop stays unchanged. Switch areas before a pending pulse reaches its output and verify it is canceled, then quit/reopen to confirm the active area restores stopped. Saved ON levers can cause a new visible output activation on start/different-view switching; identical world/camera activation does not restart a held circuit.
 6. **Check recovery controls.** Advanced → Finder Diagnostics should still show permission/items/polling/errors and allow a manual refresh. Advanced → Desktop Details should show the assigned world/area, event rejection metadata, camera/pointer and last action. The Developer Placement window should be absent. Performance counters are collapsed under Technical Details instead of filling the normal footer. Report any clipping, missing previews or confusion in the new layout.
 
-The three original Slice 19C MANUAL checkboxes remain pending until your specific Mac report; the Update Current Area/context-menu follow-up is accepted. The more specific 19B runtime checks also remain pending; this cleanup does not infer they passed. Resource packs, advanced redstone and display-change handling remain later slices.
+The three original Slice 19C MANUAL checkboxes remain pending until your specific Mac report; the Update Current Area/context-menu follow-up is accepted. The more specific 19B runtime checks also remain pending; this cleanup does not infer they passed. Resource packs and advanced redstone remain later slices; Slice 21 now implements display-change handling.
 
 
 ### Slice 19C follow-up — Update Current Area and right-click menus
@@ -585,4 +585,25 @@ The management dropdowns are gone. Update failure keeps the previous saved view 
 4. Choose **Output**, then hover near a circle. The placement outline should snap to the tile containing its center even just across a tile edge (within 24 editor points). Click a green target: Output should appear on that tile, and nothing should open. Red targets remain blocked by terrain, decoration or an existing component. Move the folder again: its circle moves, but your placed Output stays on its original world tile. Use Erase if this was only a test.
 5. Browse another world or pan to an unsaved view. The named projection should follow the selected world/proposed origin; the **Desktop:** assignment and running circuit must stay unchanged. Seed previews hide markers. Start/Stop Desktop should leave opted-in editor markers tracking; hiding them with View stops editor-only polling. Closing/reopening the app resets Show Finder Items to off. To try the real output, save/update the proposed view, explicitly activate that saved area, then Start Desktop and trigger its circuit normally.
 
-Please report whether icon movement/alignment and snapping work on your Mac, including that browsing and placing Outputs leave the desktop assignment and Finder files alone. The three Slice 20 MANUAL checkboxes remain pending until that report. This slice does not yet handle live display reconfiguration (Slice 21).
+Please report whether icon movement/alignment and snapping work on your Mac, including that browsing and placing Outputs leave the desktop assignment and Finder files alone. The three Slice 20 MANUAL checkboxes remain pending until that report. Slice 21 now handles live display reconfiguration; use the combined walkthrough below.
+
+
+## Combined Mac validation — Slices 20 and 21
+
+The owner authorized Slice 21 while away, so neither slice's manual checks are marked accepted yet. Final Debug build and **244 tests pass** (12 added display checks). The tests use fake displays, Finder providers, input and file openers; real display switching/Finder alignment still needs the following check.
+
+1. **Launch the latest app.** Quit the old app with **⌘Q**. Open Terminal and run:
+
+   ```sh
+   open /Users/peterzielinski/git/redstone-desktop/build/Build/Products/Debug/RedstoneDesktop.app
+   ```
+
+   Desktop should start stopped and **Show Finder Items** should be off. Your existing worlds/areas/builds should remain. No Finder query is initiated until you explicitly start Desktop, enable editor tracking or request a diagnostic read.
+2. **Track a real icon (Slice 20).** Leave Desktop stopped. Below the editor canvas, choose **View → Show Finder Items**. Allow Finder Automation if asked. Move a harmless folder on the **real Finder desktop**, moving the editor aside if needed. Its named teal marker should update automatically. The editor is scaled and may show another world/proposed camera, so the marker is a world projection rather than physical pixel-for-pixel placement. Red markers mean several icon centers share a tile.
+3. **Check snapping (Slice 20).** Select **Output** and hover near a marker: the highlighted tile should be the tile under its center, even if the pointer is just across an edge (within 24 editor points). Click only a green outline; it should place an Output and open nothing. Red targets remain blocked by terrain/decoration/components. Move the folder: its marker moves but the placed Output stays. Erase the test Output if you do not want it saved. Browse another world or pan and confirm **Desktop:** assignment/circuit stays unchanged. Seed preview should hide markers.
+4. **Prepare the actual desktop (Slice 21).** Choose **Show Desktop Area**, then **Start Desktop**. Use a harmless folder and keep it away from buttons/levers while checking input. Move/minimize the editor to see the desktop renderer: it should remain behind Finder icons and let Finder receive normal clicks/drags. Existing circuits should still work. An already-held powered output must not reopen merely because display geometry is rebuilt.
+5. **Change scale/resolution (Slice 21).** Keep the app running. Open **System Settings → Displays**, note your current setting, then choose another scaling/resolution option. Wait about a second after it settles. The world should fill the primary display without a leftover old-size window, remain beneath icons and accept pointer/click mapping at the new positions. Finder markers/output occupancy should use the icons' current centers; refresh is automatic. Restore your original setting and repeat the alignment check. Finder may rearrange icons: an icon can land on a different tile. The saved world origin/tile size stays fixed while the visible extent changes.
+6. **Unplug/replug if you have an external display (Slice 21).** Disconnect and reconnect it with the app running. The app should remain responsive and rebuild on the currently reported primary display. If you change which display is primary, the one desktop world should follow that primary; moving only the editor should not move it. If macOS temporarily exposes no usable display, Desktop stops and stays stopped when one returns; explicitly choose **Start Desktop**. This slice still renders only one display. If you have no external display, report this check as unavailable rather than passed.
+7. **Check stopped-editor refresh/recovery.** Stop Desktop but leave **Show Finder Items** on; change scaling once more and verify editor markers return after settling. Turn Show Finder Items off to stop editor-only polling. If Automation is denied, **Advanced → Finder Diagnostics → Read Finder Items** can retry after System Settings → Privacy & Security → Automation allows access; toggle Show Finder Items off/on to resume. A denied permission should remain visible and not prompt repeatedly on display changes. Finally quit/reopen: stored areas/components remain, while Desktop and editor tracking start off.
+
+Please report separately whether **Slice 20 icon movement/snapping** and **Slice 21 scaling/alignment/unplug-replug** pass. Both sets of MANUAL checkboxes remain pending until your report. The lower-left anchor and public notification policy are documented in SPEC.md Section 5.4. No Finder icon-size synchronization, continuous multi-monitor map or resource-pack work is included.

@@ -54,7 +54,7 @@ struct EditorView: View {
                         }
                     }.padding(8)
                     if appState.editorFinderItemsVisible {
-                        Text(editor.isPreviewing(appState) ? "Finder projection hidden during seed preview" : "Finder projection: \(appState.selectedDocument.name) · proposed view · desktop assignment unchanged")
+                        Text(appState.isDisplaySettling ? "Display changed · waiting for fresh Finder positions…" : editor.isPreviewing(appState) ? "Finder projection hidden during seed preview" : "Finder projection: \(appState.selectedDocument.name) · proposed view · desktop assignment unchanged")
                             .font(.caption).foregroundStyle(.secondary).padding(.horizontal, 8).padding(.bottom, 6)
                     }
                     Divider()
@@ -167,7 +167,7 @@ struct EditorView: View {
                 DisclosureGroup("Technical Details") {
                     Text(appState.developerPlacementStatus).font(.caption).textSelection(.enabled)
                     Text("Terrain: \(editor.terrainMetrics.retainedChunks) cached chunks · \(editor.terrainMetrics.chunkNodes) nodes · \(editor.terrainMetrics.generatedChunks) generated · \(editor.terrainMetrics.textureBuilds) textures").font(.caption)
-                    Text("Slice 20 · Finder projections").font(.caption)
+                    Text("Slice 21 · Display resilience").font(.caption)
                 }
                 Divider()
                 Text("To run a circuit, enable Desktop World and press its input on the real desktop. Editor clicks select/place; they do not open files.")

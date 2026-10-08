@@ -54,7 +54,7 @@ final class AppState: ObservableObject {
     private(set) var activationTask: Task<Void, Never>?
     private let desktopInteractionAssessment: (MouseEventIdentity) -> DesktopInteractionAssessment
     private var desktopSession = UUID()
-    private var desktopController: DesktopWindowController?
+    private(set) var desktopController: DesktopWindowController?
     private var pointerMonitor: PointerMonitor?
     private var clickMonitor: DesktopClickMonitor?
     private var terminationObserver: AnyCancellable?
@@ -63,9 +63,16 @@ final class AppState: ObservableObject {
     private var finderItemsObserver: AnyCancellable?
     private var finderReferenceScreen: ScreenDescriptor?
     private let finderReferenceProviding: () -> ScreenDescriptor?
+    @Published private(set) var displayGeometry: DisplayGeometry?
+    @Published private(set) var isDisplaySettling = false
+    private var lastObservedGeometry: DisplayGeometry?
+    private var displayChangeMonitor: DisplayChangeMonitor?
+    private var displayRefreshGeneration = UUID()
+    private(set) var displayRefreshTask: Task<Void, Never>?
+    private let displaySettleDelay: Duration
 
     init(screenProviding: @escaping () -> ScreenDescriptor? = {
-        NSScreen.main.map { ScreenDescriptor(screen: $0) }
+        NSScreen.screens.first.map { ScreenDescriptor(screen: $0) }
     }, clickEventMonitoring: any GlobalMouseEventMonitoring = AppKitGlobalMouseEventMonitor(),
        finderDiagnostics: FinderDiagnosticsModel = FinderDiagnosticsModel(),
        desktopInteractionAssessment: @escaping (MouseEventIdentity) -> DesktopInteractionAssessment = { DesktopInteractionGate.assess($0) },
@@ -74,6 +81,8 @@ final class AppState: ObservableObject {
        libraryStore: (any WorldLibraryStoring)? = nil,
        automaticallyRefreshFinder: Bool = false,
        autosaveDelay: Duration = .milliseconds(750),
+       displayNotificationCenter: NotificationCenter = .default,
+       displaySettleDelay: Duration = .milliseconds(500),
        finderReferenceProviding: @escaping () -> ScreenDescriptor? = {
            NSScreen.screens.first.map { ScreenDescriptor(screen: $0) }
        }) {
@@ -92,6 +101,7 @@ final class AppState: ObservableObject {
         self.tickScheduler = tickScheduler
         self.desktopInteractionAssessment = desktopInteractionAssessment
         openItemAction = OpenItemAction(opener: itemOpener)
+        self.displaySettleDelay = displaySettleDelay
         self.screenProviding = screenProviding
         self.clickEventMonitoring = clickEventMonitoring
         self.finderDiagnostics = finderDiagnostics
@@ -124,26 +134,32 @@ final class AppState: ObservableObject {
                 persistenceStatus = "Could not restore library: \(error.localizedDescription) Saved files preserved; autosave disabled. Repair or move library.json (or legacy world.json if no library exists) before reopening."
             }
         }
+        lastObservedGeometry = DisplayGeometry(target: screenProviding(), finderReference: finderReferenceProviding())
+        displayChangeMonitor = DisplayChangeMonitor(center: displayNotificationCenter) { [weak self] in self?.displayParametersDidChange() }
+        displayChangeMonitor?.start()
         terminationObserver = NotificationCenter.default.publisher(for: NSApplication.willTerminateNotification)
             .sink { [weak self] _ in
                 MainActor.assumeIsolated { self?.shutdown() }
             }
     }
 
-    var desktopScreen: ScreenDescriptor? { desktopController?.scene.screen ?? screenProviding() }
+    var desktopScreen: ScreenDescriptor? {
+        if let displayGeometry { return displayGeometry.target }
+        return desktopController?.scene.screen ?? screenProviding()
+    }
     func setEditorFinderItemsVisible(_ visible: Bool) {
         editorFinderItemsVisible = visible
-        if visible { startEditorFinderTrackingIfNeeded() }
+        if visible { displayChangeMonitor?.start(); startEditorFinderTrackingIfNeeded() }
         else if !isDesktopWorldEnabled || !automaticallyRefreshFinder { desktopItemTracker.stop() }
     }
 
     private func startEditorFinderTrackingIfNeeded() {
-        if editorFinderItemsVisible && finderDiagnostics.permission != .denied { desktopItemTracker.start() }
+        if editorFinderItemsVisible && !isDisplaySettling && finderDiagnostics.permission != .denied { desktopItemTracker.start() }
     }
 
     func editorFinderProjection(camera: CameraState, preview: Bool = false) -> EditorFinderProjection {
         EditorFinderProjection(worldID: selectedWorldID, camera: camera, snapshot: finderReadSnapshot,
-            screen: desktopScreen, reference: finderReferenceProviding(), enabled: editorFinderItemsVisible && !preview)
+            screen: desktopScreen, reference: displayGeometry == nil ? finderReferenceProviding() : displayGeometry?.finderReference, enabled: editorFinderItemsVisible && !preview && !isDisplaySettling)
     }
 
     @Published private(set) var areaStatus = "Save Area bookmarks the proposed view. Activate on Desktop uses the selected saved view."
@@ -443,6 +459,13 @@ final class AppState: ObservableObject {
 
     /// Used by both disable and the app's termination notification.
     func shutdown(preserveEditorTracking: Bool = false) {
+        if !preserveEditorTracking || !editorFinderItemsVisible {
+            displayRefreshTask?.cancel()
+            displayRefreshTask = nil
+            displayRefreshGeneration = UUID()
+            isDisplaySettling = false
+        }
+        if !preserveEditorTracking { displayChangeMonitor?.stop() }
         saveWorldNow()
         desktopSession = UUID()
         activationTask?.cancel()
@@ -474,6 +497,7 @@ final class AppState: ObservableObject {
     }
 
     func toggleDesktopWorld() {
+        displayChangeMonitor?.start()
         if isDesktopWorldEnabled {
             shutdown(preserveEditorTracking: true)
         } else {
@@ -482,40 +506,106 @@ final class AppState: ObservableObject {
                 return
             }
             do {
-                let mapper = try CoordinateMapper(canvasFrame: screen.frame, camera: desktopCamera)
-                let controller = DesktopWindowController(screen: screen, mapper: mapper)
-                let monitor = PointerMonitor(screen: screen, mapper: mapper) { [weak self, weak controller] snapshot in
-                    self?.pointer = snapshot
-                    controller?.scene.updateHighlight(snapshot.tile)
-                }
-                desktopController = controller
-                // Durable lever positions resume only after explicitly enabling the world.
                 simulator = CircuitSimulator(world: desktopWorld.circuit)
                 for lever in savedLevers { simulator.toggleLever(at: lever) }
-                controller.scene.updateWorld(desktopWorld, poweredTiles: simulator.poweredTiles)
-                finderReferenceScreen = finderReferenceProviding()
-                updateFinderState(finderDiagnostics.items, error: finderDiagnostics.error, hasRead: finderDiagnostics.hasRead)
-                pointerMonitor = monitor
-                let clicks = DesktopClickMonitor(screen: screen, mapper: mapper, eventMonitoring: clickEventMonitoring) { [weak self, weak controller] snapshot in
-                    guard let self else { return }
-                    self.lastClick = snapshot
-                    self.observedClickCount += 1
-                    controller?.scene.flashTile(snapshot.tile)
-                    self.handleCircuitClick(snapshot.tile, identity: snapshot.identity)
-                }
-                clickMonitor = clicks
-                controller.enable()
-                monitor.start()
+                try installDesktopRenderer(on: screen)
                 isDesktopWorldEnabled = true
-                if automaticallyRefreshFinder && finderDiagnostics.permission != .denied { desktopItemTracker.start() }
+                if automaticallyRefreshFinder && !isDisplaySettling && finderDiagnostics.permission != .denied { desktopItemTracker.start() }
                 startCircuitTimer()
                 lastActionResult = "Place a harmless Finder item on OUTPUT (7, 3), then click PRESS (2, 3)."
-                desktopStatus = clicks.start()
-                    ? "Desktop checker is enabled. Click the desktop to flash a tile."
-                    : "Desktop checker is enabled, but click observation could not start. Disable and re-enable to retry."
             } catch {
                 desktopStatus = "Display geometry cannot be mapped. Desktop checker remains disabled."
             }
+        }
+    }
+
+    private func installDesktopRenderer(on screen: ScreenDescriptor) throws {
+        let mapper = try CoordinateMapper(canvasFrame: screen.frame, camera: desktopCamera)
+        let controller = DesktopWindowController(screen: screen, mapper: mapper)
+        let monitor = PointerMonitor(screen: screen, mapper: mapper) { [weak self, weak controller] snapshot in
+            self?.pointer = snapshot
+            controller?.scene.updateHighlight(snapshot.tile)
+        }
+        desktopController = controller
+        controller.scene.updateWorld(desktopWorld, poweredTiles: simulator.poweredTiles, leverPositions: simulator.activeLevers)
+        finderReferenceScreen = finderReferenceProviding()
+        lastObservedGeometry = DisplayGeometry(target: screen, finderReference: finderReferenceScreen)
+        if displayGeometry != nil { displayGeometry = lastObservedGeometry }
+        updateFinderState(finderDiagnostics.items, error: finderDiagnostics.error, hasRead: finderDiagnostics.hasRead)
+        pointerMonitor = monitor
+        let clicks = DesktopClickMonitor(screen: screen, mapper: mapper, eventMonitoring: clickEventMonitoring) { [weak self, weak controller] snapshot in
+            guard let self else { return }
+            self.lastClick = snapshot
+            self.observedClickCount += 1
+            controller?.scene.flashTile(snapshot.tile)
+            self.handleCircuitClick(snapshot.tile, identity: snapshot.identity)
+        }
+        clickMonitor = clicks
+        controller.enable()
+        monitor.start()
+        desktopStatus = clicks.start()
+            ? "Desktop checker is enabled. Click the desktop to flash a tile."
+            : "Desktop checker is enabled, but click observation could not start. Disable and re-enable to retry."
+    }
+
+    /// Geometry changes preserve saved cameras/configuration and the current simulator.
+    func displayParametersDidChange() {
+        let next = DisplayGeometry(target: screenProviding(), finderReference: finderReferenceProviding())
+        guard next != lastObservedGeometry else { return }
+        lastObservedGeometry = next
+        displayGeometry = next
+        displayRefreshGeneration = UUID()
+        let generation = displayRefreshGeneration
+        displayRefreshTask?.cancel()
+        desktopSession = UUID()
+        activationTask?.cancel(); activationTask = nil
+        pendingOutputs = []
+        desktopItemTracker.stop()
+        isDisplaySettling = true
+        finderDiagnostics.invalidateDisplayPositions()
+        finderMappings = []
+        desktopOccupancy = .unavailable("Display changed; waiting for fresh Finder positions.")
+        pointerMonitor?.stop(); pointerMonitor = nil
+        clickMonitor?.stop(); clickMonitor = nil
+        pointer = nil; lastClick = nil
+        desktopController?.disable(); desktopController?.close(); desktopController = nil
+        tickScheduler.stop()
+        if isDesktopWorldEnabled {
+            do {
+                guard let screen = next.target else { throw CoordinateMapper.ValidationError.invalidCanvas }
+                let mapper = try CoordinateMapper(canvasFrame: screen.frame, camera: desktopCamera)
+                guard !mapper.visibleChunks(on: screen, viewport: CGRect(origin: .zero, size: screen.frame.size)).isEmpty else {
+                    throw CoordinateMapper.ValidationError.invalidCanvas
+                }
+                try installDesktopRenderer(on: screen)
+                desktopController?.scene.updateOccupancy(desktopOccupancy)
+                startCircuitTimer()
+            } catch {
+                isDesktopWorldEnabled = false
+                desktopStatus = "Display unavailable or invalid. Desktop stopped; Start Desktop after the display returns."
+            }
+        }
+        lastActionResult = "Display changed; old input/output requests canceled. Waiting for Finder to settle."
+        displayRefreshTask = Task { @MainActor [weak self] in
+            guard let self else { return }
+            defer { if self.displayRefreshGeneration == generation { self.displayRefreshTask = nil } }
+            do {
+                try await Task.sleep(for: self.displaySettleDelay)
+                // Keep the shared read slot occupied if an old provider ignores cancellation.
+                while self.finderDiagnostics.isReading {
+                    try await Task.sleep(for: .milliseconds(50))
+                }
+            } catch { return }
+            guard !Task.isCancelled, self.displayRefreshGeneration == generation else { return }
+            let needsFinder = (self.isDesktopWorldEnabled || self.editorFinderItemsVisible)
+                && next.target != nil && next.finderReference != nil && self.finderDiagnostics.permission != .denied
+            let success = needsFinder ? await self.finderDiagnostics.readItems() : false
+            guard !Task.isCancelled, self.displayRefreshGeneration == generation else { return }
+            self.isDisplaySettling = false
+            if success && ((self.isDesktopWorldEnabled && self.automaticallyRefreshFinder) || self.editorFinderItemsVisible) {
+                self.desktopItemTracker.start()
+            }
+            self.lastActionResult = success ? "Display refreshed. Finder targets use the new geometry." : "Display refreshed; Finder unavailable or tracking not enabled."
         }
     }
 
@@ -535,7 +625,7 @@ final class AppState: ObservableObject {
         if next != simulator { simulator = next }
         if changedPower { desktopController?.scene.updateWorld(desktopWorld, poweredTiles: next.poweredTiles) }
         for case let .outputActivated(coordinate) in events {
-            guard outputIsVisible(coordinate) else { continue }
+            guard !isDisplaySettling, outputIsVisible(coordinate) else { continue }
             desktopController?.scene.flashOutput(at: coordinate)
             // Bound pending I/O independently of simulation, rather than accumulating requests.
             if pendingOutputs.count < 32 { pendingOutputs.append(coordinate) }
@@ -551,7 +641,7 @@ final class AppState: ObservableObject {
     }
 
     private func drainOutputActions() {
-        guard isDesktopWorldEnabled, activationTask == nil, !finderDiagnostics.isReading,
+        guard isDesktopWorldEnabled, !isDisplaySettling, activationTask == nil, !finderDiagnostics.isReading,
               !pendingOutputs.isEmpty else { return }
         guard finderDiagnostics.permission == .allowed else {
             pendingOutputs = []
@@ -577,7 +667,7 @@ final class AppState: ObservableObject {
     }
 
     func handleCircuitClick(_ tile: WorldCoordinate, identity: MouseEventIdentity = MouseEventIdentity()) {
-        guard isDesktopWorldEnabled, desktopController != nil,
+        guard isDesktopWorldEnabled, !isDisplaySettling, desktopController != nil,
               let kind = desktopWorld.circuit.components[tile]?.kind,
               kind == .button || kind == .lever else { return }
         observedPressCount += 1
@@ -650,7 +740,7 @@ final class AppState: ObservableObject {
         if let error {
             snapshot = .unavailable(error)
         } else if !hasRead {
-            snapshot = .unavailable("Read Finder Items to resolve occupancy.")
+            snapshot = .unavailable(isDisplaySettling ? "Display changed; waiting for fresh Finder positions." : "Read Finder Items to resolve occupancy.")
         } else {
             snapshot = DesktopOccupancyResolver().resolve(items: items, mapper: controller.scene.mapper,
                 finderReference: reference, activeScreen: controller.scene.screen)
