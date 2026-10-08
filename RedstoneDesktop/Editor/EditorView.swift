@@ -23,6 +23,7 @@ struct EditorView: View {
                 Button(appState.isDesktopWorldEnabled ? "Stop Desktop" : "Start Desktop") { appState.toggleDesktopWorld() }
                     .disabled(appState.isDesktopBuildMode)
                 Menu {
+                    SettingsLink { Text("Settings…") }
                     Button("Appearance & Packs…") { openWindow(id: "asset-settings") }
                     Button("Finder Diagnostics…") { openWindow(id: "finder-diagnostics") }
                     Button("Desktop Details…") { openWindow(id: "desktop-controls") }
@@ -136,7 +137,7 @@ struct EditorView: View {
                         Picker("Output action", selection: Binding(get: {
                             editor.browsingWorld(appState).circuit.components[coordinate]?.outputAction ?? .openOccupant
                         }, set: { appState.configureOutput(at: coordinate, mode: $0) })) {
-                            Text("Open occupant").tag(OutputActionMode.openOccupant)
+                            Text(appState.scriptOutputSettings.runScriptsOpenOtherItems ? "Default: scripts run, others open" : "Default: open occupant").tag(OutputActionMode.openOccupant)
                             Text("Execute script").tag(OutputActionMode.executeOccupant)
                             Text("None").tag(OutputActionMode.none)
                         }.disabled(appState.isEditorConfigurationLocked || editor.isPreviewing(appState))

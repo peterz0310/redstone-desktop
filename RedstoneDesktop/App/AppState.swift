@@ -58,6 +58,13 @@ final class AppState: ObservableObject {
     @Published private(set) var simulator = CircuitSimulator(world: DemoCircuit.makeWorld().circuit)
     @Published private(set) var lastActionResult = "Place a harmless Finder item on OUTPUT, then click PRESS on the desktop."
     @Published private(set) var lastScriptResult: ScriptExecutionResult?
+    @Published private(set) var scriptOutputSettings = ScriptOutputSettings()
+    @Published private(set) var desktopScriptAccessStatus = "Desktop access has not been requested in this session."
+    private let desktopScriptAccess: (any DesktopScriptAccessChecking)?
+    private var desktopScriptAccessAttempted = false
+    private var desktopScriptAccessGeneration = UUID()
+    private(set) var desktopScriptAccessTask: Task<Void, Never>?
+    private var outputPolicyGeneration = UUID()
     let actionAuthorizations: ActionAuthorizationStore
     private let executeScriptAction: ExecuteScriptAction
     private let openItemAction: OpenItemAction
@@ -102,6 +109,7 @@ final class AppState: ObservableObject {
        itemOpener: any ItemOpening = WorkspaceItemOpener(),
        scriptExecutor: any ScriptExecuting = ScriptProcess(),
        scriptAuthorizer: any ScriptAuthorizing = ScriptAuthorizationPresenter(),
+       desktopScriptAccess: (any DesktopScriptAccessChecking)? = nil,
        libraryStore: (any WorldLibraryStoring)? = nil,
        automaticallyRefreshFinder: Bool = false,
        autosaveDelay: Duration = .milliseconds(750),
@@ -136,6 +144,9 @@ final class AppState: ObservableObject {
         executeScriptAction = ExecuteScriptAction(executor: scriptExecutor, authorizer: scriptAuthorizer, store: authorizations)
         self.displaySettleDelay = displaySettleDelay
         self.preferences = preferences
+        self.desktopScriptAccess = desktopScriptAccess
+        if let data = preferences?.data(forKey: "scriptOutputSettings"),
+           let stored = try? JSONDecoder().decode(ScriptOutputSettings.self, from: data) { scriptOutputSettings = stored }
         self.soundPlayer = soundPlayer
         self.assets = assets
         self.buildControllerFactory = buildControllerFactory
@@ -515,7 +526,40 @@ final class AppState: ObservableObject {
         editorWorld = next
         worldDidChange()
         developerPlacementStatus = "Output action updated. Execution requires separate file approval."
+        if mode == .executeOccupant { requestDesktopScriptAccess() }
         return true
+    }
+
+    func setRunScriptsOpenOtherItems(_ enabled: Bool) {
+        guard enabled != scriptOutputSettings.runScriptsOpenOtherItems else { return }
+        scriptOutputSettings.runScriptsOpenOtherItems = enabled
+        if let data = try? JSONEncoder().encode(scriptOutputSettings) { preferences?.set(data, forKey: "scriptOutputSettings") }
+        outputPolicyGeneration = UUID()
+        // Leave the task slot occupied until cancellation finishes; no old cleanup can clear a new action.
+        activationTask?.cancel()
+        pendingOutputs = []
+        if enabled { requestDesktopScriptAccess() }
+    }
+
+    func requestDesktopScriptAccess(retry: Bool = false) {
+        guard let desktopScriptAccess, desktopScriptAccessTask == nil,
+              retry || !desktopScriptAccessAttempted else { return }
+        desktopScriptAccessAttempted = true
+        desktopScriptAccessStatus = "Checking Desktop-folder access…"
+        let generation = desktopScriptAccessGeneration
+        desktopScriptAccessTask = Task { @MainActor [weak self] in
+            guard let self else { return }
+            defer { if self.desktopScriptAccessGeneration == generation { self.desktopScriptAccessTask = nil } }
+            do {
+                guard !Task.isCancelled, self.desktopScriptAccessGeneration == generation else { return }
+                try await desktopScriptAccess.checkAccess()
+                guard !Task.isCancelled, self.desktopScriptAccessGeneration == generation else { return }
+                self.desktopScriptAccessStatus = "Desktop-folder access succeeded. Script approval is separate."
+            } catch {
+                guard !Task.isCancelled, self.desktopScriptAccessGeneration == generation else { return }
+                self.desktopScriptAccessStatus = "Desktop access failed: \(error.localizedDescription) Check System Settings → Privacy & Security → Files & Folders."
+            }
+        }
     }
 
     func resetDeveloperPlacements() {
@@ -676,6 +720,11 @@ final class AppState: ObservableObject {
 
     /// Used by both disable and the app's termination notification.
     func shutdown(preserveEditorTracking: Bool = false) {
+        if !preserveEditorTracking {
+            desktopScriptAccessGeneration = UUID()
+            if desktopScriptAccessTask != nil { desktopScriptAccessStatus = "Desktop access check cancelled." }
+            desktopScriptAccessTask?.cancel(); desktopScriptAccessTask = nil
+        }
         exitDesktopBuildMode(restoreEditor: preserveEditorTracking)
         soundPlayer.stop()
         if !preserveEditorTracking || !editorFinderItemsVisible {
@@ -884,18 +933,21 @@ final class AppState: ObservableObject {
         let session = desktopSession
         let worldID = activeWorldID
         let layoutGeneration = finderDiagnostics.layoutGeneration
+        let policyGeneration = outputPolicyGeneration
         activationTask = Task { @MainActor [weak self] in
             guard let self else { return }
             defer { if self.desktopSession == session { self.activationTask = nil } }
             let succeeded = await self.finderDiagnostics.readItems()
-            guard !Task.isCancelled, self.desktopSession == session, self.finderDiagnostics.layoutGeneration == layoutGeneration, self.activeWorldID == worldID, self.isDesktopWorldEnabled else { return }
+            guard !Task.isCancelled, self.desktopSession == session, self.finderDiagnostics.layoutGeneration == layoutGeneration, self.activeWorldID == worldID, self.isDesktopWorldEnabled, self.outputPolicyGeneration == policyGeneration else { return }
             guard succeeded else {
                 self.pendingOutputs = []
                 self.lastActionResult = "Finder could not be refreshed; nothing opened."
                 return
             }
             guard self.outputIsVisible(coordinate) else { return }
-            switch self.desktopWorld.circuit.components[coordinate]?.outputAction ?? .openOccupant {
+            let configured = self.desktopWorld.circuit.components[coordinate]?.outputAction ?? .openOccupant
+            let mode = self.scriptOutputSettings.action(configured: configured, occupancy: self.desktopOccupancy.state(at: coordinate))
+            switch mode {
             case .none: self.lastActionResult = "Output action is disabled."
             case .openOccupant:
                 self.lastActionResult = self.openItemAction.perform(occupancy: self.desktopOccupancy.state(at: coordinate))
@@ -903,6 +955,7 @@ final class AppState: ObservableObject {
                 self.lastActionResult = "Checking script and waiting for approval…"
                 let outcome = await self.executeScriptAction.perform(occupancy: self.desktopOccupancy.state(at: coordinate), isCurrent: {
                     self.desktopSession == session && self.activeWorldID == worldID && self.isDesktopWorldEnabled
+                        && self.outputPolicyGeneration == policyGeneration
                         && !self.isDisplaySettling && !self.isFinderLayoutSettling
                         && self.finderDiagnostics.layoutGeneration == layoutGeneration && self.outputIsVisible(coordinate)
                 }, refresh: {
@@ -913,7 +966,7 @@ final class AppState: ObservableObject {
                     guard !Task.isCancelled, await self.finderDiagnostics.readItems() else { return .unavailable("Finder refresh failed.") }
                     return self.desktopOccupancy.state(at: coordinate)
                 })
-                guard !Task.isCancelled, self.desktopSession == session, self.activeWorldID == worldID else { return }
+                guard !Task.isCancelled, self.desktopSession == session, self.activeWorldID == worldID, self.outputPolicyGeneration == policyGeneration else { return }
                 self.lastActionResult = outcome.message
                 if let result = outcome.result { self.lastScriptResult = result }
             }

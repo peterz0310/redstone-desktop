@@ -23,7 +23,7 @@ The intended workflow is:
 
 The project is an experiment first and a polished application second.
 
-Current implementation: **Slices 0–29 and the owner-requested 27A/28A/28B/28C polishing follow-ups are implemented**, with Debug build and all **349 automated tests passing**. Slice 28's explicit Desktop Build Mode and hover/border/editor-window follow-up are implemented. Slice 28A strengthens the border, polishes terrain/circuit art and consolidates viewport navigation; Slice 28B adds full-tile Output art/occupancy glow, removes ordinary Finder tile boxes and fixes a measured pan stall. Slice 28C moves real Finder polling/metadata work off the UI thread after measuring a remaining periodic stall; the owner accepts responsiveness. Slice 29 adds explicitly configured, separately approved script outputs with asynchronous bounded results. Ordinary desktop Finder crosshairs are removed; editor projections and diagnostic numeric mappings remain. Detailed MANUAL checks and prior unreported Finder/input checks remain pending. Slices 0–19A, 20–21 and 23–25 have owner-reported acceptance; the 19C bookmark/context-menu follow-up and corrected Slice 22 icon-size/marker checks are also accepted. Detailed earlier 19B/19C runtime/deletion checks and Slice 22's real Output-after-resize check remain pending. The owner accepted local Java texture importing on 2026-10-08; the other specific Slice 26/27 checks and detailed 27A appearance checks remain pending. Slice 26 adds optional validated folder/ZIP packs with original fallback; Slice 27 imports selected textures from local Java JARs/packs into Application Support without bundling game assets. The actual pack contract and Java mapping/cache lifecycle are documented in docs/RESOURCE_PACKS.md and docs/JAVA_TEXTURE_IMPORT.md. **Slice 30 is next and untouched.** Historical entries record earlier behavior; Sections 3.8, 7.1, 25, 26 and 29 define the world/library/editing contract.
+Current implementation: **Slices 0–29 and the owner-requested 27A/28A/28B/28C/29A follow-ups are implemented**, with Debug build and all **356 automated tests passing**. Slice 28's explicit Desktop Build Mode and hover/border/editor-window follow-up are implemented. Slice 28A strengthens the border, polishes terrain/circuit art and consolidates viewport navigation; Slice 28B adds full-tile Output art/occupancy glow, removes ordinary Finder tile boxes and fixes a measured pan stall. Slice 28C moves real Finder polling/metadata work off the UI thread after measuring a remaining periodic stall; the owner accepts responsiveness. Slice 29 adds explicitly configured, separately approved script outputs with asynchronous bounded results; the owner confirms the basic execution/target-movement walkthrough. Slice 29A adds early Desktop-folder access, an optional automatic script/open policy in Settings and remembering checked by default. Ordinary desktop Finder crosshairs are removed; editor projections and diagnostic numeric mappings remain. Detailed MANUAL checks and prior unreported Finder/input checks remain pending. Slices 0–19A, 20–21 and 23–25 have owner-reported acceptance; the 19C bookmark/context-menu follow-up and corrected Slice 22 icon-size/marker checks are also accepted. Detailed earlier 19B/19C runtime/deletion checks and Slice 22's real Output-after-resize check remain pending. The owner accepted local Java texture importing on 2026-10-08; the other specific Slice 26/27 checks and detailed 27A appearance checks remain pending. Slice 26 adds optional validated folder/ZIP packs with original fallback; Slice 27 imports selected textures from local Java JARs/packs into Application Support without bundling game assets. The actual pack contract and Java mapping/cache lifecycle are documented in docs/RESOURCE_PACKS.md and docs/JAVA_TEXTURE_IMPORT.md. **Slice 30 is next and untouched.** Historical entries record earlier behavior; Sections 3.8, 7.1, 25, 26 and 29 define the world/library/editing contract.
 
 The most important early question is not whether attractive terrain or redstone can be made. Those are comparatively straightforward. The first major feasibility gate is:
 
@@ -1223,7 +1223,18 @@ Capture bounded stdout/stderr (1 MiB each), exit code and duration without block
 
 First execution previews the resolved exact path/interpreter in a dedicated SwiftUI window. Cancel or approve once; optional Always allow this exact file remembers canonical path, resource identity and contents fingerprint in separate preferences. Edited/replaced/retargeted files ask again; Desktop Details can forget approvals. No bypass in this slice.
 
+The Always Allow checkbox starts checked in Slice 29A, but approval still requires Run Script; Cancel grants nothing. Settings owns revocation.
+
 After approval, re-read Finder through the shared gate, refuse moved/ambiguous targets and revalidate the file before launch. Session/world/area/display/layout changes and cancellation suppress stale approvals/results. This reduces races without claiming a filesystem lock. Do not persist Finder positions/paths or approvals in worlds. Component outputAction decodes missing values to openOccupant; normal placement retains that default.
+
+
+## 20.4 Output preference and Desktop access (Slice 29A)
+
+Native Settings → Output behavior offers an opt-in “Run supported scripts; open other items” setting, OFF for missing/invalid preferences. Existing `openOccupant` configuration now means the app's default behavior: open while off; while on, a single current local regular Finder file whose filename ends in .sh/.command/.zsh enters the same exact-script approval/validation path, and other occupants open normally. Case-insensitive extension classification is routing only, never permission to run. Final resolved extension/type/content validation remains mandatory; an invalid script candidate is refused rather than silently falling back to open. Explicit executeOccupant stays script-only and none stays disabled. Inspector labels reflect the actual default. No circuit/library migration or component copying.
+
+On an explicit transition to Execute script or enabling automatic routing, asynchronously attempt read-only Desktop-directory access using public POSIX directory APIs, discard the entry and close the handle. FileManager supplies the standard Desktop URL; this separate access adapter never supplies Finder positions/occupancy. Include NSDesktopFolderUsageDescription. macOS controls whether this attempt prompts and remembers existing decisions; no private TCC query/force-prompt/reset/shell workaround. Keep one attempt at a time, don't automatically repeat after denial, and expose explicit retry/status in Settings. A successful directory read establishes access at that time, not a persisted permission guarantee or exact-script approval. Denial preserves editing/settings; actual file-read failures still refuse execution. No file contents read, write or script execution merely from selecting a mode.
+
+Startup/restoration performs no folder-access request or automatic action, including with the setting enabled. Policy changes cancel pending input/output approval/execution and clear queued actions while leaving simulator/camera/world configuration unchanged; old completions cannot publish or grant an approval under the new policy. First-launch permission guidance is separately planned in Slice 33.
 
 ---
 
@@ -2723,14 +2734,35 @@ Owner reports a persistent half-second hitch after 28B. Fix the measured adapter
 - [x] diagnostics result
 - [x] harmless fixture tests
 
-**Implemented; real-Mac script acceptance pending.** See docs/SCRIPT_OUTPUTS.md for the exact target/interpreter, approval, persistence, bounds and contributor contract. Existing Outputs default to Open; execution is set per Output in the Inspector. Debug build/all 349 tests pass. No fixed paths, arbitrary interpreters, bypass or torch/Output relay implementation.
+**Implemented; basic script execution/target movement owner-accepted, repeater-specific timing pending.** See docs/SCRIPT_OUTPUTS.md for the exact target/interpreter, approval, persistence, bounds and contributor contract. Existing Outputs default to Open; execution is set per Output in the Inspector. Debug build/all 349 tests pass. No fixed paths, arbitrary interpreters, bypass or torch/Output relay implementation.
 
 ### Manual acceptance
 
-- [ ] MANUAL: harmless `.sh` on output prompts for first execution.
-- [ ] MANUAL: approval runs script.
+- [x] MANUAL: harmless `.sh` on output prompts for first execution.
+- [x] MANUAL: approval runs script.
 - [ ] MANUAL: repeater delay causes expected execution timing.
-- [ ] MANUAL: moving script away prevents it from being targeted.
+- [x] MANUAL: moving script away prevents it from being targeted.
+
+---
+
+## Slice 29A — Execution preferences and earlier Desktop permission
+
+Owner-requested usability follow-up before Slice 30; onboarding/reset remain planned Slice 33 work.
+
+- [x] Request a read-only Desktop-folder access check when selecting Execute script or enabling automatic script routing, with a macOS usage description; no startup request.
+- [x] Separate macOS Files & Folders access, Finder Automation and exact-script approval; retry/status in Settings, serialized access attempts and no repeated automatic denial requests.
+- [x] Native SwiftUI Settings scene and Advanced link; persist opt-in “Run supported scripts; open other items” separately from world saves.
+- [x] Default Outputs route current local regular .sh/.command/.zsh occupants to existing approval/execution; other occupants open normally. Explicit Execute and None modes remain authoritative.
+- [x] Remember-this-exact-file checkbox initially checked, with Cancel/uncheck/revoke and edited/replaced-file reapproval intact; no approval bypass.
+- [x] Setting changes invalidate pending action/approval work without resetting power or replaying held Output edges; read-free restoration.
+- [x] Automated routing/permissions/preferences/cancellation tests, Debug build/full suite and updated contributor/owner walkthrough.
+- [x] Document first-launch wizard and backed-up Start Over behavior in Slice 33; no destructive reset/relaunch implementation here.
+
+### Manual acceptance
+
+- [ ] MANUAL: selecting Execute script or enabling automatic routing checks Desktop access before activation; permission prompts only if macOS needs consent, and denied access/retry status remains usable.
+- [ ] MANUAL: automatic default Output executes approved .sh/.command/.zsh occupants and opens other items; changing policy does not retrigger held circuits, explicit Execute/None still work, and settings survive reopen with Desktop stopped.
+- [ ] MANUAL: script confirmation initially checks Always Allow; approved unchanged files skip later prompts, unchecking asks again, Cancel runs nothing and Forget Script Approvals restores prompting.
 
 ---
 
@@ -2816,7 +2848,7 @@ If Finder coordinate behavior makes cross-display mapping unreliable, document t
 - [ ] app icon
 - [ ] onboarding
 - [ ] permission explanations
-- [ ] settings
+- [ ] Consolidate remaining audio/appearance/scale/onboarding settings in native Settings (script settings implemented in 29A).
 - [ ] reset/export world
 - [ ] animation polish
 - [ ] audio polish
@@ -2825,6 +2857,17 @@ If Finder coordinate behavior makes cross-display mapping unreliable, document t
 - [ ] README demo video/GIF
 - [ ] known limitations
 - [ ] shutdown/relaunch robustness
+
+### First-launch wizard and Start Over (planned, not implemented)
+
+- [ ] First-launch SwiftUI wizard explains worlds/areas, Finder integration, permissions and script execution. Offer Skip and reopen Setup from Settings; completing/skipping is an app preference, never automatic Desktop enablement.
+- [ ] Request Finder Automation only when choosing Finder tracking, and Desktop Files & Folders access only when choosing script features. Explain the separate script confirmation and optional remembered approval; automatic routing remains opt-in. No upfront blanket permissions or execution as a setup test.
+- [ ] Settings → Start Over… shows exactly what will reset and requires explicit confirmation. Stop Build Mode, monitors, simulation, Finder reads, pending approvals/scripts, audio and appearance work before resetting; prevent late callbacks/autosaves from resurrecting old data.
+- [ ] Preserve a timestamped, validated local backup of all worlds/areas/circuits plus legacy world.json before replacing the library; include app preferences/approval configuration needed for recovery. Keep backups outside the active save/import namespace, with Reveal/restore guidance. Abort on backup/staging failure and preserve current data; do not silently discard saved builds.
+- [ ] Reset app-owned library/legacy migration source, settings, script approvals, setup completion and appearance selection/managed imports to fresh defaults, with guarded managed-cache ownership. Never delete Desktop files, source JARs/packs or externally selected folders. Prevent the preserved legacy backup from being automatically migrated back into the fresh library.
+- [ ] Close/relaunch through a documented public macOS mechanism and prove the restarted instance shows the wizard with an empty procedural world and Desktop stopped. No detached shell reset script/private API. Cover failure/partial reset, old-instance shutdown writes and recovery before calling this complete.
+- [ ] Leave macOS TCC/privacy permissions intact; app “first launch” state cannot promise renewed system prompts. Explain the distinction in the confirmation/setup flow without resetting other apps' privacy permissions.
+- [ ] Add isolated reset/backup/preference/migration/lifecycle tests and real-Mac first-launch, Skip/reopen, Start Over/restart, preserved-source/backup checks. All remain future work.
 
 ---
 
@@ -3843,3 +3886,18 @@ Process remains MainActor-owned but never waits synchronously. Independent nonbl
 Validation: Debug build and all **349 tests pass**, including eleven new execution tests. Native temporary harmless scripts exercise sh/command/zsh, quoted/Unicode/command-looking paths, working directory, stdout/stderr/nonzero exit/duration, dual-stream overflow, main-thread progress, cancellation, timeout, ignored-TERM escalation and recovery. Fakes cover once/always/revoke/edit approval, ambiguous/missing/moved/changed/stale target refusal, delayed repeater dispatch exactly once, mode persistence/backward decoding/invalid values/edit locks, and Stop/Start with an old suspended approval refusing launch/remembering. Updated marker tests and actual AppState fixture assert no desktop crosshairs while mapping/occupancy continue. Native SwiftUI hosting checks prompt layout and pre-cancelled presentation without activating owner windows. Initial missing actor annotation and awaited XCTest autoclosure were corrected; these are implementation/test compiler errors, not observed macOS API contradictions. Pure World/Circuit type-check and diff checks pass. Tests do not access real Finder, owner library/approvals or real Desktop scripts.
 
 Documentation: docs/SCRIPT_OUTPUTS.md is the contributor/behavior contract and exact Mac walkthrough; examples/Scripts/hello.sh prints harmless stdout/stderr only. README points to it and records current status. Slice 29 MANUAL checks remain unchecked; later torch and Output relay slices remain untouched.
+
+
+## 2026-10-08 — Owner accepts script outputs; Slice 29A and future setup/reset
+
+Context: the owner reports “Great! It works” after the direct harmless-script prompt/approval/moved-target walkthrough and observes macOS's Desktop-files permission. Record those three Slice 29 MANUAL checks as owner-reported acceptance; repeater-specific timing remains pending. They request earlier system permission, automatic script-versus-open routing in Settings, remembering checked by default, and future setup/Start Over.
+
+Decision: implement only this 29A follow-up before 30. Add native Settings with an OFF-by-default, separately persisted script/open policy; `openOccupant` acts as Default and is labeled with the current behavior. Supported regular local filename extensions route to existing exact-script approval and resolved-file validation, while other items retain normal open. Explicit Execute/None remain authoritative. No bypass, added interpreter, simulator changes, schema migration or retroactive execution from a settings change. Pending action cancellation retains its task slot until return and uses a policy generation to reject stale approval/result publication.
+
+The owner-observed macOS folder prompt is distinct from Finder Automation and app script approval. Apple documents [NSDesktopFolderUsageDescription](https://developer.apple.com/documentation/bundleresources/information-property-list/nsdesktopfolderusagedescription) and first-access consent. Add that purpose string and an injected asynchronous read-only folder-access adapter: open the standard Desktop directory, read/discard one entry and close, using public POSIX calls on a worker rather than reading script contents or collecting filenames. Request on explicit execution opt-in, serialize attempts, pause automatic requests after denial, expose Settings retry and publish no stale shutdown result. Restoring preferences never requests access. Prompt timing/attribution remain macOS-controlled and must be verified in the launched app; no fresh TCC permission was reset or requested by automated tools/tests.
+
+Always Allow initially checked still requires explicit Run Script; cancelling grants nothing and unchecking preserves approval-on-each-activation. Exact path/resource/contents fingerprint, moved-target refusal and revocation remain. Consolidate revocation into Settings and link there from Desktop Details. The existing approved-file execution path is unchanged.
+
+Future scope: Slice 33 already contains onboarding/settings/reset/relaunch. Expand it with a skippable/reopenable permission-aware wizard and confirmed Start Over: stop integration, validate a recoverable backup, reset only app-owned saves/preferences/approvals/import caches including the legacy migration source, publicly relaunch into fresh setup with Desktop stopped, and retain macOS privacy choices. Do not implement this destructive workflow now. All new future checkboxes remain unchecked; contributor docs distinguish current controls from future plans.
+
+Validation: Debug build and all **356 tests pass**, including seven additional extension/kind/scheme/action-policy, native temporary-folder read/error/preservation, serialized opt-in/denial/retry, isolated preference persistence/read-free restoration/malformed fallback/native Settings hosting, automatic default script→folder dispatch and unchanged held power, policy-off-during-approval cancellation/no remembered permission, and pre-cancelled/shutdown folder-read stale-result tests. Built Info.plist contains the Desktop usage description. Existing script process/approval/Finder/persistence/renderer tests remain green. Pure World/Circuit type-check and diff checks pass. All three 29A MANUAL groups remain pending; no real owner Desktop, settings, library, privacy reset or script was touched by automated validation. Initial Swift initializer argument-order error was corrected before the passing build/suite. Slice 30 and later implementations remain untouched.

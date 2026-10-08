@@ -22,6 +22,7 @@ struct RedstoneDesktopApp: App {
                 .disabled(appState.isDesktopBuildMode)
             }
         }
+        Settings { AppSettingsView(appState: appState) }
         Window("Desktop Details", id: "desktop-controls") {
             DesktopDetailsView(appState: appState)
         }
@@ -54,7 +55,8 @@ enum AppStartup {
             || environment.keys.contains { $0.hasPrefix("XCTest") || $0 == "XCInjectBundleInto" }
         let assets = AssetLibrary(preferences: testing ? nil : .standard, importCacheRoot: testing ? nil : JavaTextureImporter.applicationCacheRoot)
         if !testing { Task { await assets.restoreSelection() } }
-        return AppState(libraryStore: testing ? nil : WorldLibraryStore.applicationDefault(), automaticallyRefreshFinder: !testing,
+        return AppState(desktopScriptAccess: testing ? nil : DesktopScriptAccess.applicationDefault(),
+            libraryStore: testing ? nil : WorldLibraryStore.applicationDefault(), automaticallyRefreshFinder: !testing,
             preferences: testing ? nil : .standard,
             soundPlayer: testing ? SilentSoundPlayer() : (try? AudioEngine()) ?? SilentSoundPlayer(), assets: assets)
     }

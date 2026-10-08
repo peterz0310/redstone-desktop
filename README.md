@@ -4,7 +4,7 @@ An experimental native macOS app exploring a block world beneath real Finder des
 
 ## Current build and next steps
 
-**Implemented: Slices 0–29 plus the requested appearance/navigation follow-ups (27A/28A/28B/28C).** Debug build and all **349 automated tests** pass. Slice 28 adds explicitly entered Desktop Build Mode with a temporary transparent input window, hotbar and mouse-accessible exits; its real Finder/input checks remain pending. Slices 26/27 add optional validated texture/sound packs and local Minecraft Java texture importing. Original built-in assets remain complete defaults; imported game art stays in local Application Support, outside Git and app bundles. Read the [resource-pack format guide](docs/RESOURCE_PACKS.md) and [Java import guide](docs/JAVA_TEXTURE_IMPORT.md) before making/sharing packs.
+**Implemented: Slices 0–29 plus the requested appearance/navigation follow-ups (27A/28A/28B/28C/29A).** Debug build and all **356 automated tests** pass. Slice 28 adds explicitly entered Desktop Build Mode with a temporary transparent input window, hotbar and mouse-accessible exits; its real Finder/input checks remain pending. Slices 26/27 add optional validated texture/sound packs and local Minecraft Java texture importing. Original built-in assets remain complete defaults; imported game art stays in local Application Support, outside Git and app bundles. Read the [resource-pack format guide](docs/RESOURCE_PACKS.md) and [Java import guide](docs/JAVA_TEXTURE_IMPORT.md) before making/sharing packs.
 
 Slices 20/21 and 23–25 are owner-accepted, along with corrected Slice 22 icon-size/marker behavior and the 19C bookmark/context-menu follow-up. Earlier detailed 19B/19C checks, Slice 22's real Output-after-resize check and the other specific Slices 26/27 checks and new 27A appearance checks remain pending. Local Java importing is owner-accepted.
 
@@ -16,7 +16,7 @@ Configuration still saves to `~/Library/Application Support/RedstoneDesktop/libr
 
 Finder Diagnostics remains useful for permission/alignment problems, and Desktop Details for input rejection/action results. They moved to **Advanced**. The obsolete Developer Placement window and fixed-demo diagnostic rows are removed; automated tests and migration fixtures remain, and no existing saved circuits were cleared. Shelf previews remain bounded schematic terrain/circuit snapshots. Finder markers now appear separately in the main editor canvas when enabled.
 
-**Next: run the [Slice 29 script-output walkthrough](docs/SCRIPT_OUTPUTS.md#mac-walkthrough).** Finder responsiveness is owner-accepted; other detailed adapter checks remain pending. Desktop Finder crosshairs are removed. Slice 30 (simplified torches) remains untouched.
+**Next: run the [Slice 29A settings/permission walkthrough](docs/SCRIPT_OUTPUTS.md#slice-29a-settings-and-earlier-permission-walkthrough).** Basic Slice 29 prompt/run/target-movement behavior is owner-accepted; repeater-specific timing remains pending. Finder responsiveness is owner-accepted; other detailed adapter checks remain pending. Desktop Finder crosshairs are removed. Slice 30 (simplified torches) remains untouched.
 
 ## Adopted plan: worlds and saved areas
 
@@ -766,3 +766,12 @@ Implemented with Debug build/all **349 automated tests passing**. Existing/new O
 Read [docs/SCRIPT_OUTPUTS.md](docs/SCRIPT_OUTPUTS.md) for supported behavior, lifecycle limits, persistence and contributor guidance. The original MIT [hello.sh](examples/Scripts/hello.sh) fixture prints only a greeting and example stderr. Copy it to your Desktop for the walkthrough; no unfamiliar script is needed. Check first prompt/cancel/approval, repeater-before-prompt timing, held power, target movement, Stop while awaiting approval, optional remembering/revocation and mode save/reopen. Confirm ordinary folder opening still works after switching back to Open occupant. These new real-Mac checks remain MANUAL pending.
 
 The owner accepted the remaining periodic responsiveness fix before this slice. Unreported detailed Finder Automation/ambiguity/restart checks remain pending. Pink desktop crosshairs are now absent; mapper-derived occupancy and opted-in editor rings/names/snapping remain. Slice 30 and powered-Output pickup remain future work.
+
+
+## Execution settings and earlier Desktop access — Slice 29A
+
+Open **Redstone Desktop → Settings… (⌘,)**, or **Advanced → Settings…**. Enable **Run supported scripts; open other items** to route Default Outputs automatically: regular `.sh`/`.command`/`.zsh` occupants go through script approval/execution; folders/documents/apps open normally. It is off by default and persists separately from worlds. Inspector labels show the current Default behavior; explicit Execute script and None retain their meaning. Settings changes do not activate held circuits.
+
+Selecting Execute script or enabling this setting now checks Desktop-folder access immediately, before a circuit runs. macOS presents its Files & Folders permission only if needed; existing permission may mean no prompt. Settings offers status and **Check Desktop Access…** for retry. Startup never requests it automatically. This is separate from Finder Automation and the app's exact-script approval. **Always allow this exact file** now starts checked; click Run Script once to remember it, or uncheck to keep prompting. Settings → Forget Script Approvals revokes it.
+
+Debug build/all **356 tests pass**. Follow the [new Mac walkthrough](docs/SCRIPT_OUTPUTS.md#slice-29a-settings-and-earlier-permission-walkthrough) to verify early access, automatic script/folder routing, checked remembering and restart. New MANUAL groups remain pending. First-launch wizard and confirmed, backed-up **Start Over → restart into setup** are documented future Slice 33 work, not current buttons. Start Over will reset app-owned data/preferences/approvals while preserving Desktop files/source packs and macOS privacy permissions. Slice 30 is still next.

@@ -74,7 +74,7 @@ struct DesktopDetailsView: View {
                         Text(result.stderr.isEmpty ? "(empty)" : result.stderr).font(.caption.monospaced()).textSelection(.enabled)
                     }
                 }
-                Button("Forget Script Approvals") { appState.actionAuthorizations.revokeAll() }
+                SettingsLink { Text("Script settings…") }
                 if !appState.lastPressMetadata.isEmpty {
                     Text(appState.lastPressMetadata)
                         .font(.caption.monospaced())

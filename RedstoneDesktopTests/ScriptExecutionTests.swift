@@ -28,6 +28,18 @@ private final class ScriptFinderFixture: DesktopItemProviding {
     func currentDesktopItems() async throws -> [DesktopItem] { items }
 }
 
+@MainActor
+private final class ScriptAccessFixture: DesktopScriptAccessChecking {
+    var calls = 0
+    var error: (any Error)?
+    var operation: (@MainActor () async throws -> Void)?
+    func checkAccess() async throws {
+        calls += 1
+        if let operation { try await operation() }
+        if let error { throw error }
+    }
+}
+
 final class ScriptExecutionTests: XCTestCase {
     private func fixture(_ body: String = "printf 'hello\\n'", ext: String = "sh") throws -> (URL, DesktopItem) {
         let root = FileManager.default.temporaryDirectory.appendingPathComponent("redstone-script-\(UUID())", isDirectory: true)
@@ -279,6 +291,191 @@ final class ScriptExecutionTests: XCTestCase {
         XCTAssertTrue(executor.targets.isEmpty)
         XCTAssertFalse(state.actionAuthorizations.contains(try ScriptTarget.resolve(item)))
         XCTAssertNil(state.lastScriptResult)
+    }
+
+    func testAutomaticRoutingHonorsSupportedExtensionsKindsAndExplicitModes() {
+        func item(_ name: String, kind: DesktopItemKind = .file, remote: Bool = false) -> DesktopItem {
+            DesktopItem(id: name, url: remote ? URL(string: "https://example.com/\(name)")! : URL(fileURLWithPath: "/tmp/\(name)"),
+                displayName: name, position: .zero, estimatedIconSize: nil, kind: kind)
+        }
+        let automatic = ScriptOutputSettings(runScriptsOpenOtherItems: true)
+        for name in ["hello.sh", "hello.command", "hello.zsh", "UPPER.SH"] {
+            let occupancy = DesktopOccupancyState.occupied(item(name))
+            XCTAssertEqual(automatic.action(configured: .openOccupant, occupancy: occupancy), .executeOccupant)
+            XCTAssertEqual(ScriptOutputSettings().action(configured: .openOccupant, occupancy: occupancy), .openOccupant)
+            XCTAssertEqual(automatic.action(configured: .none, occupancy: occupancy), .none)
+        }
+        for occupancy in [DesktopOccupancyState.empty, .unavailable("Denied"), .ambiguous([item("a.sh"), item("b.sh")]),
+                          .occupied(item("readme.txt")), .occupied(item("hello.py")), .occupied(item("remote.sh", remote: true)),
+                          .occupied(item("folder.sh", kind: .folder)), .occupied(item("app.sh", kind: .application)),
+                          .occupied(item("alias.sh", kind: .alias)), .occupied(item("unknown.sh", kind: .unknown))] {
+            XCTAssertEqual(automatic.action(configured: .openOccupant, occupancy: occupancy), .openOccupant)
+            XCTAssertEqual(automatic.action(configured: .executeOccupant, occupancy: occupancy), .executeOccupant)
+        }
+    }
+
+    func testNativeDirectoryAccessCheckUsesTemporaryFolderWithoutReadingOrWritingFiles() async throws {
+        let (root, item) = try fixture()
+        defer { try? FileManager.default.removeItem(at: root) }
+        let before = try Data(contentsOf: item.url)
+        try await DesktopScriptAccess(directory: root).checkAccess()
+        XCTAssertEqual(try Data(contentsOf: item.url), before)
+        for directory in [root.appendingPathComponent("missing"), item.url] {
+            do { try await DesktopScriptAccess(directory: directory).checkAccess(); XCTFail("Invalid directory must fail") }
+            catch { /* Reported to settings; never a successful permission check. */ }
+        }
+    }
+
+    @MainActor
+    func testPermissionRequestsAreExplicitSerializedAndRetryableAfterDenial() async throws {
+        let access = ScriptAccessFixture()
+        let state = AppState(desktopScriptAccess: access)
+        defer { state.shutdown() }
+        XCTAssertEqual(access.calls, 0, "Startup must not ask for Desktop-folder access")
+        let started = expectation(description: "Access suspended")
+        var reply: CheckedContinuation<Void, any Error>?
+        access.operation = { try await withCheckedThrowingContinuation { reply = $0; started.fulfill() } }
+        XCTAssertTrue(state.configureOutput(at: DemoCircuit.output, mode: .executeOccupant))
+        await fulfillment(of: [started], timeout: 2)
+        state.requestDesktopScriptAccess(retry: true)
+        state.setRunScriptsOpenOtherItems(true)
+        XCTAssertEqual(access.calls, 1, "Inspector/settings share one access attempt")
+        reply?.resume(throwing: CocoaError(.fileReadNoPermission))
+        await state.desktopScriptAccessTask?.value
+        XCTAssertTrue(state.desktopScriptAccessStatus.contains("failed"))
+        state.setRunScriptsOpenOtherItems(false); state.setRunScriptsOpenOtherItems(true)
+        await state.desktopScriptAccessTask?.value
+        XCTAssertEqual(access.calls, 1, "Automatic retries must not repeatedly prompt after denial")
+        access.operation = nil
+        state.requestDesktopScriptAccess(retry: true)
+        await state.desktopScriptAccessTask?.value
+        XCTAssertEqual(access.calls, 2)
+        XCTAssertTrue(state.desktopScriptAccessStatus.contains("succeeded"))
+    }
+
+    @MainActor
+    func testRoutingPreferencePersistsSeparatelyWithReadFreeRestorationAndInvalidDataFallback() throws {
+        let suite = "redstone-routing-test-\(UUID())"
+        let prefs = try XCTUnwrap(UserDefaults(suiteName: suite))
+        defer { prefs.removePersistentDomain(forName: suite) }
+        let access = ScriptAccessFixture()
+        let first = AppState(desktopScriptAccess: access, preferences: prefs)
+        let library = first.library
+        first.setRunScriptsOpenOtherItems(true)
+        XCTAssertEqual(first.library, library, "Global policy must not rewrite worlds or their actions")
+        first.shutdown()
+        let restored = AppState(desktopScriptAccess: access, preferences: prefs)
+        defer { restored.shutdown() }
+        XCTAssertTrue(restored.scriptOutputSettings.runScriptsOpenOtherItems)
+        XCTAssertFalse(restored.isDesktopWorldEnabled)
+        XCTAssertEqual(access.calls, 0, "Restoring an opt-in preference must not read Desktop")
+        prefs.set(Data("{\"runScriptsOpenOtherItems\":\"bad\"}".utf8), forKey: "scriptOutputSettings")
+        let invalid = AppState(desktopScriptAccess: access, preferences: prefs)
+        defer { invalid.shutdown() }
+        XCTAssertFalse(invalid.scriptOutputSettings.runScriptsOpenOtherItems)
+        XCTAssertEqual(access.calls, 0)
+        let host = NSHostingView(rootView: AppSettingsView(appState: invalid))
+        host.frame = CGRect(x: 0, y: 0, width: 560, height: 400)
+        host.layoutSubtreeIfNeeded()
+        XCTAssertEqual(host.fittingSize.width, 560)
+    }
+
+    @MainActor
+    func testDefaultOutputAutomaticallyExecutesScriptAndOpensReplacementFolder() async throws {
+        let (root, item) = try fixture()
+        defer { try? FileManager.default.removeItem(at: root) }
+        let screen = ScreenDescriptor(id: "fixture", frame: CGRect(x: 0, y: 0, width: 640, height: 480), backingScale: 1)
+        let provider = ScriptFinderFixture(), authorizer = ScriptFixtureAuthorizer(), executor = ScriptFixtureExecutor(), opener = FixtureItemOpener()
+        let state = AppState(screenProviding: { screen }, clickEventMonitoring: FakeGlobalMouseEventMonitor(),
+            finderDiagnostics: FinderDiagnosticsModel(provider: provider),
+            desktopInteractionAssessment: { _ in DesktopInteractionAssessment(rejectionReason: nil, details: "fixture") },
+            tickScheduler: ManualCircuitTickScheduler(), itemOpener: opener, scriptExecutor: executor, scriptAuthorizer: authorizer,
+            finderReferenceProviding: { screen })
+        defer { state.shutdown() }
+        provider.items = [DesktopItem(id: item.id, url: item.url, displayName: item.displayName,
+            position: CGPoint(x: 480, y: 256), estimatedIconSize: nil, kind: .file)]
+        await state.finderDiagnostics.readItems()
+        state.setRunScriptsOpenOtherItems(true)
+        state.toggleDesktopWorld()
+        func press() async {
+            state.handleCircuitClick(DemoCircuit.button)
+            await state.activationTask?.value
+            state.advanceCircuitTick()
+            await state.activationTask?.value
+        }
+        await press()
+        XCTAssertEqual(executor.targets.count, 1)
+        XCTAssertEqual(authorizer.targets.count, 1, "Automatic routing still requires script approval")
+        XCTAssertTrue(opener.urls.isEmpty)
+        for _ in 0..<21 { state.advanceCircuitTick() }
+        let folder = root.appendingPathComponent("harmless folder")
+        provider.items = [DesktopItem(id: "folder", url: folder, displayName: "folder", position: CGPoint(x: 480, y: 256), estimatedIconSize: nil, kind: .folder)]
+        await press()
+        XCTAssertEqual(opener.urls, [folder])
+        XCTAssertEqual(executor.targets.count, 1)
+        let power = state.simulator.power
+        state.setRunScriptsOpenOtherItems(false)
+        XCTAssertEqual(state.simulator.power, power, "Policy changes must not reset power or replay a held Output")
+        XCTAssertEqual(opener.urls.count, 1)
+    }
+
+    @MainActor
+    func testChangingAutomaticPolicyCancelsPendingApprovalWithoutRunningOrRemembering() async throws {
+        let (root, item) = try fixture()
+        defer { try? FileManager.default.removeItem(at: root) }
+        let screen = ScreenDescriptor(id: "fixture", frame: CGRect(x: 0, y: 0, width: 640, height: 480), backingScale: 1)
+        let provider = ScriptFinderFixture(), authorizer = ScriptFixtureAuthorizer(), executor = ScriptFixtureExecutor()
+        let state = AppState(screenProviding: { screen }, clickEventMonitoring: FakeGlobalMouseEventMonitor(),
+            finderDiagnostics: FinderDiagnosticsModel(provider: provider),
+            desktopInteractionAssessment: { _ in DesktopInteractionAssessment(rejectionReason: nil, details: "fixture") },
+            tickScheduler: ManualCircuitTickScheduler(), scriptExecutor: executor, scriptAuthorizer: authorizer,
+            finderReferenceProviding: { screen })
+        defer { state.shutdown() }
+        provider.items = [DesktopItem(id: item.id, url: item.url, displayName: item.displayName,
+            position: CGPoint(x: 480, y: 256), estimatedIconSize: nil, kind: .file)]
+        await state.finderDiagnostics.readItems()
+        state.setRunScriptsOpenOtherItems(true)
+        state.toggleDesktopWorld()
+        let requested = expectation(description: "Approval pending")
+        var reply: CheckedContinuation<ScriptApproval, Never>?
+        authorizer.operation = { _ in await withCheckedContinuation { reply = $0; requested.fulfill() } }
+        state.handleCircuitClick(DemoCircuit.button)
+        await state.activationTask?.value
+        state.advanceCircuitTick()
+        let pending = state.activationTask
+        await fulfillment(of: [requested], timeout: 2)
+        state.setRunScriptsOpenOtherItems(false)
+        XCTAssertNotNil(state.activationTask, "Keep the slot until the old task returns")
+        reply?.resume(returning: .always)
+        await pending?.value
+        XCTAssertTrue(executor.targets.isEmpty)
+        XCTAssertFalse(state.actionAuthorizations.contains(try ScriptTarget.resolve(item)))
+        XCTAssertNil(state.lastScriptResult)
+        XCTAssertNil(state.activationTask)
+    }
+
+    @MainActor
+    func testShutdownRejectsLateAccessResultAndCancelledCheckDoesNotStart() async {
+        let access = ScriptAccessFixture(), neverStarted = ScriptAccessFixture()
+        let state = AppState(desktopScriptAccess: neverStarted)
+        state.requestDesktopScriptAccess()
+        let notStarted = state.desktopScriptAccessTask
+        state.shutdown()
+        await notStarted?.value
+        XCTAssertEqual(neverStarted.calls, 0)
+        XCTAssertEqual(state.desktopScriptAccessStatus, "Desktop access check cancelled.")
+        let pendingState = AppState(desktopScriptAccess: access)
+        let requested = expectation(description: "Folder access pending")
+        var reply: CheckedContinuation<Void, any Error>?
+        access.operation = { try await withCheckedThrowingContinuation { reply = $0; requested.fulfill() } }
+        pendingState.requestDesktopScriptAccess()
+        let pending = pendingState.desktopScriptAccessTask
+        await fulfillment(of: [requested], timeout: 2)
+        pendingState.shutdown()
+        reply?.resume()
+        await pending?.value
+        XCTAssertEqual(pendingState.desktopScriptAccessStatus, "Desktop access check cancelled.")
+        XCTAssertNil(pendingState.desktopScriptAccessTask)
     }
 
 }

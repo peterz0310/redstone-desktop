@@ -70,7 +70,7 @@ final class ScriptAuthorizationPresenter: NSObject, ScriptAuthorizing, NSWindowD
 struct ScriptConfirmationView: View {
     let target: ScriptTarget
     let complete: (ScriptApproval) -> Void
-    @State private var remember = false
+    @State private var remember = true
     var body: some View {
         VStack(alignment: .leading, spacing: 14) {
             Text("Run this script?").font(.title2)
