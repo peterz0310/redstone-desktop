@@ -2844,6 +2844,29 @@ Acceptance:
 
 ---
 
+## Slice 31A — App identity and menu-bar controls
+
+Planned owner-requested slice after Diagnostics (31), before Multi-display (32). App icon work moves here from general Polish (33). This is not implemented yet and does not change the next slice, 30A.
+
+- [ ] Create an original redstone-dust-inspired glyph for the app icon and menu-bar item; do not copy/bundle Minecraft artwork. Use the same recognizable motif: red in the app icon, a legible macOS template version in the menu bar. Supply the native app-icon asset sizes and configure the build/catalog correctly.
+- [ ] Replace the current grid/hammer menu-bar identity with the dust glyph. Convey Running, Stopped and Build Mode through accessible text/state, without relying only on color or replacing the identity glyph.
+- [ ] Show the currently assigned desktop world and area, independently of the world/area being browsed in the editor; keep status and enabled actions current with editor changes, restoration and display failures.
+- [ ] Add Start Desktop / Stop Desktop through the existing AppState lifecycle commands. Starting remains explicit; opening the menu, launching the app or selecting an area must never start simulation or execute an Output action.
+- [ ] Add a desktop-area submenu grouped by world, with the assigned area checked and clear names for duplicate area labels. Choosing an area assigns its saved viewport through the shared activation path, stops any running desktop session and invalidates pending actions before reassignment. Preserve the editor's browsed selection/camera and saved circuit ownership; require explicit Start for the new assignment. Show an empty/unavailable state where needed.
+- [ ] Retain Open Editor, Enter/Exit Desktop Build Mode and Quit; add Show Assigned Area in Editor, Settings, Mute/Unmute and concise links to Appearance & Packs / Finder Diagnostics / Desktop Details. Group primary controls separately from secondary tools so the menu remains easy to scan.
+- [ ] During Build Mode, keep Exit and Open Editor readily available and disable conflicting Start/assignment actions with understandable state. Use the existing build-session teardown/window restoration behavior. Stop/Quit must cancel pending reads/approvals/scripts as elsewhere in the app.
+- [ ] Factor reusable menu command/state logic so editor and menu actions cannot diverge. Menu rendering/state observation never queries Finder, mutates the library or executes actions. Use native SwiftUI MenuBarExtra/Settings and documented AppKit integration where needed; no new background service, private API or global keyboard capture.
+- [ ] Add isolated tests for active-versus-browsed identity, grouped/checkmarked area selection, guarded lifecycle/reassignment, build conflicts, cancellation, mute synchronization and side-effect-free menu construction. Validate icon asset/catalog/build metadata, build the app and run the full regression suite.
+- [ ] Document controls and startup/reassignment semantics in README; retain world/area persistence and permission behavior.
+
+### Manual acceptance
+
+- [ ] MANUAL: original dust app icon appears correctly in Finder/Dock/app switcher and the matching menu-bar glyph stays legible in light/dark appearance; menu labels work with VoiceOver and do not depend on color.
+- [ ] MANUAL: with the editor hidden/closed, menu Start/Stop and grouped world/area selection work, identify the assigned area correctly and leave it stopped after reassignment; browsing another editor world does not change the assigned checkmark.
+- [ ] MANUAL: Build Mode Exit/Open Editor remain reliable, conflicting controls are unavailable, Settings/tools/mute work, and Stop/Quit during pending work never triggers a late action. Existing editor controls stay synchronized.
+
+---
+
 ## Slice 32 — Multi-display continuous world
 
 - [ ] virtual screen union
@@ -2865,7 +2888,7 @@ If Finder coordinate behavior makes cross-display mapping unreliable, document t
 
 ## Slice 33 — Polish
 
-- [ ] app icon
+- [ ] Complete app icon/menu-bar identity and controls in dedicated Slice 31A (tracked there).
 - [ ] onboarding
 - [ ] permission explanations
 - [ ] Consolidate remaining audio/appearance/scale/onboarding settings in native Settings (script settings implemented in 29A).
@@ -3941,3 +3964,10 @@ Decision: document the exact 2D contract in Section 17.9 before simulation chang
 Add Torch to editor and Desktop Build tools (append shortcut 7, retaining 1–6), selected direction/Apply, build Rotate/R and fixed-delay feedback for T/Delay. Built-in original off/on icons and optional procedural torchToggle sound supply complete defaults. Two bounded optional Java PNG mappings are additive, for 28 total mappings; older generated packs fall back until Re-import. No game image, pack code, Java runtime, backend or private API is bundled or introduced. Contributor guides document current semantic texture/sound IDs, source aliases, circuit timing, startup and manual tests.
 
 Validation: Debug application build and all **372 automated tests pass**. Eleven new TorchTests cover cardinal input/output tables, both-edge timing, dust/repeater propagation and extra delay, directed repeater/torch input, insertion-order invariant bounded feedback, integer limits, old-component defaults and torch world round-trip, editor/build direction/placement/erase/fixed-delay handling, renderer state/labels/port connectivity and optional sound transition extraction. Existing editor placement tests now include torches; original synthetic ZIP fixtures add torch sources and verify all 28 mappings with unchanged source bytes during import. Full existing Finder/click/script/persistence/audio regression remains green. Pure World/Circuit Swift 6 type-check and diff checks pass. Three initial old test assumptions (ten textures, old hotbar end and torch-as-unknown) were updated for the additive feature. No owner file/script/library/settings was touched in automated tests. Slice 30 MANUAL remains pending; Slice 30A is untouched.
+
+
+## 2026-10-08 — Planned Slice 31A app icon and menu-bar controls
+
+Context: the owner requests a redstone-dust app/menu-bar icon and a more useful menu containing Start/Stop Desktop and desktop world/area selection, explicitly allowing this to be scheduled for later. Inspection confirms the existing menu only has grid/hammer identity, editor/build controls and Quit; the app icon was a single generic Slice 33 checklist item.
+
+Decision: move that icon scope to dedicated planned Slice 31A, after diagnostics and before multi-display work. Share an original dust motif across a red app icon and macOS template status icon, with clear running/stopped/build labels. Add grouped desktop area assignment, explicit Start/Stop and common settings/tools through existing lifecycle paths, while preserving editor browsing and requiring explicit Start after reassignment. Keep build conflicts, cancellation, accessibility, asset licensing and side-effect-free menu observation testable. All implementation/manual checkboxes remain unchecked. Only SPEC.md and README change; no app code/assets, build or test changes are needed for this documentation-only request. Slice 30A remains next; this message does not establish manual acceptance of Slice 30.

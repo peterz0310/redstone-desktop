@@ -18,6 +18,10 @@ Finder Diagnostics remains useful for permission/alignment problems, and Desktop
 
 **Next: run the [Slice 30 torch walkthrough](docs/REDSTONE_RULES.md#owner-mac-walkthrough).** Basic Slice 29B click/replacement behavior is owner-accepted. Basic Slice 29A settings/permission behavior is owner-accepted. Basic Slice 29 prompt/run/target-movement behavior is owner-accepted; repeater-specific timing remains pending. Finder responsiveness is owner-accepted; other detailed adapter checks remain pending. Desktop Finder crosshairs are removed. Slice 30A (powered Output pickup) is next and remains untouched.
 
+## Planned app icon and menu-bar controls
+
+[Slice 31A in SPEC.md](SPEC.md#slice-31a--app-identity-and-menu-bar-controls) schedules an original redstone-dust app icon and matching menu-bar glyph, Start/Stop Desktop, assigned world/area status and grouped desktop-area selection. It also adds Settings/tools/mute while retaining editor/build/quit controls. Area reassignment stops the current circuit; starting the new assignment stays explicit. This slice is planned after Diagnostics (31), before Multi-display (32), and does not change the next slice (30A). No icon/menu changes are implemented yet.
+
 ## Adopted plan: worlds and saved areas
 
 This plan is approved in [SPEC.md](SPEC.md). **Slice 19A implemented independent worlds and save migration; 19B added activation; 19C makes navigation clearer and adds previews/deletion.**
