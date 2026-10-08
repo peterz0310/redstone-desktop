@@ -4,7 +4,7 @@ An experimental native macOS app exploring a block world beneath real Finder des
 
 ## Current build and next steps
 
-**Implemented: Slices 0–28 plus the requested appearance/navigation follow-ups (27A/28A/28B).** Debug build and all **332 automated tests** pass. Slice 28 adds explicitly entered Desktop Build Mode with a temporary transparent input window, hotbar and mouse-accessible exits; its real Finder/input checks remain pending. Slices 26/27 add optional validated texture/sound packs and local Minecraft Java texture importing. Original built-in assets remain complete defaults; imported game art stays in local Application Support, outside Git and app bundles. Read the [resource-pack format guide](docs/RESOURCE_PACKS.md) and [Java import guide](docs/JAVA_TEXTURE_IMPORT.md) before making/sharing packs.
+**Implemented: Slices 0–28 plus the requested appearance/navigation follow-ups (27A/28A/28B/28C).** Debug build and all **338 automated tests** pass. Slice 28 adds explicitly entered Desktop Build Mode with a temporary transparent input window, hotbar and mouse-accessible exits; its real Finder/input checks remain pending. Slices 26/27 add optional validated texture/sound packs and local Minecraft Java texture importing. Original built-in assets remain complete defaults; imported game art stays in local Application Support, outside Git and app bundles. Read the [resource-pack format guide](docs/RESOURCE_PACKS.md) and [Java import guide](docs/JAVA_TEXTURE_IMPORT.md) before making/sharing packs.
 
 Slices 20/21 and 23–25 are owner-accepted, along with corrected Slice 22 icon-size/marker behavior and the 19C bookmark/context-menu follow-up. Earlier detailed 19B/19C checks, Slice 22's real Output-after-resize check and the other specific Slices 26/27 checks and new 27A appearance checks remain pending. Local Java importing is owner-accepted.
 
@@ -16,7 +16,7 @@ Configuration still saves to `~/Library/Application Support/RedstoneDesktop/libr
 
 Finder Diagnostics remains useful for permission/alignment problems, and Desktop Details for input rejection/action results. They moved to **Advanced**. The obsolete Developer Placement window and fixed-demo diagnostic rows are removed; automated tests and migration fixtures remain, and no existing saved circuits were cleared. Shelf previews remain bounded schematic terrain/circuit snapshots. Finder markers now appear separately in the main editor canvas when enabled.
 
-**Next: run the Slice 28B Output/performance walkthrough at the end of this file; prior detailed Slice 28 checks remain available too.** Slice 29 (script execution) remains untouched.
+**Next: run the Slice 28C Finder responsiveness walkthrough at the end of this file; prior detailed Slice 28 checks remain available too.** Slice 29 (script execution) remains untouched.
 
 ## Adopted plan: worlds and saved areas
 
@@ -744,3 +744,16 @@ These two new MANUAL groups await confirmation. If stalls remain, report whether
 **Later circuits:** torches were already planned in Slice 30; SPEC now explicitly includes placement, visuals, persistence and feedback tests. New **Slice 30A** plans `source → Output A → repeater → Output B`, with rear pickup, restored power and existing action protections. That logic is not active in this build: Outputs remain terminal sinks until its dedicated slice. Slice 29 remains next.
 
 For contributors, `./scripts/pan-profile.sh` reproduces the unoptimized native pan path using the repository's original synthetic Java fixture. Optionally pass a readable local JAR/pack path as its first argument. It creates/removes a temporary import cache and uses an isolated in-memory library; it never starts desktop input/Finder polling, opens files or changes owner preferences/saves. Output reports initial and per-step milliseconds plus cumulative texture counts. Numbers depend on machine/load/source art; automated tests enforce finite provider work and cache correctness rather than fragile timing thresholds.
+
+
+## Half-second Finder polling hitch — Slice 28C Mac walkthrough
+
+The 2 Hz Finder poll was running a synchronous NSAppleScript call on the same main thread as pointer tracking and rendering. One live read took about 298 ms. The new runner uses macOS's public `osascript` tool asynchronously for the same fixed read-only AppleScript query, then decodes/looks up metadata off the UI thread. Finder reads still take time, but the app can keep processing pointer/rendering work while awaiting them. Polling remains serialized at 0.5-second intervals.
+
+1. Quit the old app with **⌘Q**, then reopen `build/Build/Products/Debug/RedstoneDesktop.app`, or stop/run in Xcode with **⌘R**. No texture Re-import or save migration is needed.
+2. Click **Start Desktop**. Move the pointer continuously over empty desktop for 15–20 seconds: the tile highlight should follow smoothly through the previous half-second pause. Check with Java and Built-In art if convenient. Open **Advanced → Finder Diagnostics**: reads should still succeed, item positions update and icon size stay available. Move a harmless desktop folder and confirm its marker/occupancy follows.
+3. In the editor use Navigate and pan/pinch/scroll over both cached and newly explored terrain. Test while Desktop is running, then stopped with **View → Show Finder Items** enabled. Turning tracking off with Desktop stopped provides a comparison; the periodic difference should be gone.
+4. With a harmless folder over an existing Output, press its circuit input: the current occupant should open once. Move it away: no target. Ambiguous targets must still be refused. A pending read/Stop/Start or quit/reopen must not publish an old target or replay an old activation. Desktop still starts stopped after reopening.
+5. The app now invokes a system child tool for its fixed Finder query. If macOS presents Finder Automation consent, check the requesting app and allow it if you want tracking. If diagnostics instead report denial/failure, check **System Settings → Privacy & Security → Automation** and report the exact app/diagnostic message. Existing authorization may carry over, but the command-line comparison does not prove your launched app's permission attribution. Do not reset privacy settings or run shell workarounds just to bypass a failure.
+
+Local native reads returned identical snapshots while 45–55 UI heartbeat updates ran during each pending query; all 338 tests pass. Your actual cursor/pan/Finder-permission checks remain MANUAL pending. Source files: `FinderScriptProcess.swift` owns asynchronous process/cancellation/pipe limits, `FinderScriptOutput.swift` strictly parses data, and `FinderScriptRunner.swift`/`FinderDesktopItemProvider.swift` preserve the adapter/snapshot contract. Resource packs and user filenames never provide executable source. If the hitch remains, report whether it also occurs with Desktop stopped and Show Finder Items off. Slice 29 remains next and untouched.

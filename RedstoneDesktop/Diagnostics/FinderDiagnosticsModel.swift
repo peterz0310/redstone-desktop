@@ -42,7 +42,7 @@ final class FinderDiagnosticsModel: ObservableObject {
         let generation = geometryGeneration
         isReading = true
         defer { isLayoutSettling = false; isReading = false }
-        // Give SwiftUI a chance to display the reading state before NSAppleScript runs.
+        // Publish the reading state before awaiting the shared asynchronous provider.
         await Task.yield()
         guard !Task.isCancelled, generation == geometryGeneration else { return false }
         do {

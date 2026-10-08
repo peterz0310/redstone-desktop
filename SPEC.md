@@ -23,7 +23,7 @@ The intended workflow is:
 
 The project is an experiment first and a polished application second.
 
-Current implementation: **Slices 0–28 and the owner-requested 27A/28A/28B polishing follow-ups are implemented**, with Debug build and all **332 automated tests passing**. Slice 28's explicit Desktop Build Mode and hover/border/editor-window follow-up are implemented. Slice 28A strengthens the border, polishes terrain/circuit art and consolidates viewport navigation; Slice 28B adds full-tile Output art/occupancy glow, removes ordinary Finder tile boxes and fixes a measured pan stall. Detailed MANUAL checks and prior unreported Finder/input checks remain pending. Slices 0–19A, 20–21 and 23–25 have owner-reported acceptance; the 19C bookmark/context-menu follow-up and corrected Slice 22 icon-size/marker checks are also accepted. Detailed earlier 19B/19C runtime/deletion checks and Slice 22's real Output-after-resize check remain pending. The owner accepted local Java texture importing on 2026-10-08; the other specific Slice 26/27 checks and detailed 27A appearance checks remain pending. Slice 26 adds optional validated folder/ZIP packs with original fallback; Slice 27 imports selected textures from local Java JARs/packs into Application Support without bundling game assets. The actual pack contract and Java mapping/cache lifecycle are documented in docs/RESOURCE_PACKS.md and docs/JAVA_TEXTURE_IMPORT.md. **Slice 29 is next and untouched.** Historical entries record earlier behavior; Sections 3.8, 7.1, 25, 26 and 29 define the world/library/editing contract.
+Current implementation: **Slices 0–28 and the owner-requested 27A/28A/28B/28C polishing follow-ups are implemented**, with Debug build and all **338 automated tests passing**. Slice 28's explicit Desktop Build Mode and hover/border/editor-window follow-up are implemented. Slice 28A strengthens the border, polishes terrain/circuit art and consolidates viewport navigation; Slice 28B adds full-tile Output art/occupancy glow, removes ordinary Finder tile boxes and fixes a measured pan stall. Slice 28C moves real Finder polling/metadata work off the UI thread after measuring a remaining periodic stall. Detailed MANUAL checks and prior unreported Finder/input checks remain pending. Slices 0–19A, 20–21 and 23–25 have owner-reported acceptance; the 19C bookmark/context-menu follow-up and corrected Slice 22 icon-size/marker checks are also accepted. Detailed earlier 19B/19C runtime/deletion checks and Slice 22's real Output-after-resize check remain pending. The owner accepted local Java texture importing on 2026-10-08; the other specific Slice 26/27 checks and detailed 27A appearance checks remain pending. Slice 26 adds optional validated folder/ZIP packs with original fallback; Slice 27 imports selected textures from local Java JARs/packs into Application Support without bundling game assets. The actual pack contract and Java mapping/cache lifecycle are documented in docs/RESOURCE_PACKS.md and docs/JAVA_TEXTURE_IMPORT.md. **Slice 29 is next and untouched.** Historical entries record earlier behavior; Sections 3.8, 7.1, 25, 26 and 29 define the world/library/editing contract.
 
 The most important early question is not whether attractive terrain or redstone can be made. Those are comparatively straightforward. The first major feasibility gate is:
 
@@ -348,11 +348,11 @@ Display changes trigger recalculation of:
 
 Use `NSWorkspace` for ordinary open/launch behavior.
 
-Use `Process` only for explicit execution mode.
+The action layer uses `Process` only for explicit execution mode. Separately, Slice 28C permits the Finder adapter to launch the public `/usr/bin/osascript` tool asynchronously for a fixed, project-owned read-only AppleScript query. This is not occupant execution: source is never assembled from filenames, Finder results or pack content, and no shell or JavaScript runtime is introduced.
 
 ## 5.6 Finder automation
 
-Initial provider: Apple Events / AppleScript querying Finder desktop items and `desktop position`.
+Provider: Apple Events / AppleScript querying Finder desktop items and `desktop position`. Since Slice 28C, the production runner asynchronously invokes the public system AppleScript tool with an executable/argument array. The query and public Finder dictionary references remain unchanged; only execution isolation changes. Synchronous NSAppleScript is retained for harmless native fixture/descriptor checks, never production polling.
 
 The app must handle macOS Automation permission explicitly.
 
@@ -1638,6 +1638,8 @@ Aim initially for comfortably under ~5% CPU while static, but profile rather tha
 
 Slice 28B retains the native editor scene during pan/zoom/resize instead of replacing it on every camera update. Viewport updates go through CoordinateMapper and redraw bounded overlays/circuit culling. Terrain chunks still retain only the requested visible/margin set. Cache one small RGBA raster per finite terrain/decoration/appearance combination, keyed by asset revision; reuse its rows when baking chunks rather than repeating pack lookup/compositing for every tile pixel. Derive pack terrain resolution once on pack publication. The style cache is independent of explored coordinates and invalidates on pack revision; generation version, overrides, world saves and simulation are unchanged. No background rendering, asynchronous publication or catch-up simulation is introduced.
 
+Slice 28C removes another measured periodic main-thread stall: execute the fixed Finder query asynchronously, drain bounded stdout/stderr independently, and parse the quoted result/resolve file metadata off the UI thread. Keep the same 0.5-second tracker timer and shared single-read gate; a read suspends, rather than blocking pointer/rendering/simulation. Cancellation terminates the child and rejects its result; the gate remains occupied until the read returns. No queued overlapping polls, weaker occupancy rules or stale result publication.
+
 A local unoptimized native harness with temporary local 1.21.8 art measured chunk-boundary updates around 651–658 ms before the fix versus 7.5–7.8 ms afterward, and initial rendering about 2,069 ms versus 26 ms. This identifies/removes one concrete stall; owner pan/zoom/Finder-enabled smoothness remains pending, and these timings are not cross-device/frame-rate guarantees.
 
 ---
@@ -2717,6 +2719,24 @@ Owner-requested follow-up before Slice 29. Later circuit features below are docu
 
 - [ ] MANUAL: Output covers its tile without text/purple backing; one occupant glows green, empty gently red, ambiguity amber and unavailable neutral; ordinary Finder items have no occupied-tile boxes and opening still works.
 - [ ] MANUAL: long editor pan/pinch/scroll with Java art is smoother across chunk boundaries, cached counts remain bounded, pack swaps refresh correctly and browsing leaves the desktop assignment unchanged.
+
+---
+
+## Slice 28C — Periodic Finder polling responsiveness
+
+Owner reports a persistent half-second hitch after 28B. Fix the measured adapter bottleneck before proceeding to Slice 29.
+
+- [x] Identify the 0.5-second poll and synchronous NSAppleScript execution on the renderer/input main thread.
+- [x] Execute the unchanged fixed Finder query through public asynchronous Process/osascript, with separate bounded pipe readers and no shell or JavaScript runtime.
+- [x] Strictly parse quoted output as data; preserve names/paths/coordinates, before/after icon-size samples, errors and provider contracts; resolve metadata away from UI.
+- [x] Cancellation/timeout termination, bounded output, serialized polling and existing geometry/layout/world-session stale-result safeguards.
+- [x] Real harmless native tests for UI progress during pending queries, cancellation/timeout, output bounds, parser/escaping and permission errors; Debug build/full suite.
+- [x] Read-only native Finder comparison with identical snapshots and UI heartbeat measurements; document API adjustment and actual app permission validation boundary.
+
+### Manual acceptance
+
+- [ ] MANUAL: with Desktop and/or editor Finder tracking on, continuous pointer movement and editor pan/pinch/scroll no longer have the half-second hitch; diagnostics still update item positions and icon size.
+- [ ] MANUAL: actual app Finder Automation access, moving targets, occupied/empty/ambiguous Output behavior and Stop/Start/quit/reopen work with the asynchronous runner; no lingering read or replayed action.
 
 ---
 
@@ -3824,3 +3844,16 @@ Outputs now draw one full-tile semantic icon with no text/colored backing and a 
 Update Section 17 and Slice 30 to make actual torch-tool/assets/persistence scope explicit. Add planned Slice 30A after torches for powered Output state and directed repeater rear pickup; do not implement it now or change current sink tests. Signal is independent of occupant/action success, with delayed downstream power restoration, no direct dust/Output broadcast and bounded deterministic feedback. Both future slice checklists remain unchecked.
 
 Validation: Debug build and all **332 automated tests pass**, including three new finite-style work-bound, pack revision/resolution pixel replacement and stable native scene/navigation isolation tests. Existing renderer/occupancy expectations now assert full-tile art, no Output labels, distinct retained glow states, empty ordinary occupancy layer and scene reuse. Pure domain type-check and diff checks pass. Native temporary capture checks the visual change separately from owner desktop acceptance. scripts/pan-profile.sh and scripts/PanProfile.swift provide a repeatable isolated unoptimized benchmark with original synthetic assets by default and optional local-JAR input. Both new MANUAL groups remain pending; README contains exact Output/Finder/pan/pack-swap checks. No advanced redstone, script execution, private APIs, backend or bundled game art added.
+
+
+## 2026-10-08 — Slice 28C remaining half-second Finder stall
+
+Observation: the owner reports a very consistent roughly 0.5-second hitch in both editor movement and desktop cursor highlighting after 28B. Leave its pan smoothness MANUAL check pending. Inspection finds DesktopItemTracker's 0.5-second main-run-loop timer awaiting a provider that synchronously executes NSAppleScript on MainActor. A prior Task.yield only postpones the blocking call. This is a remaining bottleneck, not proof the terrain fix failed or a new macOS coordinate/layering contradiction.
+
+Public API constraint: [Apple's thread-safety guide](https://developer.apple.com/library/archive/documentation/Cocoa/Conceptual/Multithreading/ThreadSafetySummary/ThreadSafetySummary.html) restricts NSAppleScript to the main thread. Do not move that object to a background queue. The smallest adopted execution adjustment is Foundation Process plus the public system osascript tool, explicitly selecting AppleScript and quoted source-form output (`man osascript`, `-l AppleScript -s s -e`). The unchanged source constant reads Finder through the existing provider. Section 5.5 distinguishes this fixed adapter query from separately authorized occupant execution. NSUserAppleScriptTask is intended for user scripts, so it is not used for this built-in query. No JavaScript runtime, private APIs, added helper target/service/backend, pack code, shell string interpolation or user-file execution.
+
+FinderScriptProcess owns Process on MainActor without waitUntilExit. Independent worker pipe readers cap stdout at 4 MiB and stderr at 64 KiB; termination resumes the awaiting read. Cancellation and a 15-second outer deadline terminate the child, preserve read serialization and suppress results. The original script retains its 10-second Apple Event timeout. FinderScriptOutput accepts only bounded lists, quoted strings, finite numbers and missing values, refusing trailing/unsupported/executable text; 8-level nesting and 60,000 values bound parsing. Names/paths are data, never concatenated into executable source. Parse descriptors and file metadata on a worker and return a Sendable Finder snapshot; observable state remains on MainActor. Existing read/poll gate, layout/display generations, fresh action reads, permission-denial pause and world/session cancellation remain unchanged.
+
+A read-only native comparison on this Mac measured the previous synchronous main-thread query at **298 ms** for six items/icon size 64. Three asynchronous reads took roughly **289–367 ms elapsed**, while **45–55 main-actor heartbeats** ran at a requested 5 ms interval. Each snapshot exactly matched the synchronous reference. This demonstrates execution isolation rather than faster Finder itself. No paths/names/file contents were printed, no Finder settings/files changed and no output action ran. Command-line feasibility does not establish Automation attribution for the launched app/child process: owner app permission/alignment/targeting checks remain pending; stop and document any contradiction rather than adding a synchronous fallback or permission workaround.
+
+Validation: Debug build and all **338 automated tests pass**, including six new native asynchronous-query tests. Coverage includes actual process wait with UI updates while still pending, quoted escapes/Unicode/control characters, fractional/negative coordinates and missing settings, unsafe/malformed/oversized/nonfinite output refusal, error -1700 versus permission -1743, cancellation, real timeout and subsequent successful query, and excessive output without pipe deadlock. All earlier serialized tracker, denied-read recovery, settling, stale display/world/action, simulator/persistence/renderer and pack regressions pass. Project regeneration includes the new sources/tests. README records exact real-Mac tracking/pan/cursor/permission/action checks; both new MANUAL groups remain pending. Slice 29 and later logic are untouched.

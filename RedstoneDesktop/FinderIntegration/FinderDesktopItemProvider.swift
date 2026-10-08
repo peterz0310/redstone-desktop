@@ -14,10 +14,10 @@ struct FinderDesktopItemProvider: DesktopItemProviding {
     }
 
     func currentDesktopSnapshot() async throws -> FinderDesktopSnapshot {
-        try Self.parseSnapshot(runner.queryDesktopSnapshot())
+        try await runner.readDesktopSnapshot()
     }
 
-    static func parseSnapshot(_ result: NSAppleEventDescriptor) throws -> FinderDesktopSnapshot {
+    nonisolated static func parseSnapshot(_ result: NSAppleEventDescriptor) throws -> FinderDesktopSnapshot {
         guard result.descriptorType == typeAEList, result.numberOfItems == 3, let rows = result.atIndex(3) else {
             throw FinderReadError.malformedResponse("Expected icon-size samples and desktop item rows.")
         }
@@ -28,7 +28,7 @@ struct FinderDesktopItemProvider: DesktopItemProviding {
             layoutIsStable: before == nil || after == nil || before == after)
     }
 
-    static func parse(_ result: NSAppleEventDescriptor) throws -> [DesktopItem] {
+    nonisolated static func parse(_ result: NSAppleEventDescriptor) throws -> [DesktopItem] {
         guard result.descriptorType == typeAEList else {
             throw FinderReadError.malformedResponse("Expected a list of items.")
         }
@@ -60,11 +60,11 @@ struct FinderDesktopItemProvider: DesktopItemProviding {
         }
     }
 
-    private static func isText(_ descriptor: NSAppleEventDescriptor) -> Bool {
+    nonisolated private static func isText(_ descriptor: NSAppleEventDescriptor) -> Bool {
         [typeUnicodeText, typeUTF8Text, typeChar].contains(descriptor.descriptorType)
     }
 
-    private static func number(_ descriptor: NSAppleEventDescriptor?) -> Double? {
+    nonisolated private static func number(_ descriptor: NSAppleEventDescriptor?) -> Double? {
         guard let descriptor,
               [typeSInt16, typeSInt32, typeSInt64, typeUInt32, typeIEEE32BitFloatingPoint, typeIEEE64BitFloatingPoint].contains(descriptor.descriptorType) else { return nil }
         let value = descriptor.doubleValue

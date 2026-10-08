@@ -4,9 +4,13 @@ import Foundation
 protocol FinderScriptRunning {
     func queryDesktopItems() throws -> NSAppleEventDescriptor
     func queryDesktopSnapshot() throws -> NSAppleEventDescriptor
+    func readDesktopSnapshot() async throws -> FinderDesktopSnapshot
 }
 
 extension FinderScriptRunning {
+    func readDesktopSnapshot() async throws -> FinderDesktopSnapshot {
+        try FinderDesktopItemProvider.parseSnapshot(queryDesktopSnapshot())
+    }
     func queryDesktopSnapshot() throws -> NSAppleEventDescriptor {
         let result = NSAppleEventDescriptor.list()
         result.insert(.null(), at: 1)
@@ -16,9 +20,18 @@ extension FinderScriptRunning {
     }
 }
 
-/// NSAppleScript must run on the main thread. The diagnostic model serializes reads.
+/// Production reads suspend while the system AppleScript tool executes outside the app UI thread.
+/// Synchronous NSAppleScript execution is retained for native descriptor/harmless fixture checks.
 @MainActor
 struct FinderScriptRunner: FinderScriptRunning {
+    func readDesktopSnapshot() async throws -> FinderDesktopSnapshot {
+        let data = try await FinderScriptProcess.execute(source: Self.desktopSnapshotQuery)
+        let snapshot = try await Task.detached(priority: .utility) {
+            try FinderDesktopItemProvider.parseSnapshot(FinderScriptOutput.descriptor(from: data))
+        }.value
+        try Task.checkCancellation()
+        return snapshot
+    }
     static let desktopQuery = """
     with timeout of 10 seconds
         tell application id "com.apple.finder"
