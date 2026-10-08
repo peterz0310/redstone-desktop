@@ -57,6 +57,9 @@ final class AppState: ObservableObject {
     @Published private(set) var observedPressCount = 0
     @Published private(set) var simulator = CircuitSimulator(world: DemoCircuit.makeWorld().circuit)
     @Published private(set) var lastActionResult = "Place a harmless Finder item on OUTPUT, then click PRESS on the desktop."
+    @Published private(set) var lastScriptResult: ScriptExecutionResult?
+    let actionAuthorizations: ActionAuthorizationStore
+    private let executeScriptAction: ExecuteScriptAction
     private let openItemAction: OpenItemAction
     private let tickScheduler: any CircuitTickScheduling
     private var pendingOutputs: [WorldCoordinate] = []
@@ -97,6 +100,8 @@ final class AppState: ObservableObject {
        desktopInteractionAssessment: @escaping (MouseEventIdentity) -> DesktopInteractionAssessment = { DesktopInteractionGate.assess($0) },
        tickScheduler: any CircuitTickScheduling = CircuitTickScheduler(),
        itemOpener: any ItemOpening = WorkspaceItemOpener(),
+       scriptExecutor: any ScriptExecuting = ScriptProcess(),
+       scriptAuthorizer: any ScriptAuthorizing = ScriptAuthorizationPresenter(),
        libraryStore: (any WorldLibraryStoring)? = nil,
        automaticallyRefreshFinder: Bool = false,
        autosaveDelay: Duration = .milliseconds(750),
@@ -126,6 +131,9 @@ final class AppState: ObservableObject {
         self.tickScheduler = tickScheduler
         self.desktopInteractionAssessment = desktopInteractionAssessment
         openItemAction = OpenItemAction(opener: itemOpener)
+        let authorizations = ActionAuthorizationStore(preferences: preferences)
+        actionAuthorizations = authorizations
+        executeScriptAction = ExecuteScriptAction(executor: scriptExecutor, authorizer: scriptAuthorizer, store: authorizations)
         self.displaySettleDelay = displaySettleDelay
         self.preferences = preferences
         self.soundPlayer = soundPlayer
@@ -494,6 +502,19 @@ final class AppState: ObservableObject {
         editorWorld = next
         worldDidChange()
         developerPlacementStatus = "Repeater updated at (\(coordinate.x), \(coordinate.y))."
+        return true
+    }
+
+    @discardableResult
+    func configureOutput(at coordinate: WorldCoordinate, mode: OutputActionMode) -> Bool {
+        guard !isEditorConfigurationLocked,
+              var component = editorWorld.circuit.components[coordinate], component.kind == .output else { return false }
+        component.outputAction = mode
+        var next = editorWorld
+        next.circuit.components[coordinate] = component
+        editorWorld = next
+        worldDidChange()
+        developerPlacementStatus = "Output action updated. Execution requires separate file approval."
         return true
     }
 
@@ -874,7 +895,28 @@ final class AppState: ObservableObject {
                 return
             }
             guard self.outputIsVisible(coordinate) else { return }
-            self.lastActionResult = self.openItemAction.perform(occupancy: self.desktopOccupancy.state(at: coordinate))
+            switch self.desktopWorld.circuit.components[coordinate]?.outputAction ?? .openOccupant {
+            case .none: self.lastActionResult = "Output action is disabled."
+            case .openOccupant:
+                self.lastActionResult = self.openItemAction.perform(occupancy: self.desktopOccupancy.state(at: coordinate))
+            case .executeOccupant:
+                self.lastActionResult = "Checking script and waiting for approval…"
+                let outcome = await self.executeScriptAction.perform(occupancy: self.desktopOccupancy.state(at: coordinate), isCurrent: {
+                    self.desktopSession == session && self.activeWorldID == worldID && self.isDesktopWorldEnabled
+                        && !self.isDisplaySettling && !self.isFinderLayoutSettling
+                        && self.finderDiagnostics.layoutGeneration == layoutGeneration && self.outputIsVisible(coordinate)
+                }, refresh: {
+                    // A confirmation may remain open while a background poll runs; use the shared read gate.
+                    while self.finderDiagnostics.isReading && !Task.isCancelled {
+                        try? await Task.sleep(for: .milliseconds(10))
+                    }
+                    guard !Task.isCancelled, await self.finderDiagnostics.readItems() else { return .unavailable("Finder refresh failed.") }
+                    return self.desktopOccupancy.state(at: coordinate)
+                })
+                guard !Task.isCancelled, self.desktopSession == session, self.activeWorldID == worldID else { return }
+                self.lastActionResult = outcome.message
+                if let result = outcome.result { self.lastScriptResult = result }
+            }
         }
     }
 
@@ -891,7 +933,7 @@ final class AppState: ObservableObject {
             return
         }
         guard activationTask == nil, !finderDiagnostics.isReading else {
-            lastActionResult = "Finder is busy; click \(inputTitle) again after the read finishes."
+            lastActionResult = "Another action or Finder read is busy; click \(inputTitle) again after it finishes."
             return
         }
         guard finderDiagnostics.hasRead, finderDiagnostics.permission == .allowed else {

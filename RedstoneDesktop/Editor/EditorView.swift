@@ -132,6 +132,19 @@ struct EditorView: View {
                     if editor.browsingWorld(appState).circuit.components[coordinate]?.kind == .repeater {
                         Text("Stored: \(editor.browsingWorld(appState).circuit.components[coordinate]!.direction.rawValue), \(editor.browsingWorld(appState).circuit.components[coordinate]!.repeaterDelay.rawValue)t")
                     }
+                    if let component = editor.browsingWorld(appState).circuit.components[coordinate], component.kind == .output {
+                        Picker("Output action", selection: Binding(get: {
+                            editor.browsingWorld(appState).circuit.components[coordinate]?.outputAction ?? .openOccupant
+                        }, set: { appState.configureOutput(at: coordinate, mode: $0) })) {
+                            Text("Open occupant").tag(OutputActionMode.openOccupant)
+                            Text("Execute script").tag(OutputActionMode.executeOccupant)
+                            Text("None").tag(OutputActionMode.none)
+                        }.disabled(appState.isEditorConfigurationLocked || editor.isPreviewing(appState))
+                        if component.outputAction == .executeOccupant {
+                            Text("Supports .sh/.command (sh) and .zsh (zsh). A desktop activation previews the resolved path and asks for approval.")
+                                .font(.caption).foregroundStyle(.secondary)
+                        }
+                    }
                     Button("Erase selected component") {
                         appState.eraseCircuitComponent(at: coordinate, audioMapper: editor.mapper(size: editor.viewport))
                     }

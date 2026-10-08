@@ -4,7 +4,7 @@ An experimental native macOS app exploring a block world beneath real Finder des
 
 ## Current build and next steps
 
-**Implemented: Slices 0–28 plus the requested appearance/navigation follow-ups (27A/28A/28B/28C).** Debug build and all **338 automated tests** pass. Slice 28 adds explicitly entered Desktop Build Mode with a temporary transparent input window, hotbar and mouse-accessible exits; its real Finder/input checks remain pending. Slices 26/27 add optional validated texture/sound packs and local Minecraft Java texture importing. Original built-in assets remain complete defaults; imported game art stays in local Application Support, outside Git and app bundles. Read the [resource-pack format guide](docs/RESOURCE_PACKS.md) and [Java import guide](docs/JAVA_TEXTURE_IMPORT.md) before making/sharing packs.
+**Implemented: Slices 0–29 plus the requested appearance/navigation follow-ups (27A/28A/28B/28C).** Debug build and all **349 automated tests** pass. Slice 28 adds explicitly entered Desktop Build Mode with a temporary transparent input window, hotbar and mouse-accessible exits; its real Finder/input checks remain pending. Slices 26/27 add optional validated texture/sound packs and local Minecraft Java texture importing. Original built-in assets remain complete defaults; imported game art stays in local Application Support, outside Git and app bundles. Read the [resource-pack format guide](docs/RESOURCE_PACKS.md) and [Java import guide](docs/JAVA_TEXTURE_IMPORT.md) before making/sharing packs.
 
 Slices 20/21 and 23–25 are owner-accepted, along with corrected Slice 22 icon-size/marker behavior and the 19C bookmark/context-menu follow-up. Earlier detailed 19B/19C checks, Slice 22's real Output-after-resize check and the other specific Slices 26/27 checks and new 27A appearance checks remain pending. Local Java importing is owner-accepted.
 
@@ -16,7 +16,7 @@ Configuration still saves to `~/Library/Application Support/RedstoneDesktop/libr
 
 Finder Diagnostics remains useful for permission/alignment problems, and Desktop Details for input rejection/action results. They moved to **Advanced**. The obsolete Developer Placement window and fixed-demo diagnostic rows are removed; automated tests and migration fixtures remain, and no existing saved circuits were cleared. Shelf previews remain bounded schematic terrain/circuit snapshots. Finder markers now appear separately in the main editor canvas when enabled.
 
-**Next: run the Slice 28C Finder responsiveness walkthrough at the end of this file; prior detailed Slice 28 checks remain available too.** Slice 29 (script execution) remains untouched.
+**Next: run the [Slice 29 script-output walkthrough](docs/SCRIPT_OUTPUTS.md#mac-walkthrough).** Finder responsiveness is owner-accepted; other detailed adapter checks remain pending. Desktop Finder crosshairs are removed. Slice 30 (simplified torches) remains untouched.
 
 ## Adopted plan: worlds and saved areas
 
@@ -757,3 +757,12 @@ The 2 Hz Finder poll was running a synchronous NSAppleScript call on the same ma
 5. The app now invokes a system child tool for its fixed Finder query. If macOS presents Finder Automation consent, check the requesting app and allow it if you want tracking. If diagnostics instead report denial/failure, check **System Settings → Privacy & Security → Automation** and report the exact app/diagnostic message. Existing authorization may carry over, but the command-line comparison does not prove your launched app's permission attribution. Do not reset privacy settings or run shell workarounds just to bypass a failure.
 
 Local native reads returned identical snapshots while 45–55 UI heartbeat updates ran during each pending query; all 338 tests pass. Your actual cursor/pan/Finder-permission checks remain MANUAL pending. Source files: `FinderScriptProcess.swift` owns asynchronous process/cancellation/pipe limits, `FinderScriptOutput.swift` strictly parses data, and `FinderScriptRunner.swift`/`FinderDesktopItemProvider.swift` preserve the adapter/snapshot contract. Resource packs and user filenames never provide executable source. If the hitch remains, report whether it also occurs with Desktop stopped and Show Finder Items off. Slice 29 remains next and untouched.
+
+
+## Script execution Outputs — Slice 29
+
+Implemented with Debug build/all **349 automated tests passing**. Existing/new Outputs keep **Open occupant** as their default. Stop the active desktop, use Navigate to select an Output, and choose **Output action → Execute script** in the Inspector. Supported local `.sh`/`.command` files run via sh, `.zsh` via zsh -f; no arbitrary interpreter or shell command string. First activation previews the resolved path and asks for approval. Always Allow is optional and tied to the exact file/contents; Desktop Details can forget approvals. Moving/changing the target during approval refuses execution. Results are in **Advanced → Desktop Details → Last script result**, including stdout/stderr, exit, duration and truncation. Execution is asynchronous and bounded; Stop/Quit cancels the child/prompt.
+
+Read [docs/SCRIPT_OUTPUTS.md](docs/SCRIPT_OUTPUTS.md) for supported behavior, lifecycle limits, persistence and contributor guidance. The original MIT [hello.sh](examples/Scripts/hello.sh) fixture prints only a greeting and example stderr. Copy it to your Desktop for the walkthrough; no unfamiliar script is needed. Check first prompt/cancel/approval, repeater-before-prompt timing, held power, target movement, Stop while awaiting approval, optional remembering/revocation and mode save/reopen. Confirm ordinary folder opening still works after switching back to Open occupant. These new real-Mac checks remain MANUAL pending.
+
+The owner accepted the remaining periodic responsiveness fix before this slice. Unreported detailed Finder Automation/ambiguity/restart checks remain pending. Pink desktop crosshairs are now absent; mapper-derived occupancy and opted-in editor rings/names/snapping remain. Slice 30 and powered-Output pickup remain future work.

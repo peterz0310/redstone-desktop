@@ -64,6 +64,17 @@ struct DesktopDetailsView: View {
                 Text(appState.lastActionResult)
                     .font(.callout)
                     .textSelection(.enabled)
+                if let result = appState.lastScriptResult {
+                    DisclosureGroup("Last script result · exit \(result.exitCode)") {
+                        Text(result.path).font(.caption.monospaced()).textSelection(.enabled)
+                        Text("Duration: \(result.duration, specifier: "%.2f") s\(result.truncated ? " · output truncated" : "")").font(.caption)
+                        Text("stdout").font(.headline)
+                        Text(result.stdout.isEmpty ? "(empty)" : result.stdout).font(.caption.monospaced()).textSelection(.enabled)
+                        Text("stderr").font(.headline)
+                        Text(result.stderr.isEmpty ? "(empty)" : result.stderr).font(.caption.monospaced()).textSelection(.enabled)
+                    }
+                }
+                Button("Forget Script Approvals") { appState.actionAuthorizations.revokeAll() }
                 if !appState.lastPressMetadata.isEmpty {
                     Text(appState.lastPressMetadata)
                         .font(.caption.monospaced())

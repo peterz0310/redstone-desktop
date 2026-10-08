@@ -23,7 +23,7 @@ The intended workflow is:
 
 The project is an experiment first and a polished application second.
 
-Current implementation: **Slices 0–28 and the owner-requested 27A/28A/28B/28C polishing follow-ups are implemented**, with Debug build and all **338 automated tests passing**. Slice 28's explicit Desktop Build Mode and hover/border/editor-window follow-up are implemented. Slice 28A strengthens the border, polishes terrain/circuit art and consolidates viewport navigation; Slice 28B adds full-tile Output art/occupancy glow, removes ordinary Finder tile boxes and fixes a measured pan stall. Slice 28C moves real Finder polling/metadata work off the UI thread after measuring a remaining periodic stall. Detailed MANUAL checks and prior unreported Finder/input checks remain pending. Slices 0–19A, 20–21 and 23–25 have owner-reported acceptance; the 19C bookmark/context-menu follow-up and corrected Slice 22 icon-size/marker checks are also accepted. Detailed earlier 19B/19C runtime/deletion checks and Slice 22's real Output-after-resize check remain pending. The owner accepted local Java texture importing on 2026-10-08; the other specific Slice 26/27 checks and detailed 27A appearance checks remain pending. Slice 26 adds optional validated folder/ZIP packs with original fallback; Slice 27 imports selected textures from local Java JARs/packs into Application Support without bundling game assets. The actual pack contract and Java mapping/cache lifecycle are documented in docs/RESOURCE_PACKS.md and docs/JAVA_TEXTURE_IMPORT.md. **Slice 29 is next and untouched.** Historical entries record earlier behavior; Sections 3.8, 7.1, 25, 26 and 29 define the world/library/editing contract.
+Current implementation: **Slices 0–29 and the owner-requested 27A/28A/28B/28C polishing follow-ups are implemented**, with Debug build and all **349 automated tests passing**. Slice 28's explicit Desktop Build Mode and hover/border/editor-window follow-up are implemented. Slice 28A strengthens the border, polishes terrain/circuit art and consolidates viewport navigation; Slice 28B adds full-tile Output art/occupancy glow, removes ordinary Finder tile boxes and fixes a measured pan stall. Slice 28C moves real Finder polling/metadata work off the UI thread after measuring a remaining periodic stall; the owner accepts responsiveness. Slice 29 adds explicitly configured, separately approved script outputs with asynchronous bounded results. Ordinary desktop Finder crosshairs are removed; editor projections and diagnostic numeric mappings remain. Detailed MANUAL checks and prior unreported Finder/input checks remain pending. Slices 0–19A, 20–21 and 23–25 have owner-reported acceptance; the 19C bookmark/context-menu follow-up and corrected Slice 22 icon-size/marker checks are also accepted. Detailed earlier 19B/19C runtime/deletion checks and Slice 22's real Output-after-resize check remain pending. The owner accepted local Java texture importing on 2026-10-08; the other specific Slice 26/27 checks and detailed 27A appearance checks remain pending. Slice 26 adds optional validated folder/ZIP packs with original fallback; Slice 27 imports selected textures from local Java JARs/packs into Application Support without bundling game assets. The actual pack contract and Java mapping/cache lifecycle are documented in docs/RESOURCE_PACKS.md and docs/JAVA_TEXTURE_IMPORT.md. **Slice 30 is next and untouched.** Historical entries record earlier behavior; Sections 3.8, 7.1, 25, 26 and 29 define the world/library/editing contract.
 
 The most important early question is not whether attractive terrain or redstone can be made. Those are comparatively straightforward. The first major feasibility gate is:
 
@@ -665,7 +665,7 @@ Create a diagnostic overlay showing:
 - transformed screen coordinate
 - derived icon center
 - derived world tile
-- a visible marker behind the real icon
+- an opted-in editor marker projected from the real icon center (desktop crosshairs removed after owner calibration acceptance)
 
 The human must confirm alignment.
 
@@ -1196,13 +1196,11 @@ Output visual state:
 enum OutputActionMode: Codable {
     case openOccupant
     case executeOccupant
-    case fixedOpen(URLReference)
-    case fixedExecute(URLReference)
     case none
 }
 ```
 
-Initial vertical slice needs only `openOccupant`.
+Initial vertical slice used only `openOccupant`. Slice 29 implements the three modes above; fixed-path actions remain future work.
 
 ## 20.1 Open occupant
 
@@ -1217,43 +1215,15 @@ Expected examples:
 
 ## 20.2 Execute occupant
 
-Explicitly powerful feature.
+Slice 29 supports explicitly configured `executeOccupant`. Resolved local regular `.sh`/`.command` files use `/bin/sh -- <absolute path>`; `.zsh` uses `/bin/zsh -f -- <absolute path>`. Unsupported files, folders, aliases and ambiguity are refused. No shell `-c`, sudo, pack code or arbitrary interpreter. Script files are readable and at most 1 MiB. Use the script's parent working directory, null stdin and current account/environment.
 
-Initial supported types can include:
-
-- `.sh`
-- `.command`
-- `.zsh`
-- optional `.py` using an explicitly selected interpreter
-
-Never do this:
-
-```text
-/bin/zsh -c "<concatenated user path>"
-```
-
-Use an executable plus argument array.
-
-No sudo.
-
-Capture:
-
-- stdout
-- stderr
-- exit code
-- duration
+Capture bounded stdout/stderr (1 MiB each), exit code and duration without blocking UI; drain excess, show truncation and stop waits at child exit. A 30-second deadline/Stop/Quit terminates the launched child with public POSIX escalation after two seconds if needed. Detached descendants/side effects are not undone. See docs/SCRIPT_OUTPUTS.md for supported behavior and public API references.
 
 ## 20.3 Authorization
 
-Recommended default:
+First execution previews the resolved exact path/interpreter in a dedicated SwiftUI window. Cancel or approve once; optional Always allow this exact file remembers canonical path, resource identity and contents fingerprint in separate preferences. Edited/replaced/retargeted files ask again; Desktop Details can forget approvals. No bypass in this slice.
 
-- first execution of an exact path requires confirmation
-- show resolved path
-- allow “always allow this exact file”
-- provide developer setting to bypass confirmations if user deliberately wants it
-- bypass default is OFF
-
-If target identity/path is ambiguous, refuse instead of guessing.
+After approval, re-read Finder through the shared gate, refuse moved/ambiguous targets and revalidate the file before launch. Session/world/area/display/layout changes and cancellation suppress stale approvals/results. This reduces races without claiming a filesystem lock. Do not persist Finder positions/paths or approvals in worlds. Component outputAction decodes missing values to openOccupant; normal placement retains that default.
 
 ---
 
@@ -1622,7 +1592,7 @@ Need visual state for:
 
 ### Output presentation (Slice 28B)
 
-Outputs fill their entire mapped tile with their semantic texture, centered without inset, colored backing, state label or badge text. Add only a soft edge glow: green for one occupant, gentle red for empty, amber for several occupants and gray for unreadable/unavailable data. Keep the separate bounded activation flash and inspector/diagnostic details. Ordinary Finder occupancy adds no green/red tile boxes; diagnostic center markers and opted-in editor projections remain available. Renderers consume the same occupancy snapshots and never choose or open targets.
+Outputs fill their entire mapped tile with their semantic texture, centered without inset, colored backing, state label or badge text. Add only a soft edge glow: green for one occupant, gentle red for empty, amber for several occupants and gray for unreadable/unavailable data. Keep the separate bounded activation flash and inspector/diagnostic details. Ordinary Finder occupancy adds no green/red tile boxes; opted-in editor projections and numeric Finder diagnostics remain available. Ordinary desktop Finder items have no crosshair/center-ring overlay. Renderers consume the same occupancy snapshots and never choose or open targets.
 
 ## 28.3 Performance goals
 
@@ -2735,22 +2705,25 @@ Owner reports a persistent half-second hitch after 28B. Fix the measured adapter
 
 ### Manual acceptance
 
-- [ ] MANUAL: with Desktop and/or editor Finder tracking on, continuous pointer movement and editor pan/pinch/scroll no longer have the half-second hitch; diagnostics still update item positions and icon size.
+- [x] MANUAL: with Desktop and/or editor Finder tracking on, continuous pointer movement and editor navigation no longer have the reported half-second hitch (owner-reported acceptance).
+- [ ] MANUAL: recheck diagnostic item-position/icon-size updates and the remaining detailed adapter checks below.
 - [ ] MANUAL: actual app Finder Automation access, moving targets, occupied/empty/ambiguous Output behavior and Stop/Start/quit/reopen work with the asynchronous runner; no lingering read or replayed action.
 
 ---
 
 ## Slice 29 — Script execution outputs
 
-- [ ] `executeOccupant`
-- [ ] supported type validation
-- [ ] resolved-path preview
-- [ ] first-run authorization
-- [ ] `Process` execution
-- [ ] stdout/stderr capture
-- [ ] exit code
-- [ ] diagnostics result
-- [ ] harmless fixture tests
+- [x] `executeOccupant`
+- [x] supported type validation
+- [x] resolved-path preview
+- [x] first-run authorization
+- [x] `Process` execution
+- [x] stdout/stderr capture
+- [x] exit code
+- [x] diagnostics result
+- [x] harmless fixture tests
+
+**Implemented; real-Mac script acceptance pending.** See docs/SCRIPT_OUTPUTS.md for the exact target/interpreter, approval, persistence, bounds and contributor contract. Existing Outputs default to Open; execution is set per Output in the Inspector. Debug build/all 349 tests pass. No fixed paths, arbitrary interpreters, bypass or torch/Output relay implementation.
 
 ### Manual acceptance
 
@@ -3857,3 +3830,16 @@ FinderScriptProcess owns Process on MainActor without waitUntilExit. Independent
 A read-only native comparison on this Mac measured the previous synchronous main-thread query at **298 ms** for six items/icon size 64. Three asynchronous reads took roughly **289–367 ms elapsed**, while **45–55 main-actor heartbeats** ran at a requested 5 ms interval. Each snapshot exactly matched the synchronous reference. This demonstrates execution isolation rather than faster Finder itself. No paths/names/file contents were printed, no Finder settings/files changed and no output action ran. Command-line feasibility does not establish Automation attribution for the launched app/child process: owner app permission/alignment/targeting checks remain pending; stop and document any contradiction rather than adding a synchronous fallback or permission workaround.
 
 Validation: Debug build and all **338 automated tests pass**, including six new native asynchronous-query tests. Coverage includes actual process wait with UI updates while still pending, quoted escapes/Unicode/control characters, fractional/negative coordinates and missing settings, unsafe/malformed/oversized/nonfinite output refusal, error -1700 versus permission -1743, cancellation, real timeout and subsequent successful query, and excessive output without pipe deadlock. All earlier serialized tracker, denied-read recovery, settling, stale display/world/action, simulator/persistence/renderer and pack regressions pass. Project regeneration includes the new sources/tests. README records exact real-Mac tracking/pan/cursor/permission/action checks; both new MANUAL groups remain pending. Slice 29 and later logic are untouched.
+
+
+## 2026-10-08 — Owner accepts responsiveness; remove crosshairs and implement Slice 29
+
+Context: the owner says “Nice. Remove the crosshair from finder items too. Otherwise great we can move on,” then asks to keep going. Record responsiveness acceptance narrowly, separate from unreported detailed Automation/ambiguity/restart checks. Remove desktop marker drawing without removing mapper-derived Finder data, occupancy, input protection, fresh action targeting or opted-in editor projections. Numeric diagnostics remain; earlier calibration markers remain historical evidence.
+
+Decision: implement the next Slice 29 only. Add default-open Codable outputAction, locked/shared per-world Inspector editing and durable configuration. Separate target validation, authorization, Process execution and result display from simulation/rendering. Support resolved readable regular .sh/.command via sh and .zsh via zsh -f, max 1 MiB, fixed interpreter/argument array, null stdin, parent working directory, no shell command string/privilege escalation/pack code. First approval previews canonical path; Always Allow remembers exact path/resource identity/SHA-256 in separate preferences with revocation. Re-read current Finder occupant after approval, revalidate file, and check captured runtime/world/layout/display/visibility/cancellation before launch/publication. Existing single action/read gate and rising-edge behavior remain.
+
+Process remains MainActor-owned but never waits synchronously. Independent nonblocking bounded pipe readers drain output without blocking UI or accumulating unbounded memory. Keep 1 MiB per stream and report truncation/exit/duration. Deadline 30 seconds; termination followed after two seconds by public POSIX kill of only the still-running child if TERM is ignored. Closing/draining pipes at child exit prevents descendant-held descriptors from hanging completion; independently detached descendants/earlier side effects are outside supervision. No new native helper, backend, private APIs or general interpreter/plugin runtime. Dedicated SwiftUI confirmation can work with the editor closed; actual focus/close behavior is owner validation.
+
+Validation: Debug build and all **349 tests pass**, including eleven new execution tests. Native temporary harmless scripts exercise sh/command/zsh, quoted/Unicode/command-looking paths, working directory, stdout/stderr/nonzero exit/duration, dual-stream overflow, main-thread progress, cancellation, timeout, ignored-TERM escalation and recovery. Fakes cover once/always/revoke/edit approval, ambiguous/missing/moved/changed/stale target refusal, delayed repeater dispatch exactly once, mode persistence/backward decoding/invalid values/edit locks, and Stop/Start with an old suspended approval refusing launch/remembering. Updated marker tests and actual AppState fixture assert no desktop crosshairs while mapping/occupancy continue. Native SwiftUI hosting checks prompt layout and pre-cancelled presentation without activating owner windows. Initial missing actor annotation and awaited XCTest autoclosure were corrected; these are implementation/test compiler errors, not observed macOS API contradictions. Pure World/Circuit type-check and diff checks pass. Tests do not access real Finder, owner library/approvals or real Desktop scripts.
+
+Documentation: docs/SCRIPT_OUTPUTS.md is the contributor/behavior contract and exact Mac walkthrough; examples/Scripts/hello.sh prints harmless stdout/stderr only. README points to it and records current status. Slice 29 MANUAL checks remain unchecked; later torch and Output relay slices remain untouched.

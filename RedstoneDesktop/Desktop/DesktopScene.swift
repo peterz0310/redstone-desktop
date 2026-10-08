@@ -105,21 +105,7 @@ final class DesktopScene: SKScene {
 
     func updateFinderMarkers(_ mappings: [FinderItemMapping]) {
         finderMarkers.removeAllChildren()
-        for mapping in mappings where screen.contains(mapping.screenCenter) {
-            let path = CGMutablePath()
-            path.addEllipse(in: CGRect(x: -32, y: -32, width: 64, height: 64))
-            path.move(to: CGPoint(x: -40, y: 0))
-            path.addLine(to: CGPoint(x: 40, y: 0))
-            path.move(to: CGPoint(x: 0, y: -40))
-            path.addLine(to: CGPoint(x: 0, y: 40))
-            let marker = SKShapeNode(path: path)
-            marker.name = mapping.id
-            marker.position = mapper.scenePoint(fromScreen: mapping.screenCenter, on: screen)
-            marker.strokeColor = .systemPink.withAlphaComponent(0.85)
-            marker.fillColor = .clear
-            marker.lineWidth = 1.5
-            finderMarkers.addChild(marker)
-        }
+        // Finder icons provide their own presentation; retain no desktop crosshairs.
     }
 
     func updateOccupancy(_ snapshot: DesktopOccupancySnapshot) {
