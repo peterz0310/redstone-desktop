@@ -23,7 +23,7 @@ The intended workflow is:
 
 The project is an experiment first and a polished application second.
 
-Current implementation: Slices 0–19A have owner-confirmed acceptance. **Slices 19B–25 are implemented.** The 19C bookmark/context-menu follow-up is owner-accepted; Slices 20–21 now have owner-reported acceptance; earlier specific 19B/19C runtime/deletion checks remain pending. The owner requested 19C usability cleanup after tentative 19B feedback. Worlds now have a sidebar; area previews sit below the canvas; creation/rename/save/deletion use focused sheets. Atomic deletion protects active/final records and preserves configuration on failure. Library, fixed-seed world and explicit saved-area activation contracts remain intact. Slice 20 adds explicitly enabled Finder projections and Output snapping in the editor; Slice 21 adds primary-display change handling with preserved lower-left camera anchoring. Slice 22 adds read-only icon-size detection and settled center refresh; its Mac checks remain pending. Slice 23 adds optional, reversible Finder scale synchronization; Mac acceptance remains pending. Slice 24 adds original semantic sound effects and master volume/mute. Slice 25 adds camera-based stereo panning; The owner accepted Slices 24/25 audio/mute/stereo on 2026-10-08; corrected Finder size/synchronization checks for 22/23 remain pending. Resource packs are next in **Slice 26** and are untouched. Historical entries record earlier behavior; Sections 3.8, 7.1, 25 and 29 define the current contract.
+Current implementation: Slices 0–19A have owner-confirmed acceptance. **Slices 19B–25 are implemented.** The 19C bookmark/context-menu follow-up is owner-accepted; Slices 20–21 now have owner-reported acceptance; earlier specific 19B/19C runtime/deletion checks remain pending. The owner requested 19C usability cleanup after tentative 19B feedback. Worlds now have a sidebar; area previews sit below the canvas; creation/rename/save/deletion use focused sheets. Atomic deletion protects active/final records and preserves configuration on failure. Library, fixed-seed world and explicit saved-area activation contracts remain intact. Slice 20 adds explicitly enabled Finder projections and Output snapping in the editor; Slice 21 adds primary-display change handling with preserved lower-left camera anchoring. Slice 22 adds read-only icon-size detection and settled center refresh; its Mac checks remain pending. Slice 23 adds optional, reversible Finder scale synchronization; Mac acceptance remains pending. Slice 24 adds original semantic sound effects and master volume/mute. Slice 25 adds camera-based stereo panning; The owner accepted Slices 24/25 audio/mute/stereo on 2026-10-08; The owner accepted corrected size/marker/synchronization behavior on 2026-10-08; Slice 22’s real Output-after-resize check remains pending. Resource packs are next in **Slice 26** and are untouched. Historical entries record earlier behavior; Sections 3.8, 7.1, 25 and 29 define the current contract.
 
 The most important early question is not whether attractive terrain or redstone can be made. Those are comparatively straightforward. The first major feasibility gate is:
 
@@ -2507,8 +2507,8 @@ Owner-requested usability detour before Finder ghosts; preserve Slice 19B runtim
 
 ### Manual acceptance
 
-- [ ] MANUAL: change desktop icon size.
-- [ ] MANUAL: mapped markers realign after Finder settles.
+- [x] MANUAL: change desktop icon size.
+- [x] MANUAL: mapped markers realign after Finder settles.
 - [ ] MANUAL: output target follows actual new item position.
 
 ---
@@ -2524,9 +2524,9 @@ Owner-requested usability detour before Finder ghosts; preserve Slice 19B runtim
 
 ### Manual acceptance
 
-- [ ] MANUAL: changing Finder icon size can zoom world in sync mode.
-- [ ] MANUAL: occupancy is recalculated rather than assumed.
-- [ ] MANUAL: independent mode leaves world scale alone.
+- [x] MANUAL: changing Finder icon size can zoom world in sync mode.
+- [x] MANUAL: occupancy is recalculated rather than assumed.
+- [x] MANUAL: independent mode leaves world scale alone.
 
 Keep this optional if Finder behavior feels awkward.
 
@@ -3610,3 +3610,8 @@ Smallest proposed/adopted correction: use Finder's public `window of desktop` ob
 Owner's “All seems good” except synchronization records acceptance of Slices 24/25 audio/mute/direction checks from the preceding walkthrough. Slice 23 remains pending; Slice 22 resize/target checks need revalidation with the corrected live size query. No resource-pack slice started.
 
 Validation of the correction: Debug build and all 279 tests pass. Two new regression checks distinguish successful item reads with missing size metadata and prove stable cached metadata can enable synchronization during an outstanding background poll. A read-only execution of the revised full snapshot script returned before/after size 64/64 and item count 5 (no file names/paths printed). No real Finder settings or saved cameras were changed. Quit/reopen the rebuilt app, verify numeric diagnostic size and repeat the optional zoom/center/occupancy/off checks.
+
+
+## 2026-10-08 — Owner confirms corrected Finder scale behavior
+
+The owner reports “Yup it works” after the numeric-size, synchronization, Finder resizing/marker and off/restored-camera retest. Record the first two Slice 22 MANUAL checks and all three Slice 23 checks as owner-reported acceptance, separately from the 279 passing automated tests. Keep Slice 22’s current-occupant Output-after-resize check pending because the most recent retest did not explicitly include that action. Resource packs (Slice 26) are next; the owner asks what comes next, so this update records acceptance and describes scope without starting implementation.
