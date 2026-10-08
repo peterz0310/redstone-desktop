@@ -5,6 +5,7 @@ struct TerrainRenderMetrics: Equatable {
     var chunkNodes = 0
     var generatedChunks = 0
     var textureBuilds = 0
+    var tileRasterBuilds = 0
     var status = ""
 }
 
@@ -19,12 +20,20 @@ final class TerrainChunkRenderer {
     private var overrides: [WorldCoordinate: Tile] = [:]
     private var excluded: Set<WorldCoordinate> = []
     private var generation: WorldGenerationSettings?
+    private struct TileRasterKey: Hashable {
+        let terrain: TerrainID
+        let decoration: DecorationID?
+        let appearance: DecorationAppearance?
+    }
+    // Finite semantic combinations, scoped to the current asset revision, independent of map size.
+    private var tileRasters: [TileRasterKey: [UInt8]] = [:]
     private(set) var metrics = TerrainRenderMetrics()
 
     func render(_ world: World, mapper: CoordinateMapper, screen: ScreenDescriptor, viewport: CGRect, into layer: SKNode) {
         guard let generation = world.generation else { return }
         let requested = mapper.visibleChunks(on: screen, viewport: viewport)
         if self.generation != generation || overrides != world.tiles || excluded != world.unspecifiedTiles || assetRevision != assets.revision {
+            if assetRevision != assets.revision { tileRasters.removeAll() }
             assetRevision = assets.revision
             for node in nodes.values { node.removeFromParent() }
             nodes.removeAll()
@@ -70,13 +79,13 @@ final class TerrainChunkRenderer {
                 let stored = world.tiles[coordinate] ?? (world.unspecifiedTiles.contains(coordinate) ? nil : chunk.tiles[coordinate])
                 let tile = stored.map { TerrainAppearance.tile($0, generated: world.tiles[coordinate] == nil) }
                 let appearance = tile?.decoration.map { DecorationAppearance.choose($0, at: coordinate, seed: world.generation?.seed ?? 0, terrain: tile?.terrain) }
-                for py in 0..<resolution {
-                    for px in 0..<resolution {
-                        let color = tile.map { assets.pixel($0, x: px, y: py, appearance: appearance) } ?? (0, 0, 0, 0)
-                        // Raster rows increase downward; global/scene conversion remains in mapper.
-                        let offset = ((dimension - 1 - (y * resolution + py)) * dimension + x * resolution + px) * 4
-                        bytes[offset] = color.0; bytes[offset + 1] = color.1
-                        bytes[offset + 2] = color.2; bytes[offset + 3] = color.3
+                let raster = tile.map { tileRaster($0, appearance: appearance, resolution: resolution) }
+                    ?? [UInt8](repeating: 0, count: resolution * resolution * 4)
+                raster.withUnsafeBufferPointer { source in
+                    for py in 0..<resolution {
+                        // Raster rows increase downward; world/scene conversion remains in mapper.
+                        let offset = ((dimension - 1 - (y * resolution + py)) * dimension + x * resolution) * 4
+                        bytes.advanced(by: offset).update(from: source.baseAddress!.advanced(by: py * resolution * 4), count: resolution * 4)
                     }
                 }
             }
@@ -86,6 +95,20 @@ final class TerrainChunkRenderer {
         texture.filteringMode = .nearest
         texture.usesMipmaps = false
         return texture
+    }
+
+    private func tileRaster(_ tile: Tile, appearance: DecorationAppearance?, resolution: Int) -> [UInt8] {
+        let key = TileRasterKey(terrain: tile.terrain, decoration: tile.decoration, appearance: appearance)
+        if let raster = tileRasters[key] { return raster }
+        var raster: [UInt8] = []
+        raster.reserveCapacity(resolution * resolution * 4)
+        for y in 0..<resolution { for x in 0..<resolution {
+            let color = assets.pixel(tile, x: x, y: y, appearance: appearance)
+            raster.append(contentsOf: [color.0, color.1, color.2, color.3])
+        } }
+        tileRasters[key] = raster
+        metrics.tileRasterBuilds += 1
+        return raster
     }
 }
 

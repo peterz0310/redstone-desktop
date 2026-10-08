@@ -63,7 +63,7 @@ For rows with numeric tint, each decoded RGB channel is multiplied by the listed
 
 Square PNGs are accepted. Vertical strips whose height is an integer multiple of their width contribute **only the first, top square frame**. Other nonsquare images are skipped. Animation metadata is ignored; there is no animated water. Source PNG dimensions must be 1–1024 on each axis and encoded size at most 4 MiB. Generated terrain is sampled at 16 pixels per tile, with nearest filtering.
 
-Tree/flower/reed images are 2D decoration overlays, not 3D models. Dust uses the existing connected wire geometry with the imported material. Selection overlays and all sounds retain original built-in assets. Outputs use the command-block face with a small original red indicator when powered; occupancy labels remain app UI. Cacti crop the central top face into a transparent 16×16 overlay. Missing individual mappings also use original fallback. Importing textures does not change terrain rules, circuits, Finder targets, world data or cameras.
+Tree/flower/reed images are 2D decoration overlays, not 3D models. Dust uses the existing connected wire geometry with the imported material. Selection overlays and all sounds retain original built-in assets. Outputs use the command-block face with a small original red indicator when powered; soft occupancy glow remains app UI; Output art covers a full tile with no text or colored backing. Cacti crop the central top face into a transparent 16×16 overlay. Missing individual mappings also use original fallback. Importing textures does not change terrain rules, circuits, Finder targets, world data or cameras.
 
 ### Circuit and decoration appearance
 

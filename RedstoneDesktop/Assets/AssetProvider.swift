@@ -72,7 +72,7 @@ final class AssetLibrary: ObservableObject, AssetProvider {
     @Published private(set) var discoveryStatus = ""
     @Published private(set) var importFolder: URL?
     @Published private(set) var importRecord: JavaImportRecord?
-    var terrainResolution: Int { pack?.textures.keys.contains(where: { $0.circuitID == nil }) == true ? 16 : 8 }
+    private(set) var terrainResolution = 8
     var soundOverrides: [SoundID: [Float]] { pack?.sounds ?? [:] }
 
     init(preferences: UserDefaults? = nil, importCacheRoot: URL? = nil) {
@@ -166,6 +166,7 @@ final class AssetLibrary: ObservableObject, AssetProvider {
     }
     func apply(_ value: LoadedPack?) {
         pack = value; textures = [:]; name = value?.manifest.name ?? "Built-in original assets"
+        terrainResolution = value?.textures.keys.contains(where: { $0.circuitID == nil }) == true ? 16 : 8
         warnings = value?.warnings ?? []; revision = UUID()
     }
     func texture(for id: TextureAssetID) -> SKTexture? {

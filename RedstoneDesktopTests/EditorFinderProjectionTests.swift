@@ -229,7 +229,7 @@ final class EditorFinderProjectionTests: XCTestCase {
     }
 
     @MainActor
-    func testOutputBadgeUsesProposedCameraInsteadOfLiveOccupancy() async throws {
+    func testOutputGlowUsesProposedCameraInsteadOfLiveOccupancy() async throws {
         let provider = ProjectionProvider(), editor = EditorSession(), opener = FixtureItemOpener()
         let wide = ScreenDescriptor(id: "wide", frame: CGRect(x: 0, y: 0, width: 1600, height: 900), backingScale: 2)
         let state = AppState(screenProviding: { wide }, clickEventMonitoring: FakeGlobalMouseEventMonitor(),
@@ -248,9 +248,11 @@ final class EditorFinderProjectionTests: XCTestCase {
         let renderer = EditorCanvasRenderer()
         let scene = try XCTUnwrap(renderer.update(appState: state, editor: editor, size: size))
         let badge = scene.childNode(withName: "circuit")?.children.compactMap {
-            $0.childNode(withName: "output-occupancy:10,7") as? SKLabelNode
+            $0.childNode(withName: "output-occupancy:10,7") as? SKShapeNode
         }.first
-        XCTAssertEqual(badge?.text, "ITEM")
+        let color = try XCTUnwrap(badge?.strokeColor.usingColorSpace(.deviceRGB))
+        XCTAssertGreaterThan(color.greenComponent, color.redComponent)
+        XCTAssertEqual(try XCTUnwrap(badge).alpha, 0.55, accuracy: 0.001)
         XCTAssertEqual(state.desktopOccupancy.state(at: output), .empty)
         XCTAssertEqual(provider.calls, 1, "Rendering consumes cached data only")
         XCTAssertTrue(opener.urls.isEmpty)

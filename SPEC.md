@@ -23,7 +23,7 @@ The intended workflow is:
 
 The project is an experiment first and a polished application second.
 
-Current implementation: **Slices 0–28 and the owner-requested 27A/28A polishing follow-ups are implemented**, with Debug build and all **329 automated tests passing**. Slice 28's explicit Desktop Build Mode and hover/border/editor-window follow-up are implemented. Slice 28A strengthens the border, polishes terrain/circuit art and consolidates viewport navigation; its detailed MANUAL checks and prior unreported Finder/input checks remain pending. Slices 0–19A, 20–21 and 23–25 have owner-reported acceptance; the 19C bookmark/context-menu follow-up and corrected Slice 22 icon-size/marker checks are also accepted. Detailed earlier 19B/19C runtime/deletion checks and Slice 22's real Output-after-resize check remain pending. The owner accepted local Java texture importing on 2026-10-08; the other specific Slice 26/27 checks and detailed 27A appearance checks remain pending. Slice 26 adds optional validated folder/ZIP packs with original fallback; Slice 27 imports selected textures from local Java JARs/packs into Application Support without bundling game assets. The actual pack contract and Java mapping/cache lifecycle are documented in docs/RESOURCE_PACKS.md and docs/JAVA_TEXTURE_IMPORT.md. **Slice 29 is next and untouched.** Historical entries record earlier behavior; Sections 3.8, 7.1, 25, 26 and 29 define the world/library/editing contract.
+Current implementation: **Slices 0–28 and the owner-requested 27A/28A/28B polishing follow-ups are implemented**, with Debug build and all **332 automated tests passing**. Slice 28's explicit Desktop Build Mode and hover/border/editor-window follow-up are implemented. Slice 28A strengthens the border, polishes terrain/circuit art and consolidates viewport navigation; Slice 28B adds full-tile Output art/occupancy glow, removes ordinary Finder tile boxes and fixes a measured pan stall. Detailed MANUAL checks and prior unreported Finder/input checks remain pending. Slices 0–19A, 20–21 and 23–25 have owner-reported acceptance; the 19C bookmark/context-menu follow-up and corrected Slice 22 icon-size/marker checks are also accepted. Detailed earlier 19B/19C runtime/deletion checks and Slice 22's real Output-after-resize check remain pending. The owner accepted local Java texture importing on 2026-10-08; the other specific Slice 26/27 checks and detailed 27A appearance checks remain pending. Slice 26 adds optional validated folder/ZIP packs with original fallback; Slice 27 imports selected textures from local Java JARs/packs into Application Support without bundling game assets. The actual pack contract and Java mapping/cache lifecycle are documented in docs/RESOURCE_PACKS.md and docs/JAVA_TEXTURE_IMPORT.md. **Slice 29 is next and untouched.** Historical entries record earlier behavior; Sections 3.8, 7.1, 25, 26 and 29 define the world/library/editing contract.
 
 The most important early question is not whether attractive terrain or redstone can be made. Those are comparatively straightforward. The first major feasibility gate is:
 
@@ -1103,7 +1103,7 @@ Rules:
 
 ## 17.8 Output
 
-Output does not propagate power.
+The current implementation treats Output as a terminal sink and does not propagate power. The planned Slice 30A powered-block/repeater-pickup behavior below is not implemented yet.
 
 On:
 
@@ -1119,7 +1119,7 @@ Holding power must not repeatedly launch something.
 
 Simplified NOT behavior only.
 
-No burnout behavior in first version.
+No burnout behavior in first version. Slice 30 supplies a placed torch component with defined 2D input/emission and transition timing, editor/Desktop Build tools, off/on original art, optional local Java mappings and backward-compatible persistence. Exact orientation/timing rules must be documented and tested before changing simulation.
 
 ---
 
@@ -1263,7 +1263,7 @@ The renderer must never directly hard-code asset file paths.
 
 Use semantic IDs.
 
-The implemented format-1 ID catalog is in [docs/RESOURCE_PACKS.md](docs/RESOURCE_PACKS.md). It has 26 texture IDs, including separate button/repeater/Output power frames and `decorationReed`. UI selection/highlight overlays are not pack IDs. Historical hypothetical names are not accepted aliases. Dust uses the connected path renderer with semantic powered/unpowered materials.
+The implemented format-1 ID catalog is in [docs/RESOURCE_PACKS.md](docs/RESOURCE_PACKS.md). It has 27 texture IDs, including separate button/repeater/Output power frames and `decorationReed`. UI selection/highlight overlays are not pack IDs. Historical hypothetical names are not accepted aliases. Dust uses the connected path renderer with semantic powered/unpowered materials.
 
 Implemented texture provider:
 
@@ -1407,7 +1407,7 @@ Texture import first.
 
 ## 23.6 Implemented Slice 27 contract
 
-[docs/JAVA_TEXTURE_IMPORT.md](docs/JAVA_TEXTURE_IMPORT.md) defines actual supported paths and controls. Twenty-three semantic textures are mapped from modern `block/` and legacy `blocks/` names. Fixed RGB tint, first top square frame and bounded 2D component raster recipes approximate Java art; models, animation metadata, biome colormaps and audio are ignored. Stable coal/iron and flower presentation preserves version-1 terrain identity. Existing import caches require explicit Re-import to adopt the expanded mappings and bright red dust recipe. At least one valid supported PNG is required; missing mappings warn and use original fallback. Java import failure preserves the previous appearance/cache.
+[docs/JAVA_TEXTURE_IMPORT.md](docs/JAVA_TEXTURE_IMPORT.md) defines actual supported paths and controls. Twenty-six semantic textures are mapped from modern `block/` and legacy `blocks/` names. Fixed RGB tint, first top square frame and bounded 2D component raster recipes approximate Java art; models, animation metadata, biome colormaps and audio are ignored. Stable coal/iron and flower presentation preserves version-1 terrain identity. Existing import caches require explicit Re-import to adopt the expanded mappings and bright red dust recipe. At least one valid supported PNG is required; missing mappings warn and use original fallback. Java import failure preserves the previous appearance/cache.
 
 Imported images are re-encoded into `Application Support/RedstoneDesktop/ImportedTextures/<UUID>/` with `pack.json` and `import.json`. Validate a staging directory before publication. One active pack resolves missing IDs to built-in assets; do not stack packs. Successful re-import replaces the last managed cache; Reload reads the generated cache, Re-import reads the original source. Use Built-In retains the last managed cache for re-import/removal. Remove Imported Assets verifies managed directory identity and never deletes the source JAR/pack. Selection preferences remain separate from world saves; no imported images enter the repository or release bundle.
 
@@ -1514,7 +1514,7 @@ View → Show Finder Items is an explicit, session-only opt-in, initially off. I
 
 Publish cached raw Finder read snapshots even when the desktop renderer is absent. Build a pure projection tagged with the selected world UUID and proposed desktop camera: convert Finder centers through CoordinateMapper using the current primary-display reference, filter to the physical target display, then convert projected world centers through the editor mapper. Backing scale does not multiply logical coordinates. Projection is ephemeral and never persists Finder paths/positions. Changing world, proposed origin, editor zoom or cached Finder data refreshes markers. Seed previews hide markers and disable snapping. Display-change observation and settled refresh are implemented in Slice 21.
 
-Label markers and inspector/output occupancy as a projection of the selected world's proposed view, including inactive worlds and unsaved camera changes; never copy the live world's occupancy into another world. Actual desktop occupancy/action dispatch remains tied to its assigned camera/world. Render only centers inside the editor canvas, with names and center rings; red rings mean multiple items in one tile. Output badges show EMPTY/ITEM/MANY/N/A using projected occupancy. No editor interaction reads Finder directly, simulates an inactive circuit or launches a file.
+Label markers and inspector/output occupancy as a projection of the selected world's proposed view, including inactive worlds and unsaved camera changes; never copy the live world's occupancy into another world. Actual desktop occupancy/action dispatch remains tied to its assigned camera/world. Render only centers inside the editor canvas, with names and center rings; red rings mean multiple items in one tile. Outputs use full-tile art with projected occupancy glow: green for exactly one item, gentle red for empty, amber for ambiguous and neutral gray for unavailable. Occupancy details remain in the inspector; no OUTPUT/EMPTY/ITEM/MANY/N/A text is drawn over the block. No editor interaction reads Finder directly, simulates an inactive circuit or launches a file.
 
 Output snapping uses a 24-logical-point radius around visible ghost centers. Choose the nearest center's containing world tile (floor through CoordinateMapper); exact equal-distance ties across different tiles fall back to the ordinary clicked tile rather than guessing a target. Multiple items on one tile remain ambiguous and retain the existing action refusal. Recompute from the latest cached projection on click, rather than committing stale hover state. Snapping changes only the placement target; shared terrain/decoration/occupied-cell rules and preview/running-active editing guards still apply. Moving an icon never moves an already-placed component.
 
@@ -1620,6 +1620,10 @@ Need visual state for:
 - output empty/occupied/ambiguous
 - output trigger flash
 
+### Output presentation (Slice 28B)
+
+Outputs fill their entire mapped tile with their semantic texture, centered without inset, colored backing, state label or badge text. Add only a soft edge glow: green for one occupant, gentle red for empty, amber for several occupants and gray for unreadable/unavailable data. Keep the separate bounded activation flash and inspector/diagnostic details. Ordinary Finder occupancy adds no green/red tile boxes; diagnostic center markers and opted-in editor projections remain available. Renderers consume the same occupancy snapshots and never choose or open targets.
+
 ## 28.3 Performance goals
 
 On modern Apple Silicon:
@@ -1631,6 +1635,10 @@ On modern Apple Silicon:
 - pause/reduce work when display sleeps if practical
 
 Aim initially for comfortably under ~5% CPU while static, but profile rather than optimizing blindly.
+
+Slice 28B retains the native editor scene during pan/zoom/resize instead of replacing it on every camera update. Viewport updates go through CoordinateMapper and redraw bounded overlays/circuit culling. Terrain chunks still retain only the requested visible/margin set. Cache one small RGBA raster per finite terrain/decoration/appearance combination, keyed by asset revision; reuse its rows when baking chunks rather than repeating pack lookup/compositing for every tile pixel. Derive pack terrain resolution once on pack publication. The style cache is independent of explored coordinates and invalidates on pack revision; generation version, overrides, world saves and simulation are unchanged. No background rendering, asynchronous publication or catch-up simulation is introduced.
+
+A local unoptimized native harness with temporary local 1.21.8 art measured chunk-boundary updates around 651–658 ms before the fix versus 7.5–7.8 ms afterward, and initial rendering about 2,069 ms versus 26 ms. This identifies/removes one concrete stall; owner pan/zoom/Finder-enabled smoothness remains pending, and these timings are not cross-device/frame-rate guarantees.
 
 ---
 
@@ -2693,6 +2701,25 @@ Scoped polish before Slice 29; retain saved worlds, generation version 1, placem
 
 ---
 
+## Slice 28B — Output presentation and measured editor pan stalls
+
+Owner-requested follow-up before Slice 29. Later circuit features below are documentation only.
+
+- [x] Full-tile Output texture with no text, purple framing or colored backing; soft occupancy glow and retained separate activation flash.
+- [x] Remove ordinary Finder occupied-tile boxes without changing snapshots, target resolution, diagnostics or action refusal.
+- [x] Measure native pan/chunk-boundary work with a temporary local Java import.
+- [x] Cache finite semantic tile rasters and pack resolution; invalidate correctly on appearance changes and preserve chunk bounds/terrain pixels.
+- [x] Reuse the native editor scene across pan, zoom and resize; remap overlays/culling through CoordinateMapper without changing desktop/saved cameras.
+- [x] Renderer/cache/navigation regression tests, Debug build, full suite and updated documentation.
+- [x] Record later torch scope and powered-Output/repeater pickup roadmap; keep simulation changes unimplemented.
+
+### Manual acceptance
+
+- [ ] MANUAL: Output covers its tile without text/purple backing; one occupant glows green, empty gently red, ambiguity amber and unavailable neutral; ordinary Finder items have no occupied-tile boxes and opening still works.
+- [ ] MANUAL: long editor pan/pinch/scroll with Java art is smoother across chunk boundaries, cached counts remain bounded, pack swaps refresh correctly and browsing leaves the desktop assignment unchanged.
+
+---
+
 ## Slice 29 — Script execution outputs
 
 - [ ] `executeOccupant`
@@ -2721,6 +2748,32 @@ Scoped polish before Slice 29; retain saved worlds, generation version 1, placem
 - [ ] tests
 - [ ] rendering
 - [ ] optional sound
+- [ ] Place/erase/rotate torches in the editor and Desktop Build Mode; keep existing tools and stored components compatible.
+- [ ] Original off/on torch assets and bounded optional local Java mappings; packs never define logic.
+- [ ] Backward-compatible component decoding/persistence, powered/unpowered input transitions, cardinal output table, insertion-order invariance and bounded feedback tests.
+- [ ] Document explicit 2D differences from Minecraft (no vertical wiring, burnout, quasi-connectivity or full update-order parity).
+
+### Manual acceptance
+
+- [ ] MANUAL: placed torches invert the documented input, power a downstream dust/repeater circuit, save/reopen correctly and leave existing circuits working.
+
+---
+
+## Slice 30A — Powered Output blocks and repeater pickup
+
+Planned owner-requested circuit extension after Slice 30, before diagnostics completion. Current Output remains a terminal sink until this slice is implemented. This is a specified 2D approximation, not a claim of full Minecraft powered-block mechanics.
+
+- [ ] Define/test Output powered-block state independently of Finder occupancy, action result and whether any action is configured; document strong/weak input handling for the supported component table.
+- [ ] A repeater whose rear faces a powered Output may sample its positive signal and emit 15 after its configured delay, allowing `source → Output A → repeater → Output B`.
+- [ ] Preserve terminal dust behavior: no implicit direct Output-to-Output or Output-to-dust broadcast in this first extension. Document any later broader conductor behavior as a separate rule change.
+- [ ] Preserve one activation per Output rising edge, no repeat while held, no replay from appearance/camera changes and normal fresh/ambiguous/offscreen/world-session action guards.
+- [ ] Two-phase, deterministic rear sampling; no in-place recursive propagation or stale-power self-latching. Test chains, all orientations, delays/on-off transitions, power restoration, reversed/side ports, insertion order, integer limits and bounded feedback with torches/repeaters.
+- [ ] Update renderer connectivity to match simulation ports, with no false side traces; maintain separate action execution and unchanged save ownership.
+- [ ] Build/full regression suite and shareable rules/examples, with demo fixtures only to the right of existing builds.
+
+### Manual acceptance
+
+- [ ] MANUAL: two Outputs separated by a correctly oriented repeater activate in sequence; held input does not repeatedly open either occupant, turning off clears the signal after delay, and moving an occupant changes only the action target.
 
 ---
 
@@ -3756,3 +3809,18 @@ Combine Select/Pan into Navigate with click-versus-drag handling; add public NSE
 Validation: Debug build and all **329 automated tests pass**, including nine new polishing tests and updated geometry/import/border expectations. Tests cover directed ports in four orientations, side/head-to-head exclusions, larger centered repeaters, thinner wire geometry, strength persistence and real native SpriteKit raster brightness, actual simulator→desktop strength delivery, stable grass/cactus projection and placement preservation, cactus fallback isolation, bounded Java recipes, pinch anchor/clamps/invalid deltas/library isolation and distinct Home/Return semantics. Existing generator/simulation/persistence/Finder/action regressions remain green. Pure domain type-check and diff checks pass.
 
 A standalone temporary import from installed local 1.21.8 produced **26 textures, zero sounds and zero warnings**. A native SpriteKit scene with the imported art was captured and inspected; pixel sampling verified progressively decreasing red brightness. Temporary caches/artifacts are outside Git, and no game art or owner preference/library changes were introduced. README and both pack guides describe current mappings, compatibility and Mac checks. All four new MANUAL groups remain pending owner validation.
+
+
+## 2026-10-08 — Slice 28B Output glow, pan profiling and future circuit requests
+
+Context: the owner likes 28A generally, asks for full-block Output art without purple/text, occupancy glow instead of ordinary Finder boxes, reports intermittent editor pan stalls and requests later torches/Output chaining. General approval is recorded without inferring every earlier detailed MANUAL check passed. Read the complete spec and inspect renderer/assets/cache/tests before changes. Implement this scoped visual/performance follow-up, with later logic documented only; Slice 29 remains next.
+
+Observed performance: an isolated unoptimized native harness using the actual importer/assets/EditorCanvasRenderer and temporary local 1.21.8 cache measured initial render 2,069 ms and chunk-boundary steps 651/658 ms, with neighboring cached steps under 1 ms. AssetLibrary.pixel recomputed terrainResolution by scanning texture IDs for every painted pixel, and chunks recomputed identical semantic tile rasters. Editor camera changes also recreated the native scene. These are code/profiling observations, not a new macOS API contradiction.
+
+Decision: cache resolution at pack publication and finite RGBA tile styles per renderer asset revision, copying rows into the existing bounded chunk textures. Keep the editor scene and update its mapper/viewport; refresh projected overlays after mapping changes. No generation/save/simulation behavior change or asynchronous renderer architecture. Repeating the same native harness measured initial render 26 ms and chunk-boundary steps 7.8/7.5 ms; neighboring steps were roughly 0.2–0.3 ms. This removes a measured cause; remaining real-Mac stalls, including possible unrelated Finder work, are not declared resolved without owner testing.
+
+Outputs now draw one full-tile semantic icon with no text/colored backing and a soft edge occupancy glow (green one item, red empty, amber ambiguous, gray unavailable). Keep the separate activation flash, occupancy snapshots/inspector, marker diagnostics, ambiguity refusal and fresh action resolver. Remove normal Finder occupancy tile boxes. No source assets or owner cache/preferences/library were changed by isolated tests/profiling.
+
+Update Section 17 and Slice 30 to make actual torch-tool/assets/persistence scope explicit. Add planned Slice 30A after torches for powered Output state and directed repeater rear pickup; do not implement it now or change current sink tests. Signal is independent of occupant/action success, with delayed downstream power restoration, no direct dust/Output broadcast and bounded deterministic feedback. Both future slice checklists remain unchecked.
+
+Validation: Debug build and all **332 automated tests pass**, including three new finite-style work-bound, pack revision/resolution pixel replacement and stable native scene/navigation isolation tests. Existing renderer/occupancy expectations now assert full-tile art, no Output labels, distinct retained glow states, empty ordinary occupancy layer and scene reuse. Pure domain type-check and diff checks pass. Native temporary capture checks the visual change separately from owner desktop acceptance. scripts/pan-profile.sh and scripts/PanProfile.swift provide a repeatable isolated unoptimized benchmark with original synthetic assets by default and optional local-JAR input. Both new MANUAL groups remain pending; README contains exact Output/Finder/pan/pack-swap checks. No advanced redstone, script execution, private APIs, backend or bundled game art added.

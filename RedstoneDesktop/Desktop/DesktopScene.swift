@@ -4,8 +4,8 @@ import SpriteKit
 final class DesktopScene: SKScene {
     private let terrainRenderer: TerrainChunkRenderer
     var terrainMetrics: TerrainRenderMetrics { terrainRenderer.metrics }
-    let screen: ScreenDescriptor
-    let mapper: CoordinateMapper
+    private(set) var screen: ScreenDescriptor
+    private(set) var mapper: CoordinateMapper
     private let highlight = SKShapeNode()
     private let clickFlash = SKShapeNode()
     private let tileLayer = SKNode()
@@ -61,6 +61,19 @@ final class DesktopScene: SKScene {
         if let world = renderedWorld { updateWorld(world, poweredTiles: renderedPower, leverPositions: renderedLevers, powerLevels: renderedPowerLevels) }
     }
 
+    /// Editor navigation keeps scene, texture and renderer ownership stable.
+    func updateViewport(screen: ScreenDescriptor, mapper: CoordinateMapper) {
+        self.screen = screen
+        self.mapper = mapper
+        if size != screen.frame.size { size = screen.frame.size }
+        else {
+            rebuildChecker()
+            if let world = renderedWorld { updateWorld(world, poweredTiles: renderedPower, leverPositions: renderedLevers, powerLevels: renderedPowerLevels) }
+        }
+        highlightedTile = nil
+        highlight.isHidden = true
+    }
+
     private var assetProvider: (any AssetProvider)?
     private var assetRevision: UUID?
     func setAssets(_ assets: any AssetProvider) {
@@ -113,16 +126,6 @@ final class DesktopScene: SKScene {
         renderedOccupancy = snapshot
         rebuildCircuit()
         occupancyLayer.removeAllChildren()
-        guard case let .available(tiles) = snapshot else { return }
-        for occupancy in tiles.values where !occupancy.items.isEmpty {
-            let rect = mapper.sceneRect(forTile: occupancy.coordinate, on: screen).insetBy(dx: 2, dy: 2)
-            let node = SKShapeNode(rect: rect)
-            let color: NSColor = occupancy.items.count == 1 ? .systemGreen : .systemRed
-            node.fillColor = color.withAlphaComponent(0.3)
-            node.strokeColor = color
-            node.lineWidth = 2
-            occupancyLayer.addChild(node)
-        }
     }
 
     func updateWorld(_ world: World, poweredTiles: Set<WorldCoordinate> = [], leverPositions: Set<WorldCoordinate>? = nil,

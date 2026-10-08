@@ -107,7 +107,7 @@ final class ChunkRendererTests: XCTestCase {
     }
 
     @MainActor
-    func testEditorSharesTerrainCacheAcrossSceneRecreationWithoutChangingDesktopCamera() throws {
+    func testEditorReusesSceneAndTerrainCacheWithoutChangingDesktopCamera() throws {
         let state = AppState(libraryStore: RendererMemoryStore())
         defer { state.shutdown() }
         let editor = EditorSession(), renderer = EditorCanvasRenderer(), size = CGSize(width: 640, height: 640)
@@ -115,7 +115,7 @@ final class ChunkRendererTests: XCTestCase {
         let metrics = first.terrainMetrics, desktop = state.desktopCamera
         editor.pan(by: CGSize(width: -1, height: -1), size: size)
         let next = try XCTUnwrap(renderer.update(appState: state, editor: editor, size: size))
-        XCTAssertFalse(first === next)
+        XCTAssertTrue(first === next)
         XCTAssertEqual(next.terrainMetrics.generatedChunks, metrics.generatedChunks)
         XCTAssertEqual(next.terrainMetrics.textureBuilds, metrics.textureBuilds)
         XCTAssertEqual(state.desktopCamera, desktop)

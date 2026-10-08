@@ -17,6 +17,28 @@ final class CircuitRenderer {
             let powered = level > .off
             let brightness: CGFloat = powered ? 0.45 + 0.55 * CGFloat(level.rawValue) / 15 : 1
             guard let textureID = CircuitTextureID.id(for: component.kind, powered: component.kind == .lever ? (leverPositions?.contains(coordinate) ?? powered) : powered) else { continue }
+            if component.kind == .output {
+                let node = SKShapeNode(rect: rect)
+                node.name = "OUTPUT"
+                node.fillColor = .clear; node.strokeColor = .clear; node.lineWidth = 0
+                let icon = SKSpriteNode(texture: textures.texture(for: textureID))
+                icon.name = "component-icon:\(coordinate.x),\(coordinate.y)"
+                icon.size = rect.size; icon.position = center
+                node.addChild(icon)
+                let glow = SKShapeNode(rect: rect.insetBy(dx: 1, dy: 1))
+                glow.name = "output-occupancy:\(coordinate.x),\(coordinate.y)"
+                glow.fillColor = .clear; glow.lineWidth = 1.5; glow.glowWidth = 6
+                glow.zPosition = 0.1
+                switch occupancy.state(at: coordinate) {
+                case .occupied: glow.strokeColor = .systemGreen; glow.alpha = 0.55
+                case .empty: glow.strokeColor = .systemRed; glow.alpha = 0.30
+                case .ambiguous: glow.strokeColor = .systemOrange; glow.alpha = 0.45
+                case .unavailable: glow.strokeColor = .gray; glow.alpha = 0.25
+                }
+                node.addChild(glow)
+                layer.addChild(node)
+                continue
+            }
             if component.kind == .dust {
                 let wire = CGMutablePath()
                 let radius = rect.width / 10
@@ -89,7 +111,7 @@ final class CircuitRenderer {
             let node = SKShapeNode(rect: rect.insetBy(dx: inset, dy: inset))
             node.name = title
             node.zPosition = 0.1
-            node.fillColor = component.kind == .output ? (powered ? .red : .darkGray) : .clear
+            node.fillColor = .clear
             node.strokeColor = powered ? .red : NSColor.white.withAlphaComponent(0.35)
             node.lineWidth = 2
             layer.addChild(node)
@@ -126,22 +148,6 @@ final class CircuitRenderer {
             let label = makeLabel(labelText, at: CGPoint(x: center.x, y: center.y - rect.height * 0.23), size: rect.width * 0.14)
             label.name = component.kind == .repeater ? "repeater-label:\(coordinate.x),\(coordinate.y)" : "state-label:\(coordinate.x),\(coordinate.y)"
             layer.addChild(label)
-            if component.kind == .output {
-                label.position.y = center.y - rect.height * 0.12
-                label.fontSize = rect.width * 0.11
-                let badgeText: String, color: NSColor
-                switch occupancy.state(at: coordinate) {
-                case .empty: (badgeText, color) = ("EMPTY", .lightGray)
-                case .occupied: (badgeText, color) = ("ITEM", .systemGreen)
-                case .ambiguous: (badgeText, color) = ("MANY", .systemRed)
-                case .unavailable: (badgeText, color) = ("N/A", .systemPurple)
-                }
-                node.strokeColor = color
-                let badge = makeLabel(badgeText, at: CGPoint(x: center.x, y: center.y - rect.height * 0.28), size: rect.width * 0.11)
-                badge.name = "output-occupancy:\(coordinate.x),\(coordinate.y)"
-                badge.fontColor = color
-                node.addChild(badge)
-            }
         }
     }
 

@@ -298,7 +298,7 @@ final class MinimalCircuitIntegrationTests: XCTestCase {
         scene.updateWorld(DemoCircuit.makeWorld(), poweredTiles: circuit.poweredTiles)
         XCTAssertNotEqual((layer.childNode(withName: "dust-path") as? SKShapeNode)?.strokeColor, offColor)
         for _ in 0..<10 { scene.updateWorld(DemoCircuit.makeWorld(), poweredTiles: circuit.poweredTiles); scene.flashOutput(at: DemoCircuit.output) }
-        XCTAssertEqual(layer.children.count, 27)
+        XCTAssertEqual(layer.children.count, 24)
         XCTAssertEqual(scene.children.count, 9)
         let flash = try XCTUnwrap(scene.childNode(withName: "output-flash")?.childNode(withName: "output-flash:\(DemoCircuit.output.x),\(DemoCircuit.output.y)") as? SKShapeNode)
         XCTAssertFalse(flash.isHidden)

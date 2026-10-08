@@ -181,7 +181,7 @@ final class EditorTests: XCTestCase {
         let oldScene = try XCTUnwrap(renderer.scene)
         editor.zoom(by: 1.25, size: size)
         let resized = try XCTUnwrap(renderer.update(appState: state, editor: editor, size: CGSize(width: 900, height: 600)))
-        XCTAssertFalse(resized === oldScene)
+        XCTAssertTrue(resized === oldScene)
         XCTAssertEqual(resized.childNode(withName: "editor-selection")?.children.count, 1)
         XCTAssertEqual(provider.calls, 0)
         XCTAssertTrue(opener.urls.isEmpty)
@@ -201,9 +201,12 @@ final class EditorTests: XCTestCase {
         for _ in 0..<3 {
             let scene = try XCTUnwrap(renderer.update(appState: state, editor: editor, size: size))
             let badge = scene.childNode(withName: "circuit")?.children.compactMap {
-                $0.childNode(withName: "output-occupancy:14,7") as? SKLabelNode
+                $0.childNode(withName: "output-occupancy:14,7") as? SKShapeNode
             }.first
-            XCTAssertEqual(badge?.text, "N/A")
+            let color = try XCTUnwrap(badge?.strokeColor.usingColorSpace(.deviceRGB))
+            XCTAssertEqual(color.redComponent, 0.5, accuracy: 0.01)
+            XCTAssertEqual(color.greenComponent, color.redComponent, accuracy: 0.001)
+            XCTAssertEqual(color.blueComponent, color.redComponent, accuracy: 0.001)
             editor.zoom(by: 1.05, size: size)
         }
         XCTAssertEqual(provider.calls, 1, "The editor consumes a snapshot; it never starts Finder reads")

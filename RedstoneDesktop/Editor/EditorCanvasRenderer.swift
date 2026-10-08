@@ -14,11 +14,15 @@ final class EditorCanvasRenderer {
 
     func update(appState: AppState, editor: EditorSession, size: CGSize) -> DesktopScene? {
         guard let mapper = editor.mapper(size: size) else { return nil }
-        if scene?.mapper.camera != editor.camera || scene?.size != size {
+        if scene == nil {
             let screen = ScreenDescriptor(id: "editor", frame: CGRect(origin: .zero, size: size), backingScale: 1)
             scene = DesktopScene(screen: screen, mapper: mapper, terrainRenderer: terrainRenderer)
             lastWorld = nil
             lastOccupancy = nil
+            lastProjection = nil
+        } else if scene?.mapper.camera != editor.camera || scene?.size != size {
+            let screen = ScreenDescriptor(id: "editor", frame: CGRect(origin: .zero, size: size), backingScale: 1)
+            scene?.updateViewport(screen: screen, mapper: mapper)
             lastProjection = nil
         }
         guard let scene else { return nil }

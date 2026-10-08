@@ -4,7 +4,7 @@ An experimental native macOS app exploring a block world beneath real Finder des
 
 ## Current build and next steps
 
-**Implemented: Slices 0–28 plus the requested appearance/navigation follow-ups (27A/28A).** Debug build and all **329 automated tests** pass. Slice 28 adds explicitly entered Desktop Build Mode with a temporary transparent input window, hotbar and mouse-accessible exits; its real Finder/input checks remain pending. Slices 26/27 add optional validated texture/sound packs and local Minecraft Java texture importing. Original built-in assets remain complete defaults; imported game art stays in local Application Support, outside Git and app bundles. Read the [resource-pack format guide](docs/RESOURCE_PACKS.md) and [Java import guide](docs/JAVA_TEXTURE_IMPORT.md) before making/sharing packs.
+**Implemented: Slices 0–28 plus the requested appearance/navigation follow-ups (27A/28A/28B).** Debug build and all **332 automated tests** pass. Slice 28 adds explicitly entered Desktop Build Mode with a temporary transparent input window, hotbar and mouse-accessible exits; its real Finder/input checks remain pending. Slices 26/27 add optional validated texture/sound packs and local Minecraft Java texture importing. Original built-in assets remain complete defaults; imported game art stays in local Application Support, outside Git and app bundles. Read the [resource-pack format guide](docs/RESOURCE_PACKS.md) and [Java import guide](docs/JAVA_TEXTURE_IMPORT.md) before making/sharing packs.
 
 Slices 20/21 and 23–25 are owner-accepted, along with corrected Slice 22 icon-size/marker behavior and the 19C bookmark/context-menu follow-up. Earlier detailed 19B/19C checks, Slice 22's real Output-after-resize check and the other specific Slices 26/27 checks and new 27A appearance checks remain pending. Local Java importing is owner-accepted.
 
@@ -16,7 +16,7 @@ Configuration still saves to `~/Library/Application Support/RedstoneDesktop/libr
 
 Finder Diagnostics remains useful for permission/alignment problems, and Desktop Details for input rejection/action results. They moved to **Advanced**. The obsolete Developer Placement window and fixed-demo diagnostic rows are removed; automated tests and migration fixtures remain, and no existing saved circuits were cleared. Shelf previews remain bounded schematic terrain/circuit snapshots. Finder markers now appear separately in the main editor canvas when enabled.
 
-**Next: run the Slice 28A polishing walkthrough at the end of this file; prior detailed Slice 28 checks remain available too.** Slice 29 (script execution) remains untouched.
+**Next: run the Slice 28B Output/performance walkthrough at the end of this file; prior detailed Slice 28 checks remain available too.** Slice 29 (script execution) remains untouched.
 
 ## Adopted plan: worlds and saved areas
 
@@ -728,3 +728,19 @@ Build Mode fixes its camera for one editing session, even if optional Finder sca
 6. Use the controls floating in the canvas's upper-right. **Home** (house) shows the **assigned desktop area**, switching the browsed world if needed. **View** (eye) → **Return to saved view** restores the **currently selected area's bookmark**, useful after panning around another area. They coincide when you're already browsing the active area, but differ when another area is selected. Neither activates an area or overwrites its saved view. View also contains **Show Finder Items** and **Reset to Origin**; Update Current Area/Activate remain explicit.
 
 These four new MANUAL acceptance groups remain pending until you confirm them. The previous detailed Finder/exit/Reduce Motion checks are still pending where not explicitly reported. This is the requested polishing slice; **Slice 29 (script execution) has not been started**. See [resource packs](docs/RESOURCE_PACKS.md) for all 27 semantic IDs and [Java importing](docs/JAVA_TEXTURE_IMPORT.md) for all 26 mappings, cache lifecycle and sharing limits.
+
+
+## Output presentation and editor stalls — Slice 28B Mac walkthrough
+
+Quit the previous app with **⌘Q** and reopen `build/Build/Products/Debug/RedstoneDesktop.app`, or stop/run in Xcode with **⌘R**. Existing Java caches already have the command-block textures from 28A, so no new Re-import is needed if your last import reported 26 textures.
+
+1. **Output appearance:** inspect an Output with Desktop started so Finder data is available. Command-block art should cover the full tile, with no OUTPUT/badge text or purple backing. Empty should glow gently red. Drag one harmless folder over its center: glow becomes green. Drag away: red returns. Ordinary Finder items elsewhere should no longer have green tile boxes. Several items on an Output should show amber and still refuse ambiguous opening; unreadable/not-yet-read occupancy is neutral gray, not falsely empty.
+2. **Run regression:** press an existing input with the folder over Output. It should open once as before; the separate activation flash remains. Appearance and occupancy refreshes alone must not open it again. Inspector/Advanced diagnostics still provide occupancy details. Editor Output glow uses the optional projected Finder snapshot; enable **View → Show Finder Items** when you want it to reflect those icons.
+3. **Pan/zoom:** with Java art active, use Navigate and drag across several chunk boundaries, then pinch/scroll in and out. The measured chunk-creation pauses were reduced from about 650 ms to 8 ms in the local Debug-like harness; check the actual interactive result on your Mac. Test both with Desktop stopped and with Desktop running/Show Finder Items enabled. Browse another world and return: desktop assignment and saved view must stay intact. Under Inspector → Technical Details, retained chunks/nodes should stay bounded while cumulative generation counts can increase.
+4. **Pack replacement:** switch to Use Built-In, pan, then Re-import to restore Java art. Terrain should immediately use the selected appearance with no stale tiles. Existing circuit positions and saves should be unchanged.
+
+These two new MANUAL groups await confirmation. If stalls remain, report whether they happen only while exploring new terrain or also over cached terrain/with Finder tracking enabled; the measured terrain-painting issue is fixed, but unrelated main-thread work is not assumed fixed.
+
+**Later circuits:** torches were already planned in Slice 30; SPEC now explicitly includes placement, visuals, persistence and feedback tests. New **Slice 30A** plans `source → Output A → repeater → Output B`, with rear pickup, restored power and existing action protections. That logic is not active in this build: Outputs remain terminal sinks until its dedicated slice. Slice 29 remains next.
+
+For contributors, `./scripts/pan-profile.sh` reproduces the unoptimized native pan path using the repository's original synthetic Java fixture. Optionally pass a readable local JAR/pack path as its first argument. It creates/removes a temporary import cache and uses an isolated in-memory library; it never starts desktop input/Finder polling, opens files or changes owner preferences/saves. Output reports initial and per-step milliseconds plus cumulative texture counts. Numbers depend on machine/load/source art; automated tests enforce finite provider work and cache correctness rather than fragile timing thresholds.

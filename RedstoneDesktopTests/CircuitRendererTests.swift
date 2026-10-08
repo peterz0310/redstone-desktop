@@ -90,8 +90,8 @@ final class CircuitRendererTests: XCTestCase {
     }
 
     @MainActor
-    func testOutputBadgesTrackAllOccupancyStatesWithoutChangingPower() throws {
-        let (scene, _, _) = try fixture()
+    func testOutputGlowsTrackAllOccupancyStatesWithoutLabelsOrChangingPower() throws {
+        let (scene, mapper, screen) = try fixture()
         let output = cell(2)
         let world = World(circuit: CircuitWorld(components: [output: CircuitComponent(kind: .output)]))
         let item = DesktopItem(id: "one", url: URL(fileURLWithPath: "/tmp/one"), displayName: "one", position: .zero, estimatedIconSize: nil, kind: .file)
@@ -100,22 +100,27 @@ final class CircuitRendererTests: XCTestCase {
         scene.updateWorld(world, poweredTiles: [output])
         let icon = try XCTUnwrap(layer.children.flatMap(\.children).first { $0 is SKSpriteNode } as? SKSpriteNode)
         let poweredTexture = icon.texture
-        for (snapshot, text, color) in [(DesktopOccupancySnapshot.available([:]), "EMPTY", NSColor.lightGray),
-            (.available([output: DesktopOccupancy(coordinate: output, items: [item])]), "ITEM", .systemGreen),
-            (.available([output: DesktopOccupancy(coordinate: output, items: [item, other])]), "MANY", .systemRed),
-            (.unavailable("Denied"), "N/A", .systemPurple)] {
+        for (snapshot, color) in [(DesktopOccupancySnapshot.available([:]), NSColor.systemRed),
+            (.available([output: DesktopOccupancy(coordinate: output, items: [item])]), .systemGreen),
+            (.available([output: DesktopOccupancy(coordinate: output, items: [item, other])]), .systemOrange),
+            (.unavailable("Denied"), .gray)] {
             scene.updateOccupancy(snapshot)
             let outputNode = try XCTUnwrap(layer.childNode(withName: "OUTPUT") as? SKShapeNode)
-            let badge = try XCTUnwrap(outputNode.childNode(withName: "output-occupancy:2,1") as? SKLabelNode)
-            XCTAssertEqual(badge.text, text)
-            let actualColor = try XCTUnwrap(outputNode.strokeColor.usingColorSpace(.sRGB))
+            let badge = try XCTUnwrap(outputNode.childNode(withName: "output-occupancy:2,1") as? SKShapeNode)
+            XCTAssertFalse(outputNode.children.contains { $0 is SKLabelNode })
+            XCTAssertNil(layer.childNode(withName: "state-label:2,1"))
+            XCTAssertEqual(outputNode.path?.boundingBoxOfPath, mapper.sceneRect(forTile: output, on: screen))
+            XCTAssertEqual((outputNode.childNode(withName: "component-icon:2,1") as? SKSpriteNode)?.size, CGSize(width: 64, height: 64))
+            XCTAssertEqual(badge.fillColor.alphaComponent, 0)
+            XCTAssertGreaterThan(badge.glowWidth, 0)
+            let actualColor = try XCTUnwrap(badge.strokeColor.usingColorSpace(.sRGB))
             let expectedColor = try XCTUnwrap(color.usingColorSpace(.sRGB))
             XCTAssertEqual(actualColor.redComponent, expectedColor.redComponent, accuracy: 0.00001)
             XCTAssertEqual(actualColor.greenComponent, expectedColor.greenComponent, accuracy: 0.00001)
             XCTAssertEqual(actualColor.blueComponent, expectedColor.blueComponent, accuracy: 0.00001)
             XCTAssertTrue((outputNode.childNode(withName: "component-icon:2,1") as? SKSpriteNode)?.texture === poweredTexture)
             scene.size = CGSize(width: 600, height: 600)
-            XCTAssertEqual((layer.childNode(withName: "OUTPUT")?.childNode(withName: "output-occupancy:2,1") as? SKLabelNode)?.text, text)
+            XCTAssertEqual((layer.childNode(withName: "OUTPUT")?.childNode(withName: "output-occupancy:2,1") as? SKShapeNode)?.strokeColor, badge.strokeColor)
         }
     }
 
