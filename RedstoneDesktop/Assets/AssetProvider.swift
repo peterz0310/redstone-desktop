@@ -53,10 +53,77 @@ final class AssetLibrary: ObservableObject, AssetProvider {
     private var textures: [TextureAssetID: SKTexture] = [:]
     private var generation = UUID()
     private let preferences: UserDefaults?
+    let importCacheRoot: URL?
+    @Published private(set) var installedVersions: [InstalledJavaVersion] = []
+    @Published private(set) var discoveryStatus = ""
+    @Published private(set) var importFolder: URL?
+    @Published private(set) var importRecord: JavaImportRecord?
     var terrainResolution: Int { pack?.textures.keys.contains(where: { $0.circuitID == nil }) == true ? 16 : 8 }
     var soundOverrides: [SoundID: [Float]] { pack?.sounds ?? [:] }
 
-    init(preferences: UserDefaults? = nil) { self.preferences = preferences }
+    init(preferences: UserDefaults? = nil, importCacheRoot: URL? = nil) {
+        self.preferences = preferences; self.importCacheRoot = importCacheRoot
+        if let root = importCacheRoot, let id = preferences?.string(forKey: "lastJavaImportID"), UUID(uuidString: id) != nil {
+            let folder = root.resolvingSymlinksInPath().appendingPathComponent(id)
+            if let record = try? JavaTextureImporter.record(in: folder, cacheRoot: root) { importFolder = folder; importRecord = record }
+        }
+    }
+
+    func discoverJava(in directory: URL? = nil) async {
+        guard importCacheRoot != nil || directory != nil else { return } // Isolated test hosts never scan the owner's installation.
+        let result = await Task.detached { Result { try JavaInstallation.discover(in: directory ?? JavaInstallation.defaultVersionsDirectory) } }.value
+        switch result {
+        case .success(let versions):
+            installedVersions = versions
+            discoveryStatus = versions.isEmpty ? "No installed version JARs found. Choose a local JAR/Java pack manually." : "\(versions.count) local Java versions found. Choose one to import."
+        case .failure:
+            installedVersions = []
+            discoveryStatus = "Minecraft's usual versions folder was not found/readable. Choose a local JAR/Java pack manually."
+        }
+    }
+
+    func importJava(_ url: URL) async {
+        guard let root = importCacheRoot else { status = "Local import cache is unavailable."; return }
+        generation = UUID(); let request = generation
+        isLoading = true; status = "Importing supported Java textures…"
+        let result = await Task.detached(priority: .userInitiated) { Result { try JavaTextureImporter.importTextures(from: url, cacheRoot: root) } }.value
+        guard generation == request else {
+            if case let .success(value) = result { try? JavaTextureImporter.remove(value.folder, cacheRoot: root) }
+            return
+        }
+        switch result {
+        case .success(let value):
+            let previous = importFolder
+            importFolder = value.folder; importRecord = value.record; source = value.folder
+            apply(value.pack); warnings += value.record.warnings
+            status = "Imported \(value.pack.textures.count) Java textures. Original circuit icons/sounds fill unsupported assets."
+            preferences?.set(value.folder.path, forKey: "assetPackPath")
+            preferences?.set(value.record.id.uuidString, forKey: "lastJavaImportID")
+            if let previous, previous != value.folder {
+                do { try JavaTextureImporter.remove(previous, cacheRoot: root) }
+                catch { warnings.append("Previous import cache retained: \(error.localizedDescription)") }
+            }
+        case .failure(let error): status = "Import refused: \(error.localizedDescription) Previous appearance preserved."
+        }
+        isLoading = false
+    }
+
+    func reimportJava() async {
+        guard let importRecord else { return }
+        await importJava(URL(fileURLWithPath: importRecord.sourcePath))
+    }
+
+    func removeImportedAssets() {
+        guard let folder = importFolder, let root = importCacheRoot else { return }
+        generation = UUID(); isLoading = false
+        do {
+            try JavaTextureImporter.remove(folder, cacheRoot: root)
+            if source == folder { useBuiltIn() }
+            importFolder = nil; importRecord = nil
+            preferences?.removeObject(forKey: "lastJavaImportID")
+            status = "Imported cache removed. Original source JAR/pack was not changed."
+        } catch { status = "Import cache removal failed: \(error.localizedDescription)" }
+    }
     func restoreSelection() async {
         guard let path = preferences?.string(forKey: "assetPackPath") else { return }
         await load(URL(fileURLWithPath: path))

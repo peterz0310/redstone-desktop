@@ -23,7 +23,7 @@ The intended workflow is:
 
 The project is an experiment first and a polished application second.
 
-Current implementation: Slices 0–19A have owner-confirmed acceptance. **Slices 19B–26 are implemented.** The 19C bookmark/context-menu follow-up is owner-accepted; Slices 20–21 now have owner-reported acceptance; earlier specific 19B/19C runtime/deletion checks remain pending. The owner requested 19C usability cleanup after tentative 19B feedback. Worlds now have a sidebar; area previews sit below the canvas; creation/rename/save/deletion use focused sheets. Atomic deletion protects active/final records and preserves configuration on failure. Library, fixed-seed world and explicit saved-area activation contracts remain intact. Slice 20 adds explicitly enabled Finder projections and Output snapping in the editor; Slice 21 adds primary-display change handling with preserved lower-left camera anchoring. Slice 22 adds read-only icon-size detection and settled center refresh; its Mac checks remain pending. Slice 23 adds optional, reversible Finder scale synchronization; Mac acceptance remains pending. Slice 24 adds original semantic sound effects and master volume/mute. Slice 25 adds camera-based stereo panning; The owner accepted Slices 24/25 audio/mute/stereo on 2026-10-08; The owner accepted corrected size/marker/synchronization behavior on 2026-10-08; Slice 22’s real Output-after-resize check remains pending. Slice 26 adds optional validated folder/ZIP packs with original fallback. Java importing is next in **Slice 27**. Historical entries record earlier behavior; Sections 3.8, 7.1, 25 and 29 define the current contract.
+Current implementation: **Slices 0–27 are implemented**, with Debug build and all **300 automated tests passing**. Slices 0–19A, 20–21 and 23–25 have owner-reported acceptance; the 19C bookmark/context-menu follow-up and corrected Slice 22 icon-size/marker checks are also accepted. Detailed earlier 19B/19C runtime/deletion checks and Slice 22's real Output-after-resize check remain pending. Slices 26/27 manual checks are pending. Slice 26 adds optional validated folder/ZIP packs with original fallback; Slice 27 imports selected textures from local Java JARs/packs into Application Support without bundling game assets. The actual pack contract and Java mapping/cache lifecycle are documented in docs/RESOURCE_PACKS.md and docs/JAVA_TEXTURE_IMPORT.md. **Slice 28 is next and untouched.** Historical entries record earlier behavior; Sections 3.8, 7.1, 25 and 29 define the world/library contract.
 
 The most important early question is not whether attractive terrain or redstone can be made. Those are comparatively straightforward. The first major feasibility gate is:
 
@@ -1261,41 +1261,21 @@ The renderer must never directly hard-code asset file paths.
 
 Use semantic IDs.
 
-Examples:
+The implemented format-1 ID catalog is in [docs/RESOURCE_PACKS.md](docs/RESOURCE_PACKS.md). It has 20 texture IDs, including separate button/repeater/Output power frames and `decorationReed`. UI selection/highlight overlays are not pack IDs. Historical hypothetical names are not accepted aliases. Dust uses the connected path renderer with semantic powered/unpowered materials.
+
+Implemented texture provider:
 
 ```swift
-enum TextureAssetID: String, Codable {
-    case terrainGrass
-    case terrainDirt
-    case terrainStone
-    case terrainSand
-    case waterShallow
-    case waterDeep
-    case decorationTree
-    case decorationFlower
-    case decorationRock
-    case redstoneDustOff
-    case redstoneDustOn
-    case redstoneRepeater
-    case redstoneButton
-    case redstoneLeverOff
-    case redstoneLeverOn
-    case redstoneOutputEmpty
-    case redstoneOutputOccupied
-    case cursorHighlight
-}
-```
-
-Actual dust rendering may later use a structured connection-state ID rather than one enum case per variant.
-
-Provider:
-
-```swift
-protocol AssetProvider {
+@MainActor
+protocol AssetProvider: AnyObject {
+    var revision: UUID { get }
+    var terrainResolution: Int { get }
     func texture(for id: TextureAssetID) -> SKTexture?
-    func soundURL(for id: SoundID) -> URL?
+    func pixel(_ tile: Tile, x: Int, y: Int) -> (UInt8, UInt8, UInt8, UInt8)
 }
 ```
+
+AssetLibrary supplies validated sound sample arrays separately to AudioEngine. Neither renderer nor simulation reads asset paths or launches files. Revision changes invalidate appearance caches without restarting simulation.
 
 Resolution order:
 
@@ -1422,6 +1402,12 @@ Do not implement Minecraft audio import in the first importer slice.
 Java audio assets may involve hash-addressed launcher asset indexes and are a separate piece of work.
 
 Texture import first.
+
+## 23.6 Implemented Slice 27 contract
+
+[docs/JAVA_TEXTURE_IMPORT.md](docs/JAVA_TEXTURE_IMPORT.md) defines actual supported paths and controls. Eleven semantic textures are mapped from modern `block/` and legacy `blocks/` names. Fixed RGB tint and first top square frame approximate Java art; models, animation metadata, biome colormaps and audio are ignored. At least one valid supported PNG is required; missing mappings warn and use original fallback. Java import failure preserves the previous appearance/cache.
+
+Imported images are re-encoded into `Application Support/RedstoneDesktop/ImportedTextures/<UUID>/` with `pack.json` and `import.json`. Validate a staging directory before publication. One active pack resolves missing IDs to built-in assets; do not stack packs. Successful re-import replaces the last managed cache; Reload reads the generated cache, Re-import reads the original source. Use Built-In retains the last managed cache for re-import/removal. Remove Imported Assets verifies managed directory identity and never deletes the source JAR/pack. Selection preferences remain separate from world saves; no imported images enter the repository or release bundle.
 
 ---
 
@@ -2591,14 +2577,16 @@ Keep this optional if Finder behavior feels awkward.
 
 ## Slice 27 — Minecraft Java texture importer
 
-- [ ] common-install detection
-- [ ] manual JAR picker
-- [ ] safe ZIP/JAR inspection
-- [ ] selected semantic texture mappings
-- [ ] local cache
-- [ ] import manifest
-- [ ] remove/reimport
-- [ ] no imported files enter repository
+- [x] common-install detection
+- [x] manual JAR picker
+- [x] safe ZIP/JAR inspection
+- [x] selected semantic texture mappings
+- [x] local cache
+- [x] import manifest
+- [x] remove/reimport
+- [x] no imported files enter repository
+
+**Status: implemented; owner Mac validation pending.** See docs/JAVA_TEXTURE_IMPORT.md for the 11 mappings, fixed tint/first-frame limits, source/cache distinction, lifecycle, archive limits and contributor/license guidance. Native local 1.21.8 JAR validation succeeded in a temporary cache; this does not mark the UI checks below accepted.
 
 ### Manual acceptance
 
@@ -3627,3 +3615,14 @@ Folder/ZIP loading runs off the main thread into immutable raster/mono-PCM snaps
 A revision invalidates appearance caches and replaces audio buffers without changing world/library/camera/input/session/simulator or dispatching/replaying outputs. Generated terrain uses 8 pixels/tile for built-in defaults and 16 with terrain/decoration overrides; source PNGs are nearest-sampled. Circuit icons retain labels/geometry/occupancy. Schematic shelf previews remain original summaries. Appearance & Packs is behind Advanced, with folder/ZIP picker, reload, diagnostics and Use Built-In. Selection persists separately from world saves and is revalidated on startup; isolated test hosts never restore owner packs.
 
 Original MIT examples/GrassOnly and its ZIP demonstrate a grass-only override; no third-party game assets are bundled. Automated coverage includes real deflated ZIP/folder equivalence, paths/schema/type/missing assets, symlink/CRC/encryption/truncated metadata, raster dimensions/orientation, WAV bounds/resampling, partial fallback/cache changes, held live-circuit/library/camera preservation, reload/preference restoration and offline audio replacement/fallback. Debug build and all 290 tests pass. Both MANUAL checks remain pending; proceed to authorized Slice 27 after this separate implementation commit.
+
+
+## 2026-10-08 — Slice 27 local Java textures
+
+Implement the second authorized slice after committing Slice 26. Discovery lists version JARs from the usual local Java installation, with a manual JAR/Java-pack folder/ZIP picker for other locations. Shared SafeZIP/PNG validation maps 11 semantic textures, crops the first square animation-strip frame and applies fixed tint. Unsupported component images and all audio retain original defaults; Java/classes, models, metadata and unrelated resources are never executed or copied.
+
+Only fixed semantic PNG filenames, pack.json and import.json enter UUID Application Support directories. Preflight and generated-pack validation precede cache publication. Re-import reads the original source, Reload reads the generated cache, Use Built-In keeps the last managed cache, Reveal shows it, and guarded removal deletes only that directory. A successful replacement removes the old managed cache; failed imports preserve previous appearance. App preferences restore selection separately from library.json; isolated test hosts never scan owner installations or restore owner packs.
+
+Validation: Debug build and all 300 automated tests pass, including ten new Java import tests with original synthetic deflated ZIP fixtures. Coverage includes discovery/order, modern/legacy and partial mappings, first-frame/tint, ignored unrelated entries, source preservation, no-assets/write failure, managed deletion/symlink refusal, re-import and preference restoration, failed-import preservation and removal while another pack is active. docs/RESOURCE_PACKS.md and docs/JAVA_TEXTURE_IMPORT.md document both formats and sharing/contributor boundaries; fixture provenance is explicit.
+
+Read-only discovery on this development Mac found 29 local versions. A standalone invocation of the actual importer against local 1.21.8 produced 11 textures, zero sounds and zero warnings in a temporary cache; source SHA-256 before/after matched. A temporary contact sheet was visually inspected, managed removal succeeded, and the temporary cache was cleaned. No real game images were added to Git/app bundles or owner selection preferences. This establishes local archive/decode/cache feasibility, separately from the three owner MANUAL checks, which remain unchecked. Slice 28 remains untouched.

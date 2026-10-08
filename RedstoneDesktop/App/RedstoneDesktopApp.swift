@@ -37,7 +37,7 @@ enum AppStartup {
         let environment = ProcessInfo.processInfo.environment
         let testing = NSClassFromString("XCTestCase") != nil
             || environment.keys.contains { $0.hasPrefix("XCTest") || $0 == "XCInjectBundleInto" }
-        let assets = AssetLibrary(preferences: testing ? nil : .standard)
+        let assets = AssetLibrary(preferences: testing ? nil : .standard, importCacheRoot: testing ? nil : JavaTextureImporter.applicationCacheRoot)
         if !testing { Task { await assets.restoreSelection() } }
         return AppState(libraryStore: testing ? nil : WorldLibraryStore.applicationDefault(), automaticallyRefreshFinder: !testing,
             preferences: testing ? nil : .standard,

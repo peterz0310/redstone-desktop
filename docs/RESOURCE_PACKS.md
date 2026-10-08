@@ -2,6 +2,8 @@
 
 Redstone Desktop packs are optional **data**: PNG images, short WAV effects and a JSON manifest. The app runs without a pack or Minecraft installation. Nothing in a pack is executed. World generation, terrain capabilities, component placement, simulation, Finder occupancy and action permissions are independent of appearance.
 
+To use an already-installed Minecraft Java version or native Java pack, see [Local Java texture import](JAVA_TEXTURE_IMPORT.md). That importer creates a local format-1 pack; it does not require you to write a manifest or add game assets to this repository.
+
 ## Try the included original example
 
 Open **Advanced → Appearance & Packs → Choose Pack Folder or ZIP…**. Select `examples/GrassOnly` or `examples/GrassOnly.zip` from this repository. Grass becomes a purple/teal checker; every other terrain, decoration, circuit and sound uses its built-in default. Both forms should look the same. Choose **Use Built-In** to restore the original appearance.

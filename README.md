@@ -4,7 +4,9 @@ An experimental native macOS app exploring a block world beneath real Finder des
 
 ## Current build and next steps
 
-**Implemented: Slices 0–25.** Slice 22 refreshes real Finder centers after icon-size changes. Slice 23 adds optional synchronized desktop scale, off by default and reversible. Slice 24 adds original semantic sound effects, volume and mute; Slice 25 adds stereo panning through the current camera. Debug build and all **279 automated tests** pass, including offline audio rendering without speaker output. The owner accepted Slices 20/21 and the 19C bookmark/context-menu follow-up; Slices 24/25 sound/mute/stereo checks are owner-accepted on 2026-10-08. Detailed earlier 19B/19C checks and corrected Slice 22 Output-after-resize validation remains pending; the owner accepted corrected icon-size/marker/synchronization behavior on 2026-10-08.
+**Implemented: Slices 0–27.** Debug build and all **300 automated tests** pass. Slices 26/27 add optional validated texture/sound packs and local Minecraft Java texture importing. Original built-in assets remain complete defaults; imported game art stays in local Application Support, outside Git and app bundles. Read the [resource-pack format guide](docs/RESOURCE_PACKS.md) and [Java import guide](docs/JAVA_TEXTURE_IMPORT.md) before making/sharing packs.
+
+Slices 20/21 and 23–25 are owner-accepted, along with corrected Slice 22 icon-size/marker behavior and the 19C bookmark/context-menu follow-up. Earlier detailed 19B/19C checks, Slice 22's real Output-after-resize check and new Slices 26/27 manual checks remain pending.
 
 The editor now shows **Worlds** in a left sidebar and **Areas in [world]** as a preview shelf below the canvas. Build tools and the inspector sit on the right. The top shows the world/area being edited, the separate desktop assignment, **Start/Stop Desktop** and **Advanced**. New World, Save Current View and rename use focused sheets; seed/creation fields are no longer permanently visible.
 
@@ -14,7 +16,7 @@ Configuration still saves to `~/Library/Application Support/RedstoneDesktop/libr
 
 Finder Diagnostics remains useful for permission/alignment problems, and Desktop Details for input rejection/action results. They moved to **Advanced**. The obsolete Developer Placement window and fixed-demo diagnostic rows are removed; automated tests and migration fixtures remain, and no existing saved circuits were cleared. Shelf previews remain bounded schematic terrain/circuit snapshots. Finder markers now appear separately in the main editor canvas when enabled.
 
-**Next: run the Slice 22–25 walkthroughs below. Resource packs (Slice 26) have not started.**
+**Next: run the combined Slice 26/27 walkthrough below. Slice 28 (Desktop Build Mode) remains untouched.**
 
 ## Adopted plan: worlds and saved areas
 
@@ -665,7 +667,7 @@ The original size query used a class reference that Finder rejected while ordina
 
 Quit with ⌘Q, reopen the rebuilt app, Start Desktop, then check Advanced → Finder Diagnostics reports a numeric icon size. Enable synchronization in Desktop Details; change Finder's real desktop icon size in Show View Options and verify world zoom/center alignment and fresh Output targeting. Turn synchronization off to restore the saved camera. Leave it off if a stable circuit layout is preferable. Slices 24/25 are owner-accepted; corrected Slice 22/23 behavior remains pending.
 
-Owner follow-up (2026-10-08): corrected Finder icon-size/marker and optional synchronization retest passed. The explicit real Output-after-resize check remains pending. Slice 26 resource packs are next, not yet implemented.
+Owner follow-up (2026-10-08): corrected Finder icon-size/marker and optional synchronization retest passed. The explicit real Output-after-resize check remains pending. Slices 26/27 are now implemented below; their manual validation remains pending.
 
 
 ## Resource packs — Slice 26
@@ -673,3 +675,22 @@ Owner follow-up (2026-10-08): corrected Finder icon-size/marker and optional syn
 Advanced → **Appearance & Packs** lets you choose a pack folder/ZIP, reload it, inspect diagnostics or restore built-in assets. The complete format and contributor guide is [docs/RESOURCE_PACKS.md](docs/RESOURCE_PACKS.md).
 
 Mac check: quit/reopen the new build, choose `examples/GrassOnly` or `examples/GrassOnly.zip` from this repository. Grass should become a purple/teal checker; stone/sand/water/circuits/sounds should retain built-in fallback. Both forms should match. Try Reload and Use Built-In; a running held circuit and world/camera should be preserved, without reopening Output from an appearance change. Quit/reopen should revalidate your choice with Desktop stopped. Both Slice 26 manual checks remain pending.
+
+
+## Local Java textures — Slice 27; combined Mac walkthrough
+
+No pack download is needed: this Mac already has installed Java versions. Read-only discovery found 29; a temporary import of **1.21.8** produced all 11 supported textures without warnings and left the source JAR unchanged. Your normal app selection has not been changed by that test.
+
+1. Quit the running app with **⌘Q**. From this repository in Terminal, open the rebuilt app:
+
+   ```sh
+   open build/Build/Products/Debug/RedstoneDesktop.app
+   ```
+
+2. Open **Advanced → Appearance & Packs → Choose Pack Folder or ZIP…**. Choose `examples/GrassOnly`. Grass should become purple/teal checker art; other textures and sounds should keep original fallback. Repeat with `examples/GrassOnly.zip`; both forms should match. Try **Reload**, then **Use Built-In** to restore the original appearance. This checks Slice 26 without third-party assets.
+3. Under **Local Minecraft Java textures**, choose **1.21.8** from **Installed version**, then **Import Selected**. Opening the window discovers versions; **Find Installed Versions** refreshes. Expected: **Imported 11 Java textures**, with no mapping warnings. If the list is empty, use **Choose Java JAR / Pack…**, press **⌘⇧G** and paste `~/Library/Application Support/minecraft/versions/1.21.8/`, then select `1.21.8.jar`.
+4. Browse a generated world: grass/dirt/stone/sand, water and tree/flower/reed decorations should change where present. Water is a still first frame with fixed tint. Wire materials change; button/lever/repeater/Output icons and all sounds remain original. Shelf thumbnails stay schematic. Start Desktop to inspect its assigned area. Change packs while a lever is held on: circuit state, world and camera should persist, with no new Output activation caused solely by the appearance change.
+5. **Reveal Import Cache** should show a UUID folder under `~/Library/Application Support/RedstoneDesktop/ImportedTextures/`, containing semantic PNGs, `pack.json` and `import.json`. **Reload** rereads that cache; **Re-import** rebuilds it from the original JAR. The JAR should remain in its original Minecraft directory. Run `git status --short` from this repository: importing must not add copied game assets to the working tree.
+6. With Java textures selected, quit/reopen: the cached appearance should restore, while Desktop starts stopped. Try **Use Built-In**: original art returns, and cache reveal/re-import remain available. Re-import, then **Remove Imported Assets**: built-in art returns and only the app-owned copy disappears; the original Java JAR remains. You can import it again later.
+
+These steps cover both new slices; manual checkboxes remain pending until you report the results. Selection is global to appearance, independent of world/area selection. One pack is active at a time; missing IDs always resolve to original assets. See the guides for every supported ID, format/size limits, mapping/tint behavior, reload/removal semantics, source rights and contributor tests.
