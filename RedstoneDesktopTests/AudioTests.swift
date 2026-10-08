@@ -6,10 +6,11 @@ import XCTest
 final class RecordingSoundPlayer: SoundPlaying {
     var status = "Fixture"
     var sounds: [SoundID] = []
+    var pans: [Float] = []
     var settings = AudioSettings()
     var stops = 0
     func configure(_ settings: AudioSettings) { self.settings = settings }
-    func play(_ id: SoundID) { sounds.append(id) }
+    func play(_ id: SoundID, pan: Float) { sounds.append(id); pans.append(pan) }
     func stop() { stops += 1 }
 }
 

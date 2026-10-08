@@ -139,7 +139,9 @@ struct EditorView: View {
                     if editor.browsingWorld(appState).circuit.components[coordinate]?.kind == .repeater {
                         Text("Stored: \(editor.browsingWorld(appState).circuit.components[coordinate]!.direction.rawValue), \(editor.browsingWorld(appState).circuit.components[coordinate]!.repeaterDelay.rawValue)t")
                     }
-                    Button("Erase selected component") { appState.eraseCircuitComponent(at: coordinate) }
+                    Button("Erase selected component") {
+                        appState.eraseCircuitComponent(at: coordinate, audioMapper: editor.mapper(size: editor.viewport))
+                    }
                         .disabled(appState.isEditorConfigurationLocked || editor.isPreviewing(appState) || editor.browsingWorld(appState).circuit.components[coordinate] == nil)
                 } else { Text("Use Select, then click a tile.").foregroundStyle(.secondary) }
                 Divider()

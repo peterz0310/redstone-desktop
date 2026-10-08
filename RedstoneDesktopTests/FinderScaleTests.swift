@@ -6,9 +6,11 @@ import XCTest
 private final class ScaleProvider: DesktopItemProviding {
     var size: Double = 64
     var items: [DesktopItem] = []
+    var fails = false
     func currentDesktopItems() async throws -> [DesktopItem] { items }
     func currentDesktopSnapshot() async throws -> FinderDesktopSnapshot {
-        FinderDesktopSnapshot(items: items, viewSettings: FinderViewSettings(iconSize: size))
+        if fails { throw FinderReadError.scriptFailure(code: -1712, message: "Fixture timeout") }
+        return FinderDesktopSnapshot(items: items, viewSettings: FinderViewSettings(iconSize: size))
     }
 }
 
@@ -70,11 +72,27 @@ final class FinderScaleTests: XCTestCase {
         XCTAssertEqual(app.library, library)
         XCTAssertTrue(opener.urls.isEmpty)
         XCTAssertTrue(app.simulator.poweredTiles.isEmpty)
+        let synchronizedController = app.desktopController
+        XCTAssertTrue(app.activateSelectedArea())
+        XCTAssertTrue(app.desktopController === synchronizedController, "Reactivating the same saved camera never restarts a synchronized runtime")
         app.setFinderScaleEnabled(false)
         XCTAssertEqual(app.desktopCamera, original)
         XCTAssertEqual(app.library, library)
         provider.size = 32; await model.readItems()
         XCTAssertEqual(app.desktopCamera, original)
+    }
+    @MainActor
+    func testFailedRefreshCannotOptInUsingOldMetadata() async {
+        let provider = ScaleProvider()
+        let failingModel = FinderDiagnosticsModel(provider: provider)
+        let app = AppState(finderDiagnostics: failingModel)
+        defer { app.shutdown() }
+        await failingModel.readItems()
+        provider.fails = true
+        await failingModel.readItems()
+        app.setFinderScaleEnabled(true)
+        XCTAssertFalse(app.finderScale.enabled)
+        XCTAssertEqual(failingModel.viewSettings?.iconSize, 64, "Failure deliberately retains last known metadata")
     }
     @MainActor
     func testPreferencesAreIsolatedAndRestoreModeWithoutReadingFinder() async throws {

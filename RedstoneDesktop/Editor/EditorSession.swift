@@ -163,10 +163,10 @@ final class EditorSession: ObservableObject {
             }
             status = "Selected (\(tile.x), \(tile.y))."
         } else if tool == .erase {
-            appState.eraseCircuitComponent(at: tile)
+            appState.eraseCircuitComponent(at: tile, audioMapper: mapper)
             status = appState.developerPlacementStatus
         } else if let component = proposedComponent {
-            appState.placeCircuitComponent(component, at: tile)
+            appState.placeCircuitComponent(component, at: tile, audioMapper: mapper)
             status = appState.developerPlacementStatus
         }
     }

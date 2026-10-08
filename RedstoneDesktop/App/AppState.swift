@@ -130,6 +130,7 @@ final class AppState: ObservableObject {
         self.finderReferenceProviding = finderReferenceProviding
         desktopItemTracker = DesktopItemTracker(diagnostics: finderDiagnostics)
         soundPlayer.configure(audioSettings)
+        if finderScale.enabled { finderScaleStatus = "Experimental sync waiting for a stable Finder icon size." }
         finderItemsObserver = Publishers.CombineLatest3(finderDiagnostics.$items, finderDiagnostics.$error, finderDiagnostics.$hasRead).sink { [weak self] items, error, hasRead in
             MainActor.assumeIsolated { self?.updateFinderState(items, error: error, hasRead: hasRead) }
         }
@@ -324,7 +325,7 @@ final class AppState: ObservableObject {
             return false
         }
         library = next
-        if selectedAreaID == library.activeAreaID { desktopCamera = camera }
+        if selectedAreaID == library.activeAreaID { desktopCamera = camera; refreshFinderScale() }
         areaStatus = selectedAreaID == library.activeAreaID
             ? "Area updated. This saved view is prepared for the next Start Desktop."
             : "Area updated in place. Desktop assignment is unchanged."
@@ -349,7 +350,7 @@ final class AppState: ObservableObject {
             areaStatus = "Activation could not be saved. Current desktop preserved; use Save Now, then retry Activate on Desktop."
             return false
         }
-        let sameView = area.worldID == activeWorldID && area.camera == desktopCamera
+        let sameView = area.worldID == activeWorldID && area.camera == library.activeArea!.camera
         let running = isDesktopWorldEnabled
         // Save succeeds before cancelling the old runtime; shutdown has no pending selection to flush.
         if !sameView { shutdown(preserveEditorTracking: true) }
@@ -360,6 +361,7 @@ final class AppState: ObservableObject {
             savedLevers = selectedDocument.activeLevers
             simulator = CircuitSimulator(world: world.circuit)
             if running { toggleDesktopWorld() }
+            else { refreshFinderScale() }
         }
         areaStatus = running && !isDesktopWorldEnabled
             ? "Area saved, but rendering could not start. Desktop World is disabled. \(desktopStatus)"
@@ -406,10 +408,10 @@ final class AppState: ObservableObject {
     }
 
     @discardableResult
-    func placeCircuitComponent(_ component: CircuitComponent, at coordinate: WorldCoordinate) -> PlacementResult {
+    func placeCircuitComponent(_ component: CircuitComponent, at coordinate: WorldCoordinate, audioMapper: CoordinateMapper? = nil) -> PlacementResult {
         guard !isEditorConfigurationLocked else {
             developerPlacementStatus = "Disable Desktop World before editing."
-            playSound(.invalidPlacement)
+            playSound(.invalidPlacement, at: coordinate, mapper: audioMapper)
             return .rejected(.reserved)
         }
         var next = editorWorld
@@ -417,14 +419,14 @@ final class AppState: ObservableObject {
         if result.isAllowed {
             editorWorld = next
             worldDidChange()
-            playSound(.placeCircuit)
+            playSound(.placeCircuit, at: coordinate, mapper: audioMapper)
             developerPlacementStatus = "Placed \(component.kind.rawValue) at (\(coordinate.x), \(coordinate.y)). Saved in the selected world. Activate a saved area to run it."
-        } else { developerPlacementStatus = result.message; playSound(.invalidPlacement) }
+        } else { developerPlacementStatus = result.message; playSound(.invalidPlacement, at: coordinate, mapper: audioMapper) }
         return result
     }
 
     @discardableResult
-    func eraseCircuitComponent(at coordinate: WorldCoordinate) -> Bool {
+    func eraseCircuitComponent(at coordinate: WorldCoordinate, audioMapper: CoordinateMapper? = nil) -> Bool {
         guard !isEditorConfigurationLocked else {
             developerPlacementStatus = "Disable Desktop World before editing."
             return false
@@ -437,7 +439,7 @@ final class AppState: ObservableObject {
         next.circuit.components.removeValue(forKey: coordinate)
         editorWorld = next
         worldDidChange()
-        playSound(.removeCircuit)
+        playSound(.removeCircuit, at: coordinate, mapper: audioMapper)
         developerPlacementStatus = "Erased component at (\(coordinate.x), \(coordinate.y)); terrain preserved."
         return true
     }
@@ -669,7 +671,7 @@ final class AppState: ObservableObject {
         let events = next.advanceTick()
         if !isDisplaySettling && !isFinderLayoutSettling {
             for (id, tile) in CircuitSounds.transitions(before: simulator, after: next) where outputIsVisible(tile) {
-                playSound(id)
+                playSound(id, at: tile, mapper: desktopController?.scene.mapper)
             }
         }
         let changedPower = next.power != simulator.power
@@ -678,7 +680,7 @@ final class AppState: ObservableObject {
         for case let .outputActivated(coordinate) in events {
             guard !isDisplaySettling, !isFinderLayoutSettling, outputIsVisible(coordinate) else { continue }
             desktopController?.scene.flashOutput(at: coordinate)
-            playSound(.outputActivate)
+            playSound(.outputActivate, at: coordinate, mapper: desktopController?.scene.mapper)
             // Bound pending I/O independently of simulation, rather than accumulating requests.
             if pendingOutputs.count < 32 { pendingOutputs.append(coordinate) }
             else { lastActionResult = "Output action queue is full; activation skipped." }
@@ -765,11 +767,12 @@ final class AppState: ObservableObject {
             }
             if kind == .button {
                 self.simulator.pressButton(at: tile)
-                self.playSound(.buttonPress)
+                self.playSound(.buttonPress, at: tile, mapper: controller.scene.mapper)
                 self.lastActionResult = "Button pulse queued; repeats extend it without another rising activation."
             } else {
                 self.simulator.toggleLever(at: tile)
-                self.playSound(self.simulator.activeLevers.contains(tile) ? .leverToggleOn : .leverToggleOff)
+                self.playSound(self.simulator.activeLevers.contains(tile) ? .leverToggleOn : .leverToggleOff,
+                    at: tile, mapper: controller.scene.mapper)
                 self.savedLevers = self.simulator.activeLevers
                 self.desktopLeversDidChange()
                 self.lastActionResult = self.simulator.activeLevers.contains(tile)
@@ -810,7 +813,7 @@ final class AppState: ObservableObject {
 
     func setFinderScaleEnabled(_ enabled: Bool) {
         if enabled {
-            guard finderDiagnostics.hasRead, !finderDiagnostics.isReading,
+            guard finderDiagnostics.hasRead, finderDiagnostics.error == nil, !finderDiagnostics.isReading,
                   let setting = finderDiagnostics.viewSettings else {
                 finderScaleStatus = "Read Finder successfully first; icon size must be available."
                 return
@@ -828,12 +831,18 @@ final class AppState: ObservableObject {
         if let data = try? JSONEncoder().encode(audioSettings) { preferences?.set(data, forKey: "audioSettings") }
     }
 
-    func previewSound(_ id: SoundID) { playSound(id) }
+    func previewSound(_ id: SoundID, pan: Float = 0) { playSound(id, pan: pan) }
 
-    private func playSound(_ id: SoundID) {
+    private func playSound(_ id: SoundID, pan: Float = 0) {
         guard audioSettings.gain > 0 else { return }
-        soundPlayer.play(id)
+        soundPlayer.play(id, pan: pan)
         audioStatus = soundPlayer.status
+    }
+
+    private func playSound(_ id: SoundID, at tile: WorldCoordinate, mapper: CoordinateMapper?) {
+        guard let mapper else { playSound(id); return }
+        guard let pan = AudioPanning.pan(tile: tile, mapper: mapper) else { return }
+        playSound(id, pan: pan)
     }
 
     private func refreshFinderScale() {

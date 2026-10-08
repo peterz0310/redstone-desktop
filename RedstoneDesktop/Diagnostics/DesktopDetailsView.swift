@@ -40,6 +40,12 @@ struct DesktopDetailsView: View {
                     }
                 }
                 Text(appState.audioStatus).font(.caption).foregroundStyle(.secondary)
+                HStack {
+                    Text("Stereo check")
+                    Button("Left") { appState.previewSound(.buttonPress, pan: -1) }
+                    Button("Center") { appState.previewSound(.buttonPress) }
+                    Button("Right") { appState.previewSound(.buttonPress, pan: 1) }
+                }
                 Divider()
                 Text("Desktop controls and diagnostics")
                     .font(.headline)

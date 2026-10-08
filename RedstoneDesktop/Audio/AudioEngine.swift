@@ -5,15 +5,19 @@ import Combine
 protocol SoundPlaying {
     var status: String { get }
     func configure(_ settings: AudioSettings)
-    func play(_ id: SoundID)
+    func play(_ id: SoundID, pan: Float)
     func stop()
+}
+
+extension SoundPlaying {
+    func play(_ id: SoundID) { play(id, pan: 0) }
 }
 
 @MainActor
 final class SilentSoundPlayer: SoundPlaying {
     var status: String { "Audio disabled in test host." }
     func configure(_ settings: AudioSettings) {}
-    func play(_ id: SoundID) {}
+    func play(_ id: SoundID, pan: Float) {}
     func stop() {}
 }
 
@@ -62,13 +66,14 @@ final class AudioEngine: SoundPlaying {
         if settings.gain == 0 { stop() }
     }
 
-    func play(_ id: SoundID) {
+    func play(_ id: SoundID, pan: Float) {
         guard settings.gain > 0, let buffer = buffers[id] else { return }
         do {
             if !engine.isRunning { try engine.start() }
             let voice = voices[nextVoice]
             nextVoice = (nextVoice + 1) % voices.count
             voice.stop() // At saturation recycle the oldest voice; never queue an unbounded tail.
+            voice.pan = pan.isFinite ? min(1, max(-1, pan)) : 0
             voice.scheduleBuffer(buffer, at: nil)
             voice.play()
             status = "Sound effects ready."

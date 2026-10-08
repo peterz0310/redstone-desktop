@@ -4,7 +4,7 @@ An experimental native macOS app exploring a block world beneath real Finder des
 
 ## Current build and next steps
 
-**Implemented: Slices 0–22.** Slice 20 adds Finder center markers, proposed-camera occupancy and Output snapping in the editor. Slice 21 rebuilds desktop rendering/input after display changes, retains the saved lower-left origin/tile size and current circuit state, and refreshes Finder after settling. Slice 22 reads optional Finder icon-size settings, waits for changed layouts to settle and refreshes actual centers without changing world scale. Debug build and all **256 automated tests** pass; the pure domain/view settings and Finder projection also type-check without AppKit/SpriteKit. The owner accepted the 19C Update Current Area/context-menu follow-up. The owner accepted the combined Slice 20/21 walkthrough with “All looking good. Continue”. Earlier detailed 19B/19C runtime/deletion checks and Slice 22 Mac validation remain pending.
+**Implemented: Slices 0–25.** Slice 22 refreshes real Finder centers after icon-size changes. Slice 23 adds optional synchronized desktop scale, off by default and reversible. Slice 24 adds original semantic sound effects, volume and mute; Slice 25 adds stereo panning through the current camera. Debug build and all **277 automated tests** pass, including offline audio rendering without speaker output. The owner accepted Slices 20/21 and the 19C bookmark/context-menu follow-up; detailed earlier 19B/19C checks and Slices 22–25 Mac validation remain pending.
 
 The editor now shows **Worlds** in a left sidebar and **Areas in [world]** as a preview shelf below the canvas. Build tools and the inspector sit on the right. The top shows the world/area being edited, the separate desktop assignment, **Start/Stop Desktop** and **Advanced**. New World, Save Current View and rename use focused sheets; seed/creation fields are no longer permanently visible.
 
@@ -14,7 +14,7 @@ Configuration still saves to `~/Library/Application Support/RedstoneDesktop/libr
 
 Finder Diagnostics remains useful for permission/alignment problems, and Desktop Details for input rejection/action results. They moved to **Advanced**. The obsolete Developer Placement window and fixed-demo diagnostic rows are removed; automated tests and migration fixtures remain, and no existing saved circuits were cleared. Shelf previews remain bounded schematic terrain/circuit snapshots. Finder markers now appear separately in the main editor canvas when enabled.
 
-**Next: validate the Slice 22 icon-size walkthrough at the end of this document. Optional synchronized world scale is Slice 23.**
+**Next: run the Slice 22–25 walkthroughs below. Resource packs (Slice 26) have not started.**
 
 ## Adopted plan: worlds and saved areas
 
@@ -649,3 +649,11 @@ open /Users/peterzielinski/git/redstone-desktop/build/Build/Products/Debug/Redst
 4. Trigger nearby circuits quickly; short effects should overlap acceptably without long queued playback. Try mute while sounds occur. Stop Desktop: ongoing effects clear. Quit/reopen: settings persist, Desktop remains stopped and no startup circuit sounds play.
 
 Report overlap/volume comfort and whether mute silences all effects. These checks remain pending.
+
+
+## Stereo direction — Slice 25
+
+1. Use stereo speakers/headphones, with system Mono Audio off if enabled. In **Advanced → Desktop Details → Sound effects → Stereo check**, press **Left**, **Center**, **Right**. The same sound should move between channels; mute/volume still apply. If your output is mono, direction cannot be assessed on it.
+2. Stop Desktop. Place/erase components near the editor canvas's left/right edges on valid ground. The effects should follow the positions **within that canvas**, including after pan/zoom. Selecting a component, panning it offscreen and using **Erase selected component** should remove it silently.
+3. Start Desktop and try visible buttons/levers toward its left/right sides. The input, release, repeater and Output effects should come from their own tile positions. Optional sync-to-Finder scale is not required; if enabled, sounds should follow the new positions after zoom. Offscreen circuit events are silent and must not replay when they come back into view.
+4. Report whether direction feels sensible. No new demo circuits were inserted above your builds; add any test circuits to the right of existing ones.

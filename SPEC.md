@@ -23,7 +23,7 @@ The intended workflow is:
 
 The project is an experiment first and a polished application second.
 
-Current implementation: Slices 0–19A have owner-confirmed acceptance. **Slices 19B–24 are implemented.** The 19C bookmark/context-menu follow-up is owner-accepted; Slices 20–21 now have owner-reported acceptance; earlier specific 19B/19C runtime/deletion checks remain pending. The owner requested 19C usability cleanup after tentative 19B feedback. Worlds now have a sidebar; area previews sit below the canvas; creation/rename/save/deletion use focused sheets. Atomic deletion protects active/final records and preserves configuration on failure. Library, fixed-seed world and explicit saved-area activation contracts remain intact. Slice 20 adds explicitly enabled Finder projections and Output snapping in the editor; Slice 21 adds primary-display change handling with preserved lower-left camera anchoring. Slice 22 adds read-only icon-size detection and settled center refresh; its Mac checks remain pending. Slice 23 adds optional, reversible Finder scale synchronization; Mac acceptance remains pending. Slice 24 adds original semantic sound effects and master volume/mute. Stereo panning is next in **Slice 25**. Historical entries record earlier behavior; Sections 3.8, 7.1, 25 and 29 define the current contract.
+Current implementation: Slices 0–19A have owner-confirmed acceptance. **Slices 19B–25 are implemented.** The 19C bookmark/context-menu follow-up is owner-accepted; Slices 20–21 now have owner-reported acceptance; earlier specific 19B/19C runtime/deletion checks remain pending. The owner requested 19C usability cleanup after tentative 19B feedback. Worlds now have a sidebar; area previews sit below the canvas; creation/rename/save/deletion use focused sheets. Atomic deletion protects active/final records and preserves configuration on failure. Library, fixed-seed world and explicit saved-area activation contracts remain intact. Slice 20 adds explicitly enabled Finder projections and Output snapping in the editor; Slice 21 adds primary-display change handling with preserved lower-left camera anchoring. Slice 22 adds read-only icon-size detection and settled center refresh; its Mac checks remain pending. Slice 23 adds optional, reversible Finder scale synchronization; Mac acceptance remains pending. Slice 24 adds original semantic sound effects and master volume/mute. Slice 25 adds camera-based stereo panning; Mac checks for 22–25 remain pending. Resource packs are next in **Slice 26** and are untouched. Historical entries record earlier behavior; Sections 3.8, 7.1, 25 and 29 define the current contract.
 
 The most important early question is not whether attractive terrain or redstone can be made. Those are comparatively straightforward. The first major feasibility gate is:
 
@@ -1452,7 +1452,7 @@ Requirements:
 - one persistent audio engine rather than recreation per sound
 - no microphone permission
 
-Later positional pan:
+Slice 25 positional pan:
 
 ```text
 left edge   = -1.0
@@ -2556,17 +2556,18 @@ Keep this optional if Finder behavior feels awkward.
 
 ## Slice 25 — Audio panning
 
-- [ ] event world position → screen position
-- [ ] horizontal position → -1...1 pan
-- [ ] clamp
-- [ ] off-screen event policy
-- [ ] unit tests for panning math
+- [x] event world position → screen position
+- [x] horizontal position → -1...1 pan
+- [x] clamp
+- [x] off-screen event policy
+- [x] unit tests for panning math
 
 ### Manual acceptance
 
 - [ ] MANUAL: left/right controls sound directionally sensible.
 
 ---
+
 
 ## Slice 26 — Resource packs
 
@@ -3589,3 +3590,12 @@ AudioEngine owns one persistent AVAudioEngine graph with eight overlapping mono 
 AppState dispatches accepted button/lever actions, successful placement/removal and refused placement. CircuitSounds extracts button release and repeater power edges from pure snapshots; visible Output rising edges have an activation tone even without a Finder occupant. Simulation and renderer never play audio or open files. Stale/rejected desktop clicks are silent; held outputs do not repeat tones. Placement previews/hover and erasing an empty tile are silent. Settings (35% default volume, enabled effects, mute off) persist separately from library JSON. Desktop Details offers controls and previews for every semantic ID.
 
 Debug build and all 269 tests pass. Tests cover synthesized samples, semantic edges, app input/output/edit dispatch, settings persistence and actual overlapping PCM/mute in AVAudioEngine offline mode. Test hosts inject silent players; no real speaker playback or microphone access. Sound quality/overlap and mute on the owner's output device remain MANUAL pending.
+
+
+## Slice 25 implementation evidence
+
+AudioPanning maps a tile center through CoordinateMapper into the event's canvas, then normalizes horizontal position to -1…1. Desktop events use the current desktop mapper (including optional Finder scale/display changes). Editor placement/refusal/removal use the editor's current mapper; Inspector removal uses that same viewport, never the desktop camera. Offscreen tile centers in either axis are silent and never queued or replayed when a camera moves. Nonspatial sound previews remain centered; Desktop Details offers explicit Left/Center/Right previews. Invalid/nonfinite pan input is refused by projection or centered at the engine boundary; finite input is clamped. Mono player voices pan independently into the stereo mixer.
+
+Automated tests cover negative screen origins, endpoints/center/clamps, invalid input, tile-center conversion, both-axis offscreen policy, camera pan/zoom, editor/desktop dispatch and actual offline stereo-channel energy for left/center/right. The scale experiment's same-area reactivation now compares saved cameras rather than its temporary effective camera, avoiding unnecessary runtime restart. A failed Finder refresh cannot opt in using stale metadata. Updating/stopped activation prepares the effective camera without saving its transform; restored sync status clearly waits for metadata.
+
+Debug build and all 277 tests pass. Actual stereo perception on the owner's output device remains MANUAL pending. Slices 22–25 manual checkboxes stay unchecked; no resource pack, backend, private API or bundled Minecraft audio.
