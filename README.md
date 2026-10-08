@@ -666,3 +666,10 @@ The original size query used a class reference that Finder rejected while ordina
 Quit with ⌘Q, reopen the rebuilt app, Start Desktop, then check Advanced → Finder Diagnostics reports a numeric icon size. Enable synchronization in Desktop Details; change Finder's real desktop icon size in Show View Options and verify world zoom/center alignment and fresh Output targeting. Turn synchronization off to restore the saved camera. Leave it off if a stable circuit layout is preferable. Slices 24/25 are owner-accepted; corrected Slice 22/23 behavior remains pending.
 
 Owner follow-up (2026-10-08): corrected Finder icon-size/marker and optional synchronization retest passed. The explicit real Output-after-resize check remains pending. Slice 26 resource packs are next, not yet implemented.
+
+
+## Resource packs — Slice 26
+
+Advanced → **Appearance & Packs** lets you choose a pack folder/ZIP, reload it, inspect diagnostics or restore built-in assets. The complete format and contributor guide is [docs/RESOURCE_PACKS.md](docs/RESOURCE_PACKS.md).
+
+Mac check: quit/reopen the new build, choose `examples/GrassOnly` or `examples/GrassOnly.zip` from this repository. Grass should become a purple/teal checker; stone/sand/water/circuits/sounds should retain built-in fallback. Both forms should match. Try Reload and Use Built-In; a running held circuit and world/camera should be preserved, without reopening Output from an appearance change. Quit/reopen should revalidate your choice with Desktop stopped. Both Slice 26 manual checks remain pending.

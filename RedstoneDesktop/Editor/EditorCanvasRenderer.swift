@@ -22,6 +22,8 @@ final class EditorCanvasRenderer {
             lastProjection = nil
         }
         guard let scene else { return nil }
+        scene.setAssets(appState.assets)
+        ghostRenderer.textures.assets = appState.assets
         let world = editor.browsingWorld(appState)
         let power: Set<WorldCoordinate> = editor.isPreviewing(appState) ? [] : appState.editorPoweredTiles
         let levers: Set<WorldCoordinate> = editor.isPreviewing(appState) ? [] : appState.editorLeverPositions

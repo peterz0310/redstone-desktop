@@ -1,0 +1,8 @@
+{
+  "formatVersion": 1,
+  "name": "Original Grass Checker",
+  "author": "Redstone Desktop contributors",
+  "assets": {
+    "terrainGrass": "textures/grass.png"
+  }
+}

@@ -23,7 +23,7 @@ The intended workflow is:
 
 The project is an experiment first and a polished application second.
 
-Current implementation: Slices 0–19A have owner-confirmed acceptance. **Slices 19B–25 are implemented.** The 19C bookmark/context-menu follow-up is owner-accepted; Slices 20–21 now have owner-reported acceptance; earlier specific 19B/19C runtime/deletion checks remain pending. The owner requested 19C usability cleanup after tentative 19B feedback. Worlds now have a sidebar; area previews sit below the canvas; creation/rename/save/deletion use focused sheets. Atomic deletion protects active/final records and preserves configuration on failure. Library, fixed-seed world and explicit saved-area activation contracts remain intact. Slice 20 adds explicitly enabled Finder projections and Output snapping in the editor; Slice 21 adds primary-display change handling with preserved lower-left camera anchoring. Slice 22 adds read-only icon-size detection and settled center refresh; its Mac checks remain pending. Slice 23 adds optional, reversible Finder scale synchronization; Mac acceptance remains pending. Slice 24 adds original semantic sound effects and master volume/mute. Slice 25 adds camera-based stereo panning; The owner accepted Slices 24/25 audio/mute/stereo on 2026-10-08; The owner accepted corrected size/marker/synchronization behavior on 2026-10-08; Slice 22’s real Output-after-resize check remains pending. Resource packs are next in **Slice 26** and are untouched. Historical entries record earlier behavior; Sections 3.8, 7.1, 25 and 29 define the current contract.
+Current implementation: Slices 0–19A have owner-confirmed acceptance. **Slices 19B–26 are implemented.** The 19C bookmark/context-menu follow-up is owner-accepted; Slices 20–21 now have owner-reported acceptance; earlier specific 19B/19C runtime/deletion checks remain pending. The owner requested 19C usability cleanup after tentative 19B feedback. Worlds now have a sidebar; area previews sit below the canvas; creation/rename/save/deletion use focused sheets. Atomic deletion protects active/final records and preserves configuration on failure. Library, fixed-seed world and explicit saved-area activation contracts remain intact. Slice 20 adds explicitly enabled Finder projections and Output snapping in the editor; Slice 21 adds primary-display change handling with preserved lower-left camera anchoring. Slice 22 adds read-only icon-size detection and settled center refresh; its Mac checks remain pending. Slice 23 adds optional, reversible Finder scale synchronization; Mac acceptance remains pending. Slice 24 adds original semantic sound effects and master volume/mute. Slice 25 adds camera-based stereo panning; The owner accepted Slices 24/25 audio/mute/stereo on 2026-10-08; The owner accepted corrected size/marker/synchronization behavior on 2026-10-08; Slice 22’s real Output-after-resize check remains pending. Slice 26 adds optional validated folder/ZIP packs with original fallback. Java importing is next in **Slice 27**. Historical entries record earlier behavior; Sections 3.8, 7.1, 25 and 29 define the current contract.
 
 The most important early question is not whether attractive terrain or redstone can be made. Those are comparatively straightforward. The first major feasibility gate is:
 
@@ -2571,15 +2571,15 @@ Keep this optional if Finder behavior feels awkward.
 
 ## Slice 26 — Resource packs
 
-- [ ] `AssetProvider`
-- [ ] built-in provider
-- [ ] pack manifest
-- [ ] validation
-- [ ] partial override fallback
-- [ ] folder/zip selection
-- [ ] reload
-- [ ] diagnostics
-- [ ] unit tests
+- [x] `AssetProvider`
+- [x] built-in provider
+- [x] pack manifest
+- [x] validation
+- [x] partial override fallback
+- [x] folder/zip selection
+- [x] reload
+- [x] diagnostics
+- [x] unit tests
 
 ### Manual acceptance
 
@@ -2587,6 +2587,7 @@ Keep this optional if Finder behavior feels awkward.
 - [ ] MANUAL: missing assets fall back to built-in.
 
 ---
+
 
 ## Slice 27 — Minecraft Java texture importer
 
@@ -3615,3 +3616,14 @@ Validation of the correction: Debug build and all 279 tests pass. Two new regres
 ## 2026-10-08 — Owner confirms corrected Finder scale behavior
 
 The owner reports “Yup it works” after the numeric-size, synchronization, Finder resizing/marker and off/restored-camera retest. Record the first two Slice 22 MANUAL checks and all three Slice 23 checks as owner-reported acceptance, separately from the 279 passing automated tests. Keep Slice 22’s current-occupant Output-after-resize check pending because the most recent retest did not explicitly include that action. Resource packs (Slice 26) are next; the owner asks what comes next, so this update records acceptance and describes scope without starting implementation.
+
+
+## 2026-10-08 — Slice 26 resource packs
+
+Owner authorizes Slices 26 then 27 and requests shareable documentation and a local Java test path. Implement Slice 26 first, without treating its manual checks as passed. Format-1 manifests address 20 texture IDs and nine semantic sounds. See docs/RESOURCE_PACKS.md for the authoritative actual ID catalog, file bounds, lifecycle, fallback/error policy and contributor guidance; earlier hypothetical ID examples are not aliases. AssetProvider addresses textures/terrain pixels; AssetLibrary also supplies validated sound arrays to the separate audio engine instead of giving renderers disk paths. Built-in original art/sounds remain complete defaults.
+
+Folder/ZIP loading runs off the main thread into immutable raster/mono-PCM snapshots. A bounded central-directory reader supports stored/raw-deflate ZIP with CRC and local-name checks, rejecting unsafe/duplicate paths, symlinks, encryption, multi-disk, ZIP64 and oversized structures. It never extracts archive paths to disk or executes pack content. PNG dimensions are checked before ImageIO raster decode. Short PCM16/float32 WAV effects are averaged/resampled and peak-limited. Missing/invalid individual assets warn and fall back; malformed/unsafe manifests/archives refuse the whole pack and activate built-in assets.
+
+A revision invalidates appearance caches and replaces audio buffers without changing world/library/camera/input/session/simulator or dispatching/replaying outputs. Generated terrain uses 8 pixels/tile for built-in defaults and 16 with terrain/decoration overrides; source PNGs are nearest-sampled. Circuit icons retain labels/geometry/occupancy. Schematic shelf previews remain original summaries. Appearance & Packs is behind Advanced, with folder/ZIP picker, reload, diagnostics and Use Built-In. Selection persists separately from world saves and is revalidated on startup; isolated test hosts never restore owner packs.
+
+Original MIT examples/GrassOnly and its ZIP demonstrate a grass-only override; no third-party game assets are bundled. Automated coverage includes real deflated ZIP/folder equivalence, paths/schema/type/missing assets, symlink/CRC/encryption/truncated metadata, raster dimensions/orientation, WAV bounds/resampling, partial fallback/cache changes, held live-circuit/library/camera preservation, reload/preference restoration and offline audio replacement/fallback. Debug build and all 290 tests pass. Both MANUAL checks remain pending; proceed to authorized Slice 27 after this separate implementation commit.

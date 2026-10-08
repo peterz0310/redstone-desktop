@@ -77,6 +77,8 @@ final class AppState: ObservableObject {
     private let preferences: UserDefaults?
     @Published private(set) var audioSettings = AudioSettings()
     @Published private(set) var audioStatus = "Sound effects ready."
+    let assets: AssetLibrary
+    private var assetObserver: AnyCancellable?
     private let soundPlayer: any SoundPlaying
 
     init(screenProviding: @escaping () -> ScreenDescriptor? = {
@@ -93,6 +95,7 @@ final class AppState: ObservableObject {
        displaySettleDelay: Duration = .milliseconds(500),
        preferences: UserDefaults? = nil,
        soundPlayer: any SoundPlaying = SilentSoundPlayer(),
+       assets: AssetLibrary = AssetLibrary(),
        finderReferenceProviding: @escaping () -> ScreenDescriptor? = {
            NSScreen.screens.first.map { ScreenDescriptor(screen: $0) }
        }) {
@@ -114,6 +117,7 @@ final class AppState: ObservableObject {
         self.displaySettleDelay = displaySettleDelay
         self.preferences = preferences
         self.soundPlayer = soundPlayer
+        self.assets = assets
         if let data = preferences?.data(forKey: "audioSettings"),
            let stored = try? JSONDecoder().decode(AudioSettings.self, from: data) {
             audioSettings = AudioSettings(volume: stored.volume.isFinite ? min(1, max(0, stored.volume)) : 0,
@@ -130,6 +134,15 @@ final class AppState: ObservableObject {
         self.finderReferenceProviding = finderReferenceProviding
         desktopItemTracker = DesktopItemTracker(diagnostics: finderDiagnostics)
         soundPlayer.configure(audioSettings)
+        soundPlayer.replaceSoundOverrides(assets.soundOverrides)
+        assetObserver = assets.$revision.dropFirst().sink { [weak self] _ in
+            Task { @MainActor [weak self] in
+                guard let self else { return }
+                self.soundPlayer.replaceSoundOverrides(self.assets.soundOverrides)
+                self.desktopController?.scene.setAssets(self.assets)
+                self.objectWillChange.send()
+            }
+        }
         if finderScale.enabled { finderScaleStatus = "Experimental sync waiting for a stable Finder icon size." }
         finderItemsObserver = Publishers.CombineLatest3(finderDiagnostics.$items, finderDiagnostics.$error, finderDiagnostics.$hasRead).sink { [weak self] items, error, hasRead in
             MainActor.assumeIsolated { self?.updateFinderState(items, error: error, hasRead: hasRead) }
@@ -575,6 +588,7 @@ final class AppState: ObservableObject {
             controller?.scene.updateHighlight(snapshot.tile)
         }
         desktopController = controller
+        controller.scene.setAssets(assets)
         controller.scene.updateWorld(desktopWorld, poweredTiles: simulator.poweredTiles, leverPositions: simulator.activeLevers)
         finderReferenceScreen = finderReferenceProviding()
         lastObservedGeometry = DisplayGeometry(target: screen, finderReference: finderReferenceScreen)

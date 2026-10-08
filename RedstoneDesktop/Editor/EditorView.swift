@@ -18,6 +18,7 @@ struct EditorView: View {
                 Spacer()
                 Button(appState.isDesktopWorldEnabled ? "Stop Desktop" : "Start Desktop") { appState.toggleDesktopWorld() }
                 Menu {
+                    Button("Appearance & Packs…") { openWindow(id: "asset-settings") }
                     Button("Finder Diagnostics…") { openWindow(id: "finder-diagnostics") }
                     Button("Desktop Details…") { openWindow(id: "desktop-controls") }
                     Divider()

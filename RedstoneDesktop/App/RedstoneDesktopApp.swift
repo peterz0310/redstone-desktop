@@ -20,6 +20,9 @@ struct RedstoneDesktopApp: App {
             DesktopDetailsView(appState: appState)
         }
         .defaultSize(width: 640, height: 740)
+        Window("Appearance & Packs", id: "asset-settings") {
+            AssetSettingsView(assets: appState.assets)
+        }.defaultSize(width: 660, height: 650)
         Window("Finder Diagnostics", id: "finder-diagnostics") {
             FinderDiagnosticsView(appState: appState)
         }
@@ -34,8 +37,10 @@ enum AppStartup {
         let environment = ProcessInfo.processInfo.environment
         let testing = NSClassFromString("XCTestCase") != nil
             || environment.keys.contains { $0.hasPrefix("XCTest") || $0 == "XCInjectBundleInto" }
+        let assets = AssetLibrary(preferences: testing ? nil : .standard)
+        if !testing { Task { await assets.restoreSelection() } }
         return AppState(libraryStore: testing ? nil : WorldLibraryStore.applicationDefault(), automaticallyRefreshFinder: !testing,
             preferences: testing ? nil : .standard,
-            soundPlayer: testing ? SilentSoundPlayer() : (try? AudioEngine()) ?? SilentSoundPlayer())
+            soundPlayer: testing ? SilentSoundPlayer() : (try? AudioEngine()) ?? SilentSoundPlayer(), assets: assets)
     }
 }

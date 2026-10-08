@@ -7,9 +7,11 @@ protocol SoundPlaying {
     func configure(_ settings: AudioSettings)
     func play(_ id: SoundID, pan: Float)
     func stop()
+    func replaceSoundOverrides(_ samples: [SoundID: [Float]])
 }
 
 extension SoundPlaying {
+    func replaceSoundOverrides(_ samples: [SoundID: [Float]]) {}
     func play(_ id: SoundID) { play(id, pan: 0) }
 }
 
@@ -28,6 +30,7 @@ final class AudioEngine: SoundPlaying {
     private let engine = AVAudioEngine()
     private let voices = (0..<8).map { _ in AVAudioPlayerNode() }
     private var buffers: [SoundID: AVAudioPCMBuffer] = [:]
+    private var builtInBuffers: [SoundID: AVAudioPCMBuffer] = [:]
     private var nextVoice = 0
     private var settings = AudioSettings()
     private var configurationObserver: AnyCancellable?
@@ -46,6 +49,7 @@ final class AudioEngine: SoundPlaying {
             for (index, sample) in samples.enumerated() { buffer.floatChannelData![0][index] = sample }
             buffers[id] = buffer
         }
+        builtInBuffers = buffers
         if offline {
             let stereo = AVAudioFormat(standardFormatWithSampleRate: BuiltInSounds.sampleRate, channels: 2)!
             try engine.enableManualRenderingMode(.offline, format: stereo, maximumFrameCount: 4096)
@@ -58,6 +62,19 @@ final class AudioEngine: SoundPlaying {
                     self?.status = "Audio device changed; previous sounds cleared. Next effect retries playback."
                 }
             }
+    }
+
+    func replaceSoundOverrides(_ samples: [SoundID: [Float]]) {
+        stop()
+        buffers = builtInBuffers
+        let mono = AVAudioFormat(standardFormatWithSampleRate: BuiltInSounds.sampleRate, channels: 1)!
+        for (id, values) in samples where !values.isEmpty && values.count <= 88200 {
+            guard values.allSatisfy({ $0.isFinite && abs($0) <= 0.11 }),
+                  let buffer = AVAudioPCMBuffer(pcmFormat: mono, frameCapacity: AVAudioFrameCount(values.count)) else { continue }
+            buffer.frameLength = buffer.frameCapacity
+            for (index, value) in values.enumerated() { buffer.floatChannelData![0][index] = value }
+            buffers[id] = buffer
+        }
     }
 
     func configure(_ settings: AudioSettings) {

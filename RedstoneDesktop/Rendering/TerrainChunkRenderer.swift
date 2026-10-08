@@ -12,6 +12,8 @@ struct TerrainRenderMetrics: Equatable {
 /// Terrain cache survives editor camera changes; circuit/power/occupancy never rebuild textures.
 @MainActor
 final class TerrainChunkRenderer {
+    var assets: any AssetProvider = BuiltInAssetProvider()
+    private var assetRevision: UUID?
     private var cache = ChunkCache()
     private var nodes: [ChunkCoordinate: SKSpriteNode] = [:]
     private var overrides: [WorldCoordinate: Tile] = [:]
@@ -22,7 +24,8 @@ final class TerrainChunkRenderer {
     func render(_ world: World, mapper: CoordinateMapper, screen: ScreenDescriptor, viewport: CGRect, into layer: SKNode) {
         guard let generation = world.generation else { return }
         let requested = mapper.visibleChunks(on: screen, viewport: viewport)
-        if self.generation != generation || overrides != world.tiles || excluded != world.unspecifiedTiles {
+        if self.generation != generation || overrides != world.tiles || excluded != world.unspecifiedTiles || assetRevision != assets.revision {
+            assetRevision = assets.revision
             for node in nodes.values { node.removeFromParent() }
             nodes.removeAll()
             self.generation = generation; overrides = world.tiles; excluded = world.unspecifiedTiles
@@ -54,7 +57,8 @@ final class TerrainChunkRenderer {
     }
 
     private func texture(for chunk: TerrainChunk, world: World) -> SKTexture? {
-        let dimension = 256
+        let resolution = assets.terrainResolution
+        let dimension = 32 * resolution
         guard let origin = chunk.coordinate.worldOrigin,
               let bitmap = NSBitmapImageRep(bitmapDataPlanes: nil, pixelsWide: dimension, pixelsHigh: dimension,
                 bitsPerSample: 8, samplesPerPixel: 4, hasAlpha: true, isPlanar: false,
@@ -64,11 +68,11 @@ final class TerrainChunkRenderer {
             for x in 0..<32 {
                 let coordinate = WorldCoordinate(x: origin.x + x, y: origin.y + y)
                 let tile = world.tiles[coordinate] ?? (world.unspecifiedTiles.contains(coordinate) ? nil : chunk.tiles[coordinate])
-                for py in 0..<8 {
-                    for px in 0..<8 {
-                        let color = tile.map { OriginalTerrainPixels.pixel($0, x: px, y: py) } ?? (0, 0, 0, 0)
+                for py in 0..<resolution {
+                    for px in 0..<resolution {
+                        let color = tile.map { assets.pixel($0, x: px, y: py) } ?? (0, 0, 0, 0)
                         // Raster rows increase downward; global/scene conversion remains in mapper.
-                        let offset = ((255 - (y * 8 + py)) * dimension + x * 8 + px) * 4
+                        let offset = ((dimension - 1 - (y * resolution + py)) * dimension + x * resolution + px) * 4
                         bytes[offset] = color.0; bytes[offset + 1] = color.1
                         bytes[offset + 2] = color.2; bytes[offset + 3] = color.3
                     }

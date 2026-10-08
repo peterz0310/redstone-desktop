@@ -5,6 +5,21 @@ enum CircuitTextureID: String, CaseIterable {
     case dustOff, dustOn, buttonUp, buttonDown, leverOff, leverOn
     case repeaterOff, repeaterOn, outputOff, outputOn
 
+    var assetID: TextureAssetID {
+        switch self {
+        case .dustOff: .redstoneDustOff
+        case .dustOn: .redstoneDustOn
+        case .buttonUp: .redstoneButtonUp
+        case .buttonDown: .redstoneButtonDown
+        case .leverOff: .redstoneLeverOff
+        case .leverOn: .redstoneLeverOn
+        case .repeaterOff: .redstoneRepeaterOff
+        case .repeaterOn: .redstoneRepeaterOn
+        case .outputOff: .redstoneOutputOff
+        case .outputOn: .redstoneOutputOn
+        }
+    }
+
     static func id(for kind: CircuitComponentKind, powered: Bool) -> CircuitTextureID? {
         switch kind {
         case .dust: return powered ? .dustOn : .dustOff
@@ -20,12 +35,15 @@ enum CircuitTextureID: String, CaseIterable {
 /// Small code-drawn images, cached once per scene. No external assets or pack code.
 @MainActor
 final class CircuitTextures {
+    var assets: any AssetProvider = BuiltInAssetProvider()
+    private var revision: UUID?
     private var cache: [CircuitTextureID: SKTexture] = [:]
     var cachedTextureCount: Int { cache.count }
 
     func texture(for id: CircuitTextureID) -> SKTexture {
+        if revision != assets.revision { cache = [:]; revision = assets.revision }
         if let texture = cache[id] { return texture }
-        let texture = SKTexture(image: Self.image(for: id))
+        let texture = assets.texture(for: id.assetID) ?? SKTexture(image: Self.image(for: id))
         texture.filteringMode = .nearest
         cache[id] = texture
         return texture

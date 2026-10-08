@@ -60,6 +60,17 @@ final class DesktopScene: SKScene {
         if let world = renderedWorld { updateWorld(world, poweredTiles: renderedPower, leverPositions: renderedLevers) }
     }
 
+    private var assetProvider: (any AssetProvider)?
+    private var assetRevision: UUID?
+    func setAssets(_ assets: any AssetProvider) {
+        guard assetRevision != assets.revision else { return }
+        assetRevision = assets.revision
+        assetProvider = assets
+        terrainRenderer.assets = assets
+        circuitRenderer.textures.assets = assets
+        if let world = renderedWorld { updateWorld(world, poweredTiles: renderedPower, leverPositions: renderedLevers) }
+    }
+
     func updateHighlight(_ coordinate: WorldCoordinate?) {
         guard coordinate != highlightedTile else { return }
         highlightedTile = coordinate
@@ -128,7 +139,9 @@ final class DesktopScene: SKScene {
             guard rect.intersects(viewport) else { continue }
             let node = SKShapeNode(rect: rect.insetBy(dx: 0.5, dy: 0.5))
             node.name = "tile:\(coordinate.x),\(coordinate.y)"
-            node.fillColor = terrainColor(tile.terrain)
+            node.fillColor = .white
+            node.fillTexture = assetProvider?.texture(for: .terrain(tile.terrain))
+            if node.fillTexture == nil { node.fillColor = terrainColor(tile.terrain) }
             node.strokeColor = .clear
             tileLayer.addChild(node)
             if let decoration = tile.decoration {
