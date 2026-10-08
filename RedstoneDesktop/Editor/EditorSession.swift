@@ -6,13 +6,14 @@ import Foundation
 final class EditorSession: ObservableObject {
     enum Tool: String, CaseIterable {
         case select = "Navigate", dust = "Dust", button = "Button"
-        case lever = "Lever", repeater = "Repeater", output = "Output", erase = "Erase"
+        case lever = "Lever", repeater = "Repeater", output = "Output", erase = "Erase", torch = "Torch"
 
         var componentKind: CircuitComponentKind? {
             switch self {
             case .dust: return .dust
             case .button: return .button
             case .lever: return .lever
+            case .torch: return .torch
             case .repeater: return .repeater
             case .output: return .output
             case .select, .erase: return nil
@@ -157,7 +158,7 @@ final class EditorSession: ObservableObject {
         }
         selectedTile = tile
         if tool == .select {
-            if let component = browsingWorld(appState).circuit.components[tile], component.kind == .repeater {
+            if let component = browsingWorld(appState).circuit.components[tile], [.repeater, .torch].contains(component.kind) {
                 direction = component.direction
                 delay = component.repeaterDelay
             }

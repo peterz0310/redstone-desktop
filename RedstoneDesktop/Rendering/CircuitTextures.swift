@@ -3,7 +3,7 @@ import SpriteKit
 /// Original placeholder art, addressed by semantic IDs rather than file paths.
 enum CircuitTextureID: String, CaseIterable {
     case dustOff, dustOn, buttonUp, buttonDown, leverOff, leverOn
-    case repeaterOff, repeaterOn, outputOff, outputOn
+    case repeaterOff, repeaterOn, outputOff, outputOn, torchOff, torchOn
 
     var assetID: TextureAssetID {
         switch self {
@@ -15,6 +15,8 @@ enum CircuitTextureID: String, CaseIterable {
         case .leverOn: .redstoneLeverOn
         case .repeaterOff: .redstoneRepeaterOff
         case .repeaterOn: .redstoneRepeaterOn
+        case .torchOff: .redstoneTorchOff
+        case .torchOn: .redstoneTorchOn
         case .outputOff: .redstoneOutputOff
         case .outputOn: .redstoneOutputOn
         }
@@ -26,6 +28,7 @@ enum CircuitTextureID: String, CaseIterable {
         case .button: return powered ? .buttonDown : .buttonUp
         case .lever: return powered ? .leverOn : .leverOff
         case .repeater: return powered ? .repeaterOn : .repeaterOff
+        case .torch: return powered ? .torchOn : .torchOff
         case .output: return powered ? .outputOn : .outputOff
         case .empty: return nil
         }
@@ -96,6 +99,11 @@ final class CircuitTextures {
                 path.close()
                 (id == .repeaterOn ? hot : rim).setFill()
                 path.fill()
+            case .torchOff, .torchOn:
+                fill(CGRect(x: 13, y: 4, width: 6, height: 19), .brown)
+                fill(CGRect(x: 14, y: 6, width: 2, height: 14), rim)
+                fill(CGRect(x: 10, y: 20, width: 12, height: 9), id == .torchOn ? hot : red)
+                fill(CGRect(x: 13, y: 24, width: 6, height: 3), id == .torchOn ? .white : dark)
             case .outputOff, .outputOn:
                 // Original terminal block motif; Java importing supplies the real command-block face.
                 fill(CGRect(x: 1, y: 1, width: 30, height: 30), .brown)

@@ -1,7 +1,7 @@
 import Foundation
 
 enum SoundID: String, Codable, CaseIterable, Sendable {
-    case buttonPress, buttonRelease, leverToggleOn, leverToggleOff, repeaterTick
+    case buttonPress, buttonRelease, leverToggleOn, leverToggleOff, repeaterTick, torchToggle
     case placeCircuit, removeCircuit, invalidPlacement, outputActivate
 }
 
@@ -24,6 +24,7 @@ struct BuiltInSounds {
         case .buttonRelease: (frequency, duration) = (410, 0.045)
         case .leverToggleOn: (frequency, duration) = (790, 0.09)
         case .leverToggleOff: (frequency, duration) = (390, 0.09)
+        case .torchToggle: (frequency, duration) = (950, 0.045)
         case .repeaterTick: (frequency, duration) = (1080, 0.035)
         case .placeCircuit: (frequency, duration) = (880, 0.065)
         case .removeCircuit: (frequency, duration) = (330, 0.075)
@@ -47,6 +48,7 @@ struct CircuitSounds {
             let wasOn = before.power(at: tile) > .off, isOn = after.power(at: tile) > .off
             switch before.world.components[tile]?.kind {
             case .button where wasOn && !isOn: return (.buttonRelease, tile)
+            case .torch where wasOn != isOn: return (.torchToggle, tile)
             case .repeater where wasOn != isOn: return (.repeaterTick, tile)
             default: return nil
             }

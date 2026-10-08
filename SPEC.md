@@ -23,7 +23,7 @@ The intended workflow is:
 
 The project is an experiment first and a polished application second.
 
-Current implementation: **Slices 0–29 and the owner-requested 27A/28A/28B/28C/29A/29B follow-ups are implemented**, with Debug build and all **361 automated tests passing**. Slice 28's explicit Desktop Build Mode and hover/border/editor-window follow-up are implemented. Slice 28A strengthens the border, polishes terrain/circuit art and consolidates viewport navigation; Slice 28B adds full-tile Output art/occupancy glow, removes ordinary Finder tile boxes and fixes a measured pan stall. Slice 28C moves real Finder polling/metadata work off the UI thread after measuring a remaining periodic stall; the owner accepts responsiveness. Slice 29 adds explicitly configured, separately approved script outputs with asynchronous bounded results; the owner confirms the basic execution/target-movement walkthrough. Slice 29A adds early Desktop-folder access, an optional automatic script/open policy in Settings and remembering checked by default; the owner reports this flow works. Slice 29B retains accepted input during short Finder reads instead of requiring another click. Ordinary desktop Finder crosshairs are removed; editor projections and diagnostic numeric mappings remain. Detailed MANUAL checks and prior unreported Finder/input checks remain pending. Slices 0–19A, 20–21 and 23–25 have owner-reported acceptance; the 19C bookmark/context-menu follow-up and corrected Slice 22 icon-size/marker checks are also accepted. Detailed earlier 19B/19C runtime/deletion checks and Slice 22's real Output-after-resize check remain pending. The owner accepted local Java texture importing on 2026-10-08; the other specific Slice 26/27 checks and detailed 27A appearance checks remain pending. Slice 26 adds optional validated folder/ZIP packs with original fallback; Slice 27 imports selected textures from local Java JARs/packs into Application Support without bundling game assets. The actual pack contract and Java mapping/cache lifecycle are documented in docs/RESOURCE_PACKS.md and docs/JAVA_TEXTURE_IMPORT.md. **Slice 30 is next and untouched.** Historical entries record earlier behavior; Sections 3.8, 7.1, 25, 26 and 29 define the world/library/editing contract.
+Current implementation: **Slices 0–30 and the owner-requested 27A/28A/28B/28C/29A/29B follow-ups are implemented**, with Debug build and all **372 automated tests passing**. Slice 28's explicit Desktop Build Mode and hover/border/editor-window follow-up are implemented. Slice 28A strengthens the border, polishes terrain/circuit art and consolidates viewport navigation; Slice 28B adds full-tile Output art/occupancy glow, removes ordinary Finder tile boxes and fixes a measured pan stall. Slice 28C moves real Finder polling/metadata work off the UI thread after measuring a remaining periodic stall; the owner accepts responsiveness. Slice 29 adds explicitly configured, separately approved script outputs with asynchronous bounded results; the owner confirms the basic execution/target-movement walkthrough. Slice 29A adds early Desktop-folder access, an optional automatic script/open policy in Settings and remembering checked by default; the owner reports this flow works. Slice 29B retains accepted input during short Finder reads instead of requiring another click. Ordinary desktop Finder crosshairs are removed; editor projections and diagnostic numeric mappings remain. Detailed MANUAL checks and prior unreported Finder/input checks remain pending. Slices 0–19A, 20–21 and 23–25 have owner-reported acceptance; the 19C bookmark/context-menu follow-up and corrected Slice 22 icon-size/marker checks are also accepted. Detailed earlier 19B/19C runtime/deletion checks and Slice 22's real Output-after-resize check remain pending. The owner accepted local Java texture importing on 2026-10-08; the other specific Slice 26/27 checks and detailed 27A appearance checks remain pending. Slice 26 adds optional validated folder/ZIP packs with original fallback; Slice 27 imports selected textures from local Java JARs/packs into Application Support without bundling game assets. The actual pack contract and Java mapping/cache lifecycle are documented in docs/RESOURCE_PACKS.md and docs/JAVA_TEXTURE_IMPORT.md. **Slice 30 implements placed directional NOT torches; Slice 30A powered-Output pickup is next and untouched.** Historical entries record earlier behavior; Sections 3.8, 7.1, 25, 26 and 29 define the world/library/editing contract.
 
 The most important early question is not whether attractive terrain or redstone can be made. Those are comparatively straightforward. The first major feasibility gate is:
 
@@ -76,7 +76,7 @@ The world should eventually support:
 - redstone dust
 - repeaters
 - outputs
-- later: a simplified torch/inverter
+- simplified torch/inverter
 - Finder-item occupancy
 - opening Finder occupants
 - explicitly authorized script execution
@@ -1043,10 +1043,7 @@ Required V1:
 - lever
 - repeater
 - output
-
-Next:
-
-- simplified torch/inverter
+- torch (simplified directional inverter, Slice 30)
 
 ## 17.2 Direction
 
@@ -1115,11 +1112,13 @@ emit exactly one activation event.
 
 Holding power must not repeatedly launch something.
 
-## 17.9 Torch/inverter later
+## 17.9 Torch/inverter — Slice 30
 
-Simplified NOT behavior only.
+A torch's direction points away from its single rear input. It samples delivered power at `direction.opposite` after each completed network snapshot. Positive rear power requests OFF; zero requests ON. Both edges mature two simulation ticks (100 ms) after sampling, matching one redstone tick. New runtime history starts ON: the first tick emits 15, and a powered rear first sampled at tick 1 suppresses it at tick 3. Stopping/restarting resets this transient history; configuration/direction persist, runtime power does not.
 
-No burnout behavior in first version. Slice 30 supplies a placed torch component with defined 2D input/emission and transition timing, editor/Desktop Build tools, off/on original art, optional local Java mappings and backward-compatible persistence. Exact orientation/timing rules must be documented and tested before changing simulation.
+An ON torch emits 15 to its front and both sides, never to its rear. Adjacent dust receives 15 and attenuates normally thereafter; repeaters accept torch power only at their own rear and apply their own delay; Outputs sense any valid emitting adjacent torch port and retain rising-edge-only actions. A torch may sense another torch's emitting port or a correctly facing repeater, as well as dust/buttons/levers. Output remains a terminal sink until Slice 30A. North is positive world Y.
+
+All torch/repeater outputs mature before dust propagation. All rear inputs sample the same finished snapshot afterward; histories are bounded and never updated recursively. Feedback may oscillate deterministically and does not implement burnout. No vertical wiring, attachment/support blocks, quasi-connectivity, Minecraft update-order parity or resource-pack logic. Placement uses the existing grass/dirt/sand/decorations/occupancy rules. Editor direction/Apply and Desktop Build Rotate/R edit direction; Delay/T only applies to repeaters. Original off/on art, optional fixed local Java texture mappings and optional transition tone are presentation only.
 
 ---
 
@@ -2780,22 +2779,24 @@ Scoped owner-reported missed-click correction before Slice 30.
 
 ### Manual acceptance
 
-- [ ] MANUAL: with automatic Finder tracking enabled, a single button click after replacing an Output file activates the current occupant once; allow power to turn off between attempts, and repeat several times across polling intervals.
+- [x] MANUAL: with automatic Finder tracking enabled, a single button click after replacing an Output file activates the current occupant once; allow power to turn off between attempts, and repeat several times across polling intervals.
 - [ ] MANUAL: waiting feedback appears for an in-flight refresh; Stop while waiting prevents later activation; input during script approval/execution asks for retry and never fires after the prompt/process completes.
 
 ---
 
 ## Slice 30 — Simplified torch/inverter
 
-- [ ] define orientation/input semantics
-- [ ] NOT behavior
-- [ ] tests
-- [ ] rendering
-- [ ] optional sound
-- [ ] Place/erase/rotate torches in the editor and Desktop Build Mode; keep existing tools and stored components compatible.
-- [ ] Original off/on torch assets and bounded optional local Java mappings; packs never define logic.
-- [ ] Backward-compatible component decoding/persistence, powered/unpowered input transitions, cardinal output table, insertion-order invariance and bounded feedback tests.
-- [ ] Document explicit 2D differences from Minecraft (no vertical wiring, burnout, quasi-connectivity or full update-order parity).
+Implemented with Debug build and all 372 tests passing. See Section 17.9 and docs/REDSTONE_RULES.md for exact ports/timing and the Mac walkthrough. Physical owner acceptance remains pending.
+
+- [x] define orientation/input semantics
+- [x] NOT behavior
+- [x] tests
+- [x] rendering
+- [x] optional sound
+- [x] Place/erase/rotate torches in the editor and Desktop Build Mode; keep existing tools and stored components compatible.
+- [x] Original off/on torch assets and bounded optional local Java mappings; packs never define logic.
+- [x] Backward-compatible component decoding/persistence, powered/unpowered input transitions, cardinal output table, insertion-order invariance and bounded feedback tests.
+- [x] Document explicit 2D differences from Minecraft (no vertical wiring, burnout, quasi-connectivity or full update-order parity).
 
 ### Manual acceptance
 
@@ -3929,3 +3930,14 @@ Observation: the owner reports needing multiple presses, especially after changi
 Decision: reserve a bounded input task through a background refresh and then perform its own fresh Finder read. Periodic polling checks explicit-read priority both before scheduling and before executing. One captured input may wait behind a short Output read; repeated busy inputs coalesce. Queue state is discarded on Stop, policy/display/scale/world/layout invalidation, read failure and transition to script approval/execution. Script-busy clicks retain explicit retry feedback rather than delayed execution after a potentially long prompt/process. Fresh input icon exclusion and fresh Output occupancy remain authoritative; simulation, action authorization and pulse/rising-edge semantics are unchanged. No public API contradiction or private API is involved.
 
 Validation: Debug build and all **361 automated tests pass**. Five added tests cover suspended background read plus replacement and repeated clicks without retry, Stop while waiting, bounded input during Output refresh, priority over an already scheduled periodic poll, and script-approval clicks without later replay. Existing stale-session/layout/occupancy and script cancellation tests remain green. Pure World/Circuit Swift 6 type-check and diff checks pass. No real Desktop file or owner script was opened/run during automated validation. The owner confirms the preceding basic 29A walkthrough; denial/revocation/restart and other unreported details remain pending. Both new 29B MANUAL groups remain pending; Slice 30 is untouched.
+
+
+## 2026-10-08 — Slice 30 directional torch/inverter
+
+Context: the owner confirms the preceding missed-click correction and requests the next slice. Record the basic 29B click/replacement acceptance; Stop/approval-specific checks remain pending. Implement Slice 30 only. No new demo components are injected into saved worlds; the documentation example goes to the right of existing circuits.
+
+Decision: document the exact 2D contract in Section 17.9 before simulation changes. Add a torch kind with the existing direction field: rear-only inhibition, full-strength front/side emission, fixed two-simulation-tick delay on both edges, initial ON history and bounded deterministic feedback without burnout. A shared pure component emission table serves simulation and renderer connections. Repeaters keep their original delays, Outputs remain terminal and action execution stays separate. Torch direction persists through unchanged world/library formats; old missing action/delay defaults remain. Starting Desktop can activate an Output supplied by an initially ON torch; the walkthrough starts with an empty Output.
+
+Add Torch to editor and Desktop Build tools (append shortcut 7, retaining 1–6), selected direction/Apply, build Rotate/R and fixed-delay feedback for T/Delay. Built-in original off/on icons and optional procedural torchToggle sound supply complete defaults. Two bounded optional Java PNG mappings are additive, for 28 total mappings; older generated packs fall back until Re-import. No game image, pack code, Java runtime, backend or private API is bundled or introduced. Contributor guides document current semantic texture/sound IDs, source aliases, circuit timing, startup and manual tests.
+
+Validation: Debug application build and all **372 automated tests pass**. Eleven new TorchTests cover cardinal input/output tables, both-edge timing, dust/repeater propagation and extra delay, directed repeater/torch input, insertion-order invariant bounded feedback, integer limits, old-component defaults and torch world round-trip, editor/build direction/placement/erase/fixed-delay handling, renderer state/labels/port connectivity and optional sound transition extraction. Existing editor placement tests now include torches; original synthetic ZIP fixtures add torch sources and verify all 28 mappings with unchanged source bytes during import. Full existing Finder/click/script/persistence/audio regression remains green. Pure World/Circuit Swift 6 type-check and diff checks pass. Three initial old test assumptions (ten textures, old hotbar end and torch-as-unknown) were updated for the additive feature. No owner file/script/library/settings was touched in automated tests. Slice 30 MANUAL remains pending; Slice 30A is untouched.

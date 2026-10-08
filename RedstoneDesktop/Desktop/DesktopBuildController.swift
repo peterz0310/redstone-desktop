@@ -249,7 +249,7 @@ private struct DesktopBuildHotbar: View {
                 Picker("Delay", selection: Binding(get: { session.delay }, set: { appState.setBuildRepeaterDelay($0) })) {
                     ForEach(RepeaterDelay.allCases, id: \.self) { Text("\($0.rawValue) tick\($0 == .one ? "" : "s")").tag($0) }
                 }.frame(width: 160)
-                Text("Hover: R rotates · T cycles delay").font(.caption).foregroundStyle(.secondary)
+                Text("Hover: R rotates torch/repeater · T repeater delay").font(.caption).foregroundStyle(.secondary)
             }
             Text(session.status).font(.caption).lineLimit(2)
         }.padding(12).frame(width: 636)

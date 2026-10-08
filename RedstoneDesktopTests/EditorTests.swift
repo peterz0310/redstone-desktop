@@ -77,7 +77,7 @@ final class EditorTests: XCTestCase {
         editor.zoom(by: 1.25, size: size)
         editor.direction = .east
         editor.delay = .four
-        for (index, tool) in [EditorSession.Tool.dust, .button, .lever, .repeater, .output].enumerated() {
+        for (index, tool) in [EditorSession.Tool.dust, .button, .lever, .repeater, .output, .torch].enumerated() {
             let coordinate = cell(10 + index)
             editor.tool = tool
             editor.click(at: try point(coordinate, editor: editor), size: size, appState: state)

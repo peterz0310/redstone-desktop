@@ -50,12 +50,12 @@ final class DesktopBuildTests: XCTestCase {
         XCTAssertEqual(mapper.scenePoint(fromScreen: mapper.screenPoint(fromScene: local, on: screen), on: screen), local)
         session.selectTool(number: 4)
         XCTAssertEqual(session.component?.kind, .repeater)
-        session.selectTool(number: 0); session.selectTool(number: 7)
+        session.selectTool(number: 0); session.selectTool(number: DesktopBuildSession.Tool.allCases.count + 1)
         XCTAssertEqual(session.tool, .repeater)
-        session.selectTool(number: 6); session.cycleTool(forward: true)
+        session.selectTool(number: DesktopBuildSession.Tool.allCases.count); session.cycleTool(forward: true)
         XCTAssertEqual(session.tool, .dust)
         session.cycleTool(forward: false)
-        XCTAssertEqual(session.tool, .erase)
+        XCTAssertEqual(session.tool, .torch)
         for _ in 0..<4 { session.rotateDirection() }
         XCTAssertEqual(session.direction, .east)
     }

@@ -6,13 +6,14 @@ import Foundation
 final class DesktopBuildSession: ObservableObject {
     enum Tool: String, CaseIterable {
         case dust = "Dust", button = "Button", lever = "Lever"
-        case repeater = "Repeater", output = "Output", erase = "Erase"
+        case repeater = "Repeater", output = "Output", erase = "Erase", torch = "Torch"
 
         var kind: CircuitComponentKind? {
             switch self {
             case .dust: .dust
             case .button: .button
             case .lever: .lever
+            case .torch: .torch
             case .repeater: .repeater
             case .output: .output
             case .erase: nil

@@ -84,6 +84,10 @@ final class CircuitRenderer {
                     case .dust: connects = true
                     case .repeater:
                         connects = (outgoing ? other.direction.opposite : other.direction).neighbor(of: neighbor) == coordinate
+                    case .torch:
+                        connects = outgoing
+                            ? other.direction.opposite.neighbor(of: neighbor) == coordinate
+                            : other.emitsPower(from: neighbor, to: coordinate)
                     case .output: connects = outgoing
                     case .button, .lever: connects = !outgoing
                     case .empty: connects = false
@@ -134,7 +138,7 @@ final class CircuitRenderer {
             switch component.kind {
             case .button: labelText = powered ? "DOWN" : "PRESS"
             case .lever: labelText = (leverPositions?.contains(coordinate) ?? powered) ? "ON" : "OFF"
-            case .repeater:
+            case .repeater, .torch:
                 let arrow: String
                 switch component.direction {
                 case .north: arrow = "↑"
@@ -142,7 +146,7 @@ final class CircuitRenderer {
                 case .south: arrow = "↓"
                 case .west: arrow = "←"
                 }
-                labelText = "\(arrow) \(component.repeaterDelay.rawValue)t"
+                labelText = component.kind == .torch ? "\(arrow) NOT" : "\(arrow) \(component.repeaterDelay.rawValue)t"
             default: labelText = title
             }
             let label = makeLabel(labelText, at: CGPoint(x: center.x, y: center.y - rect.height * 0.23), size: rect.width * 0.14)

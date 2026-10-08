@@ -512,6 +512,22 @@ final class AppState: ObservableObject {
     }
 
     @discardableResult
+    func configureTorch(at coordinate: WorldCoordinate, direction: Direction) -> Bool {
+        guard !isEditorConfigurationLocked else {
+            developerPlacementStatus = editorConfigurationLockMessage
+            return false
+        }
+        guard var component = editorWorld.circuit.components[coordinate], component.kind == .torch else { return false }
+        component.direction = direction
+        var next = editorWorld
+        next.circuit.components[coordinate] = component
+        editorWorld = next
+        worldDidChange()
+        developerPlacementStatus = "Torch direction updated at (\(coordinate.x), \(coordinate.y))."
+        return true
+    }
+
+    @discardableResult
     func configureRepeater(at coordinate: WorldCoordinate, direction: Direction, delay: RepeaterDelay) -> Bool {
         guard !isEditorConfigurationLocked else {
             developerPlacementStatus = editorConfigurationLockMessage
@@ -658,7 +674,7 @@ final class AppState: ObservableObject {
               session.worldID == activeWorldID, session.areaID == library.activeAreaID,
               let tile = session.tile(at: point) else { return }
         session.selectedTile = tile
-        if let existing = desktopWorld.circuit.components[tile], existing.kind == .repeater {
+        if let existing = desktopWorld.circuit.components[tile], [.repeater, .torch].contains(existing.kind) {
             session.direction = existing.direction
             session.delay = existing.repeaterDelay
         }
@@ -672,7 +688,7 @@ final class AppState: ObservableObject {
         } else if let component = session.component {
             let result = circuitPlacement.place(component, at: tile, in: &next)
             guard result.isAllowed else {
-                session.status = result.message + (next.circuit.components[tile]?.kind == .repeater ? " Use Rotate or Delay to edit this repeater." : "")
+                session.status = result.message + (next.circuit.components[tile]?.kind == .repeater ? " Use Rotate or Delay to edit this repeater." : (next.circuit.components[tile]?.kind == .torch ? " Use Rotate to edit this torch." : ""))
                 playSound(.invalidPlacement, at: tile, mapper: session.mapper)
                 return
             }
@@ -691,17 +707,25 @@ final class AppState: ObservableObject {
 
     func setBuildRepeaterDelay(_ delay: RepeaterDelay) {
         guard let session = buildSession else { return }
+        if session.selectedTile.flatMap({ desktopWorld.circuit.components[$0]?.kind }) == .torch {
+            session.status = "Torch inversion has a fixed 1-redstone-tick delay; Rotate changes its direction."
+            return
+        }
         session.delay = delay
         configureBuildRepeater()
     }
 
     /// Keyboard editing targets hover only; never falls back to a previously
-    /// selected repeater when the pointer leaves it or moves over another tile.
+    /// selected directional component when the pointer leaves it or moves over another tile.
     func editHoveredBuildRepeater(at tile: WorldCoordinate?, rotate: Bool) {
         guard let session = buildSession else { return }
         guard let tile, tile == session.hoveredTile,
-              let component = desktopWorld.circuit.components[tile], component.kind == .repeater else {
-            session.status = "Hover a repeater, then press R to rotate or T to cycle its delay."
+              let component = desktopWorld.circuit.components[tile], [.repeater, .torch].contains(component.kind) else {
+            session.status = "Hover a torch/repeater and press R to rotate; T cycles repeater delay."
+            return
+        }
+        guard rotate || component.kind == .repeater else {
+            session.status = "Torch inversion has a fixed 1-redstone-tick delay; R rotates it."
             return
         }
         session.selectedTile = tile
@@ -714,16 +738,18 @@ final class AppState: ObservableObject {
 
     private func configureBuildRepeater() {
         guard let session = buildSession else { return }
-        guard let tile = session.selectedTile, var component = desktopWorld.circuit.components[tile], component.kind == .repeater else {
-            session.status = "Next repeater: \(session.direction.rawValue), delay \(session.delay.rawValue)."; return
+        guard let tile = session.selectedTile, var component = desktopWorld.circuit.components[tile], [.repeater, .torch].contains(component.kind) else {
+            session.status = "Next direction: \(session.direction.rawValue), delay \(session.delay.rawValue)."; return
         }
         component.direction = session.direction
-        component.repeaterDelay = session.delay
+        if component.kind == .repeater { component.repeaterDelay = session.delay }
         var next = desktopWorld
         next.circuit.components[tile] = component
         commitCircuit(next, worldID: session.worldID)
         refreshBuildRenderer()
-        session.status = "Repeater (\(tile.x), \(tile.y)): \(session.direction.rawValue), delay \(session.delay.rawValue)."
+        session.status = component.kind == .torch
+            ? "Torch (\(tile.x), \(tile.y)): \(session.direction.rawValue), fixed 1-tick inversion."
+            : "Repeater (\(tile.x), \(tile.y)): \(session.direction.rawValue), delay \(session.delay.rawValue)."
     }
 
     private func desktopLeversDidChange() {

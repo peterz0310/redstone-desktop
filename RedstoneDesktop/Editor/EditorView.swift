@@ -133,6 +133,9 @@ struct EditorView: View {
                     if editor.browsingWorld(appState).circuit.components[coordinate]?.kind == .repeater {
                         Text("Stored: \(editor.browsingWorld(appState).circuit.components[coordinate]!.direction.rawValue), \(editor.browsingWorld(appState).circuit.components[coordinate]!.repeaterDelay.rawValue)t")
                     }
+                    if let component = editor.browsingWorld(appState).circuit.components[coordinate], component.kind == .torch {
+                        Text("Stored: \(component.direction.rawValue), fixed 1-tick inversion")
+                    }
                     if let component = editor.browsingWorld(appState).circuit.components[coordinate], component.kind == .output {
                         Picker("Output action", selection: Binding(get: {
                             editor.browsingWorld(appState).circuit.components[coordinate]?.outputAction ?? .openOccupant
@@ -152,10 +155,12 @@ struct EditorView: View {
                         .disabled(appState.isEditorConfigurationLocked || editor.isPreviewing(appState) || editor.browsingWorld(appState).circuit.components[coordinate] == nil)
                 } else { Text("Navigate: click to inspect, drag to pan. Pinch or scroll to zoom.").foregroundStyle(.secondary) }
                 Divider()
-                if editor.tool == .repeater || editor.selectedTile.flatMap({ editor.browsingWorld(appState).circuit.components[$0]?.kind }) == .repeater {
+                if editor.tool == .repeater || editor.tool == .torch || editor.selectedTile.flatMap({ editor.browsingWorld(appState).circuit.components[$0]?.kind }).map({ [.repeater, .torch].contains($0) }) == true {
                     Picker("Direction", selection: $editor.direction) {
                         ForEach(Direction.allCases, id: \.self) { Text($0.rawValue.capitalized).tag($0) }
                     }
+                }
+                if editor.tool == .repeater || editor.selectedTile.flatMap({ editor.browsingWorld(appState).circuit.components[$0]?.kind }) == .repeater {
                     Picker("Delay", selection: $editor.delay) {
                         ForEach(RepeaterDelay.allCases, id: \.self) { Text("\($0.rawValue) redstone tick(s)").tag($0) }
                     }
@@ -164,6 +169,14 @@ struct EditorView: View {
                     Button("Apply direction/delay") {
                         appState.configureRepeater(at: coordinate, direction: editor.direction, delay: editor.delay)
                     }.disabled(appState.isEditorConfigurationLocked || editor.isPreviewing(appState))
+                }
+                if let coordinate = editor.selectedTile, editor.browsingWorld(appState).circuit.components[coordinate]?.kind == .torch {
+                    Button("Apply torch direction") {
+                        appState.configureTorch(at: coordinate, direction: editor.direction)
+                    }.disabled(appState.isEditorConfigurationLocked || editor.isPreviewing(appState))
+                }
+                if editor.tool == .torch {
+                    Text("NOT: rear input; front and sides output. Fixed 1-tick delay.").font(.caption)
                 }
                 if let tile = editor.hoveredTile {
                     Text("Hover (\(tile.x), \(tile.y))").font(.caption.monospaced())

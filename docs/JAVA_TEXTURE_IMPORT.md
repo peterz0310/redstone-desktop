@@ -28,6 +28,8 @@ A folder must contain `assets/minecraft/textures/` directly. An archive may have
 
 ## Supported mappings
 
+Slice 30 adds two optional torch mappings (28 total). Earlier local 26-mapping validation remains historical; current automated imports use original synthetic assets. Torch direction/NOT labels stay app UI; pack pixels never affect the documented [circuit rules](REDSTONE_RULES.md).
+
 Modern paths below are relative to `assets/minecraft/textures/block/`. Legacy paths are relative to `assets/minecraft/textures/blocks/`. Modern paths are tried first, then the legacy alternative. Each semantic ID can independently fall back.
 
 | Redstone Desktop ID | Modern PNG | Legacy PNG | Tint or 2D recipe |
@@ -54,6 +56,8 @@ Modern paths below are relative to `assets/minecraft/textures/block/`. Legacy pa
 | `redstoneLeverOn` | `lever.png` | `lever.png` | On handle recipe |
 | `redstoneRepeaterOff` | `repeater.png` | `repeater_off.png` | East-facing top/indicator recipe |
 | `redstoneRepeaterOn` | `repeater_on.png` | `repeater_on.png` | East-facing top/indicator recipe |
+| `redstoneTorchOff` | `redstone_torch_off.png` | `redstone_torch_off.png` | First square frame, unchanged pixels |
+| `redstoneTorchOn` | `redstone_torch.png` | `redstone_torch_on.png` | First square frame, unchanged pixels |
 | `redstoneDustOff` | `redstone_dust_dot.png` | `redstone_dust_dot.png` | Dark red material recipe |
 | `redstoneDustOn` | `redstone_dust_dot.png` | `redstone_dust_dot.png` | Bright red material recipe |
 | `redstoneOutputOff` | `command_block_front.png` | `command_block_front.png` | Command-block face |
@@ -73,7 +77,7 @@ Dust converts source-dot luminance into an **opaque** textured material, dark re
 
 The existing generator's flower and legacy rock positions are preserved. Stable seed/coordinate selection chooses poppy/dandelion/blue orchid/allium/oxeye daisy, with cactus on sand (including sandy shores) and coal/iron elsewhere. Generated dirt is presented with the imported grass-block top; explicit saved dirt overrides remain dirt. Ore art replaces loose rock art; deposits remain placement-blocking decorations, not mineable resources. This is appearance variety, not a generation/save migration.
 
-**After upgrading from an older 11- or 23-mapping importer, press Re-import once to generate the current 26-mapping pack.** Reload reads the old generated cache and cannot create missing variant/component mappings or update its orange dust image. No automatic rewrite of user caches occurs.
+**After upgrading from an older 11-, 23- or 26-mapping importer, press Re-import once to generate the current 28-mapping pack.** Reload reads the old generated cache and cannot create missing variant/component mappings or update its orange dust image. No automatic rewrite of user caches occurs.
 
 ## Cache, reload and removal
 

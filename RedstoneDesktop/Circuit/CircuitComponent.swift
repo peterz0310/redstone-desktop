@@ -3,7 +3,7 @@ enum OutputActionMode: String, CaseIterable, Codable, Sendable {
 }
 
 enum CircuitComponentKind: String, CaseIterable, Codable, Sendable {
-    case empty, dust, button, lever, repeater, output
+    case empty, dust, button, lever, repeater, output, torch
 }
 
 /// Component configuration only. Runtime simulation and actions are separate layers.
@@ -18,6 +18,17 @@ struct CircuitComponent: Equatable, Codable, Sendable {
         self.kind = kind
         self.direction = direction
         self.repeaterDelay = repeaterDelay
+    }
+
+    /// Shared domain port table for simulation and presentation.
+    func emitsPower(from source: WorldCoordinate, to target: WorldCoordinate) -> Bool {
+        guard Direction.allCases.contains(where: { $0.neighbor(of: source) == target }) else { return false }
+        switch kind {
+        case .button, .lever, .dust: return true
+        case .repeater: return direction.neighbor(of: source) == target
+        case .torch: return direction.opposite.neighbor(of: source) != target
+        case .empty, .output: return false
+        }
     }
 
     private enum CodingKeys: String, CodingKey { case kind, direction, repeaterDelay, outputAction }

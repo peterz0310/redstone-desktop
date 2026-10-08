@@ -71,6 +71,8 @@ enum JavaTextureImporter {
         mapping(.redstoneLeverOff, "lever", art: .lever(false)), mapping(.redstoneLeverOn, "lever", art: .lever(true)),
         mapping(.redstoneRepeaterOff, "repeater", old: "repeater_off", art: .repeater(false)),
         mapping(.redstoneRepeaterOn, "repeater_on", art: .repeater(true)),
+        mapping(.redstoneTorchOff, "redstone_torch_off"),
+        mapping(.redstoneTorchOn, "redstone_torch", old: "redstone_torch_on"),
         mapping(.redstoneDustOff, "redstone_dust_dot", art: .dust(false)),
         mapping(.redstoneDustOn, "redstone_dust_dot", art: .dust(true))
     ]

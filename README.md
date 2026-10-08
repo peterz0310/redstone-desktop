@@ -4,7 +4,7 @@ An experimental native macOS app exploring a block world beneath real Finder des
 
 ## Current build and next steps
 
-**Implemented: Slices 0–29 plus the requested appearance/navigation follow-ups (27A/28A/28B/28C/29A/29B).** Debug build and all **361 automated tests** pass. Slice 28 adds explicitly entered Desktop Build Mode with a temporary transparent input window, hotbar and mouse-accessible exits; its real Finder/input checks remain pending. Slices 26/27 add optional validated texture/sound packs and local Minecraft Java texture importing. Original built-in assets remain complete defaults; imported game art stays in local Application Support, outside Git and app bundles. Read the [resource-pack format guide](docs/RESOURCE_PACKS.md) and [Java import guide](docs/JAVA_TEXTURE_IMPORT.md) before making/sharing packs.
+**Implemented: Slices 0–30 plus the requested appearance/navigation follow-ups (27A/28A/28B/28C/29A/29B).** Debug build and all **372 automated tests** pass. Slice 28 adds explicitly entered Desktop Build Mode with a temporary transparent input window, hotbar and mouse-accessible exits; its real Finder/input checks remain pending. Slices 26/27 add optional validated texture/sound packs and local Minecraft Java texture importing. Original built-in assets remain complete defaults; imported game art stays in local Application Support, outside Git and app bundles. Read the [resource-pack format guide](docs/RESOURCE_PACKS.md) and [Java import guide](docs/JAVA_TEXTURE_IMPORT.md) before making/sharing packs.
 
 Slices 20/21 and 23–25 are owner-accepted, along with corrected Slice 22 icon-size/marker behavior and the 19C bookmark/context-menu follow-up. Earlier detailed 19B/19C checks, Slice 22's real Output-after-resize check and the other specific Slices 26/27 checks and new 27A appearance checks remain pending. Local Java importing is owner-accepted.
 
@@ -16,7 +16,7 @@ Configuration still saves to `~/Library/Application Support/RedstoneDesktop/libr
 
 Finder Diagnostics remains useful for permission/alignment problems, and Desktop Details for input rejection/action results. They moved to **Advanced**. The obsolete Developer Placement window and fixed-demo diagnostic rows are removed; automated tests and migration fixtures remain, and no existing saved circuits were cleared. Shelf previews remain bounded schematic terrain/circuit snapshots. Finder markers now appear separately in the main editor canvas when enabled.
 
-**Next: run the [Slice 29B click-refresh walkthrough](#clicks-during-finder-refresh--slice-29b).** Basic Slice 29A settings/permission behavior is owner-accepted. Basic Slice 29 prompt/run/target-movement behavior is owner-accepted; repeater-specific timing remains pending. Finder responsiveness is owner-accepted; other detailed adapter checks remain pending. Desktop Finder crosshairs are removed. Slice 30 (simplified torches) remains untouched.
+**Next: run the [Slice 30 torch walkthrough](docs/REDSTONE_RULES.md#owner-mac-walkthrough).** Basic Slice 29B click/replacement behavior is owner-accepted. Basic Slice 29A settings/permission behavior is owner-accepted. Basic Slice 29 prompt/run/target-movement behavior is owner-accepted; repeater-specific timing remains pending. Finder responsiveness is owner-accepted; other detailed adapter checks remain pending. Desktop Finder crosshairs are removed. Slice 30A (powered Output pickup) is next and remains untouched.
 
 ## Adopted plan: worlds and saved areas
 
@@ -792,3 +792,14 @@ Mac walkthrough:
 5. If testing a script, clicks during its approval or execution should show a busy/retry message and must not execute later by themselves.
 
 Debug build and all **361 tests pass**. These physical Mac checks remain pending.
+
+
+## Torch/inverter — Slice 30
+
+Torch is now available in the editor and Desktop Build Mode. Its direction points away from the single rear input: rear power turns it OFF, no rear power turns it ON, after a fixed one-redstone-tick delay. An ON torch emits 15 forward and to both sides, never backward. Repeaters retain their own added delay; Outputs still fire only on a rising edge and remain terminal sinks until Slice 30A.
+
+Select a torch in Navigate mode, change Direction and **Apply torch direction**. In Desktop Build Mode, shortcut **7** selects Torch; hover **R** or **Rotate Selected** rotates it. T/Delay stays repeater-only. Erase/placement use the existing surface rules and world saves. Built-in off/on art and optional sound work without a pack. Java Re-import adds optional torch textures (28 mappings total); older packs use original fallback.
+
+**Starting Desktop can immediately power a torch with no rear input and activate its connected Output.** Begin the manual test with the Output empty. Read the [complete circuit rules and step-by-step Mac test](docs/REDSTONE_RULES.md), including a rightward lever → torch → dust → repeater → dust → Output example, save/reopen and direction editing.
+
+Debug build and all **372 automated tests pass**. The Slice 30 Mac acceptance checkbox remains pending.

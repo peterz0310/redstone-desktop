@@ -79,7 +79,7 @@ final class DomainPrimitivesTests: XCTestCase {
 
     func testUnknownKindsAndDirectionsAreRejected() {
         XCTAssertThrowsError(try JSONDecoder().decode(Direction.self, from: Data(#""up""#.utf8)))
-        XCTAssertThrowsError(try JSONDecoder().decode(CircuitComponentKind.self, from: Data(#""torch""#.utf8)))
+        XCTAssertThrowsError(try JSONDecoder().decode(CircuitComponentKind.self, from: Data(#""unknown-component""#.utf8)))
     }
 
     private func assertJSONRoundTrip<T: Codable & Equatable>(

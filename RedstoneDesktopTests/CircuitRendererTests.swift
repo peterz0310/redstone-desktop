@@ -156,9 +156,9 @@ final class CircuitRendererTests: XCTestCase {
             XCTAssertEqual(first.filteringMode, .nearest)
             XCTAssertEqual(first.size(), CGSize(width: 32, height: 32))
         }
-        XCTAssertEqual(textures.cachedTextureCount, 10)
+        XCTAssertEqual(textures.cachedTextureCount, CircuitTextureID.allCases.count)
         let pairs: [(CircuitTextureID, CircuitTextureID)] = [(.dustOff, .dustOn), (.buttonUp, .buttonDown),
-            (.leverOff, .leverOn), (.repeaterOff, .repeaterOn), (.outputOff, .outputOn)]
+            (.leverOff, .leverOn), (.repeaterOff, .repeaterOn), (.outputOff, .outputOn), (.torchOff, .torchOn)]
         for (off, on) in pairs {
             let offData = try XCTUnwrap(CircuitTextures.image(for: off).tiffRepresentation)
             let onData = try XCTUnwrap(CircuitTextures.image(for: on).tiffRepresentation)
