@@ -13,11 +13,11 @@ final class CircuitRenderer {
             guard component.kind != .empty, rect.intersects(viewport) else { continue }
             let center = CGPoint(x: rect.midX, y: rect.midY)
             let powered = poweredTiles.contains(coordinate)
-            guard let textureID = CircuitTextureID.id(for: component.kind, powered: powered) else { continue }
+            guard let textureID = CircuitTextureID.id(for: component.kind, powered: component.kind == .lever ? (leverPositions?.contains(coordinate) ?? powered) : powered) else { continue }
             if component.kind == .dust {
                 let wire = CGMutablePath()
-                let radius = rect.width / 16
-                wire.addEllipse(in: CGRect(x: center.x - radius, y: center.y - radius, width: radius * 2, height: radius * 2))
+                let radius = rect.width / 8
+                wire.addRect(CGRect(x: center.x - radius, y: center.y - radius, width: radius * 2, height: radius * 2))
                 for neighbor in world.occupiedCardinalNeighbors(at: coordinate) {
                     guard let other = world.components[neighbor] else { continue }
                     // A repeater has ports only at its rear and front, never at its sides.
@@ -29,16 +29,23 @@ final class CircuitRenderer {
                     let fraction: CGFloat = other.kind == .dust ? 0.5 : 0.625
                     let endpoint = CGPoint(x: center.x + (neighborRect.midX - center.x) * fraction,
                                            y: center.y + (neighborRect.midY - center.y) * fraction)
-                    wire.move(to: center)
-                    wire.addLine(to: endpoint)
+                    // Keep subpaths disjoint: SpriteKit's fill rule can turn overlapping rectangles into holes.
+                    if endpoint.x == center.x {
+                        let start = endpoint.y < center.y ? endpoint.y : center.y + radius
+                        let end = endpoint.y < center.y ? center.y - radius : endpoint.y
+                        wire.addRect(CGRect(x: center.x - radius, y: start, width: radius * 2, height: end - start))
+                    } else {
+                        let start = endpoint.x < center.x ? endpoint.x : center.x + radius
+                        let end = endpoint.x < center.x ? center.x - radius : endpoint.x
+                        wire.addRect(CGRect(x: start, y: center.y - radius, width: end - start, height: radius * 2))
+                    }
                 }
                 let node = SKShapeNode(path: wire)
                 node.name = "dust-path"
-                node.strokeColor = powered ? .systemYellow : .systemRed
-                node.fillColor = node.strokeColor
-                node.strokeTexture = textures.texture(for: textureID)
-                node.fillTexture = node.strokeTexture
-                node.lineWidth = rect.width / 8
+                node.strokeColor = powered ? .red : NSColor(calibratedRed: 0.42, green: 0.05, blue: 0.07, alpha: 1)
+                node.fillColor = .white // Texture supplies color; multiplying it by a UI tint darkens imported art.
+                node.fillTexture = textures.texture(for: textureID)
+                node.lineWidth = 0
                 node.isAntialiased = false
                 layer.addChild(node)
                 continue
@@ -47,14 +54,14 @@ final class CircuitRenderer {
             let node = SKShapeNode(rect: rect.insetBy(dx: rect.width / 8, dy: rect.height / 8))
             node.name = title
             node.zPosition = 0.1
-            node.fillColor = powered ? .systemOrange : .darkGray
-            node.strokeColor = .white
+            node.fillColor = component.kind == .output ? (powered ? .red : .darkGray) : .clear
+            node.strokeColor = powered ? .red : NSColor.white.withAlphaComponent(0.35)
             node.lineWidth = 2
             layer.addChild(node)
             let icon = SKSpriteNode(texture: textures.texture(for: textureID))
             icon.name = "component-icon:\(coordinate.x),\(coordinate.y)"
-            icon.size = CGSize(width: rect.width * 0.35, height: rect.height * 0.35)
-            icon.position = CGPoint(x: center.x, y: center.y + rect.height * 0.13)
+            icon.size = CGSize(width: rect.width * 0.62, height: rect.height * 0.62)
+            icon.position = CGPoint(x: center.x, y: center.y + rect.height * 0.09)
             icon.zPosition = 0.05
             if component.kind == .repeater {
                 switch component.direction {

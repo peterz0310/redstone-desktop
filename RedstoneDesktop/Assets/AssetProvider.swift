@@ -6,7 +6,13 @@ protocol AssetProvider: AnyObject {
     var revision: UUID { get }
     var terrainResolution: Int { get }
     func texture(for id: TextureAssetID) -> SKTexture?
-    func pixel(_ tile: Tile, x: Int, y: Int) -> (UInt8, UInt8, UInt8, UInt8)
+    func pixel(_ tile: Tile, x: Int, y: Int, appearance: DecorationAppearance?) -> (UInt8, UInt8, UInt8, UInt8)
+}
+
+extension AssetProvider {
+    func pixel(_ tile: Tile, x: Int, y: Int) -> (UInt8, UInt8, UInt8, UInt8) {
+        pixel(tile, x: x, y: y, appearance: nil)
+    }
 }
 
 @MainActor
@@ -20,12 +26,20 @@ final class BuiltInAssetProvider: AssetProvider {
         if let circuit = id.circuitID { texture = SKTexture(image: CircuitTextures.image(for: circuit)) }
         else {
             let terrain = TerrainID.allCases.first { TextureAssetID.terrain($0) == id }
-            let decoration = DecorationID.allCases.first { TextureAssetID.decoration($0) == id }
+            let appearance = id.decorationAppearance
+            let decoration: DecorationID? = appearance.map { value in
+                switch value {
+                case .tree: .tree
+                case .reed: .reed
+                case .coal, .iron: .rock
+                default: .flower
+                }
+            }
             guard terrain != nil || decoration != nil else { return nil }
             var bytes: [UInt8] = []
             for y in (0..<8).reversed() {
                 for x in 0..<8 {
-                    let value = OriginalTerrainPixels.pixel(Tile(terrain: terrain ?? .grass, decoration: decoration), x: x, y: y)
+                    let value = OriginalTerrainPixels.pixel(Tile(terrain: terrain ?? .grass, decoration: decoration), x: x, y: y, appearance: appearance)
                     let plain = OriginalTerrainPixels.pixel(Tile(terrain: terrain ?? .grass), x: x, y: y)
                     bytes += decoration != nil && value == plain ? [0,0,0,0] : [value.0,value.1,value.2,value.3]
                 }
@@ -37,7 +51,7 @@ final class BuiltInAssetProvider: AssetProvider {
         textures[id] = texture
         return texture
     }
-    func pixel(_ tile: Tile, x: Int, y: Int) -> (UInt8, UInt8, UInt8, UInt8) { OriginalTerrainPixels.pixel(tile, x: x, y: y) }
+    func pixel(_ tile: Tile, x: Int, y: Int, appearance: DecorationAppearance?) -> (UInt8, UInt8, UInt8, UInt8) { OriginalTerrainPixels.pixel(tile, x: x, y: y, appearance: appearance) }
 }
 
 @MainActor
@@ -96,7 +110,7 @@ final class AssetLibrary: ObservableObject, AssetProvider {
             let previous = importFolder
             importFolder = value.folder; importRecord = value.record; source = value.folder
             apply(value.pack); warnings += value.record.warnings
-            status = "Imported \(value.pack.textures.count) Java textures. Original circuit icons/sounds fill unsupported assets."
+            status = "Imported \(value.pack.textures.count) Java textures. Missing mappings and all sounds use built-in assets."
             preferences?.set(value.folder.path, forKey: "assetPackPath")
             preferences?.set(value.record.id.uuidString, forKey: "lastJavaImportID")
             if let previous, previous != value.folder {
@@ -156,18 +170,19 @@ final class AssetLibrary: ObservableObject, AssetProvider {
     }
     func texture(for id: TextureAssetID) -> SKTexture? {
         if let value = textures[id] { return value }
-        guard let raster = pack?.textures[id], let image = raster.cgImage else { return builtIn.texture(for: id) }
+        guard let raster = pack?.textures[id] ?? id.decorationFallback.flatMap({ pack?.textures[$0] }), let image = raster.cgImage else { return builtIn.texture(for: id) }
         let value = SKTexture(cgImage: image); value.filteringMode = .nearest; value.usesMipmaps = false
         textures[id] = value
         return value
     }
-    func pixel(_ tile: Tile, x: Int, y: Int) -> (UInt8, UInt8, UInt8, UInt8) {
+    func pixel(_ tile: Tile, x: Int, y: Int, appearance: DecorationAppearance?) -> (UInt8, UInt8, UInt8, UInt8) {
         let resolution = terrainResolution
-        let original = OriginalTerrainPixels.pixel(tile, x: x * 8 / resolution, y: y * 8 / resolution)
+        let original = OriginalTerrainPixels.pixel(tile, x: x * 8 / resolution, y: y * 8 / resolution, appearance: appearance)
         let plain = OriginalTerrainPixels.pixel(Tile(terrain: tile.terrain), x: x * 8 / resolution, y: y * 8 / resolution)
         var base = pack?.textures[.terrain(tile.terrain)]?.sample(x: x, y: y, resolution: resolution) ?? plain
         if let decoration = tile.decoration {
-            if let raster = pack?.textures[.decoration(decoration)] {
+            let id = appearance.map { TextureAssetID.decoration($0) } ?? TextureAssetID.decoration(decoration)
+            if let raster = pack?.textures[id] ?? id.decorationFallback.flatMap({ pack?.textures[$0] }) {
                 let overlay = raster.sample(x: x, y: y, resolution: resolution)
                 let inverse = 255 - Int(overlay.3)
                 base = (UInt8(min(255, Int(overlay.0) + Int(base.0) * inverse / 255)),

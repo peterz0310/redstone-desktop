@@ -133,7 +133,7 @@ struct EditorView: View {
                 if let coordinate = editor.selectedTile {
                     Text("Tile (\(coordinate.x), \(coordinate.y))").font(.body.monospaced())
                     Text("Terrain: \(editor.browsingWorld(appState).tile(at: coordinate)?.terrain.rawValue ?? "unspecified")")
-                    Text("Decoration: \(editor.browsingWorld(appState).tile(at: coordinate)?.decoration?.rawValue ?? "none")")
+                    Text("Decoration: \(editor.browsingWorld(appState).tile(at: coordinate)?.decoration.map { DecorationAppearance.choose($0, at: coordinate, seed: editor.browsingWorld(appState).generation?.seed ?? 0).name } ?? "none")")
                     Text("Component: \(editor.browsingWorld(appState).circuit.components[coordinate]?.kind.rawValue ?? "none")")
                     Text(occupancyText(at: coordinate)).font(.caption)
                     Text("Power: \((editor.isPreviewing(appState) ? PowerLevel.off : appState.editorPower(at: coordinate)).rawValue)")

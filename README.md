@@ -4,9 +4,9 @@ An experimental native macOS app exploring a block world beneath real Finder des
 
 ## Current build and next steps
 
-**Implemented: Slices 0–27.** Debug build and all **300 automated tests** pass. Slices 26/27 add optional validated texture/sound packs and local Minecraft Java texture importing. Original built-in assets remain complete defaults; imported game art stays in local Application Support, outside Git and app bundles. Read the [resource-pack format guide](docs/RESOURCE_PACKS.md) and [Java import guide](docs/JAVA_TEXTURE_IMPORT.md) before making/sharing packs.
+**Implemented: Slices 0–27 plus the requested appearance follow-up (27A).** Debug build and all **304 automated tests** pass. Slices 26/27 add optional validated texture/sound packs and local Minecraft Java texture importing. Original built-in assets remain complete defaults; imported game art stays in local Application Support, outside Git and app bundles. Read the [resource-pack format guide](docs/RESOURCE_PACKS.md) and [Java import guide](docs/JAVA_TEXTURE_IMPORT.md) before making/sharing packs.
 
-Slices 20/21 and 23–25 are owner-accepted, along with corrected Slice 22 icon-size/marker behavior and the 19C bookmark/context-menu follow-up. Earlier detailed 19B/19C checks, Slice 22's real Output-after-resize check and new Slices 26/27 manual checks remain pending.
+Slices 20/21 and 23–25 are owner-accepted, along with corrected Slice 22 icon-size/marker behavior and the 19C bookmark/context-menu follow-up. Earlier detailed 19B/19C checks, Slice 22's real Output-after-resize check and the other specific Slices 26/27 checks and new 27A appearance checks remain pending. Local Java importing is owner-accepted.
 
 The editor now shows **Worlds** in a left sidebar and **Areas in [world]** as a preview shelf below the canvas. Build tools and the inspector sit on the right. The top shows the world/area being edited, the separate desktop assignment, **Start/Stop Desktop** and **Advanced**. New World, Save Current View and rename use focused sheets; seed/creation fields are no longer permanently visible.
 
@@ -679,7 +679,7 @@ Mac check: quit/reopen the new build, choose `examples/GrassOnly` or `examples/G
 
 ## Local Java textures — Slice 27; combined Mac walkthrough
 
-No pack download is needed: this Mac already has installed Java versions. Read-only discovery found 29; a temporary import of **1.21.8** produced all 11 supported textures without warnings and left the source JAR unchanged. Your normal app selection has not been changed by that test.
+No pack download is needed: this Mac already has installed Java versions. Read-only discovery found 29; a temporary import of **1.21.8** produced all 23 supported textures without warnings and left the source JAR unchanged. Your normal app selection has not been changed by that test.
 
 1. Quit the running app with **⌘Q**. From this repository in Terminal, open the rebuilt app:
 
@@ -688,9 +688,20 @@ No pack download is needed: this Mac already has installed Java versions. Read-o
    ```
 
 2. Open **Advanced → Appearance & Packs → Choose Pack Folder or ZIP…**. Choose `examples/GrassOnly`. Grass should become purple/teal checker art; other textures and sounds should keep original fallback. Repeat with `examples/GrassOnly.zip`; both forms should match. Try **Reload**, then **Use Built-In** to restore the original appearance. This checks Slice 26 without third-party assets.
-3. Under **Local Minecraft Java textures**, choose **1.21.8** from **Installed version**, then **Import Selected**. Opening the window discovers versions; **Find Installed Versions** refreshes. Expected: **Imported 11 Java textures**, with no mapping warnings. If the list is empty, use **Choose Java JAR / Pack…**, press **⌘⇧G** and paste `~/Library/Application Support/minecraft/versions/1.21.8/`, then select `1.21.8.jar`.
-4. Browse a generated world: grass/dirt/stone/sand, water and tree/flower/reed decorations should change where present. Water is a still first frame with fixed tint. Wire materials change; button/lever/repeater/Output icons and all sounds remain original. Shelf thumbnails stay schematic. Start Desktop to inspect its assigned area. Change packs while a lever is held on: circuit state, world and camera should persist, with no new Output activation caused solely by the appearance change.
+3. Under **Local Minecraft Java textures**, choose **1.21.8** from **Installed version**, then **Import Selected**. Opening the window discovers versions; **Find Installed Versions** refreshes. Expected: **Imported 23 Java textures**, with no mapping warnings. If the list is empty, use **Choose Java JAR / Pack…**, press **⌘⇧G** and paste `~/Library/Application Support/minecraft/versions/1.21.8/`, then select `1.21.8.jar`.
+4. Browse a generated world: grass/dirt/stone/sand, water and tree/flower/reed decorations should change where present. Water is a still first frame with fixed tint. Wire materials, button/lever/repeater art, coal/iron deposits and five flower varieties now change. Output icons and all sounds remain original. Powered wire is wider and bright red. Shelf thumbnails stay schematic. Start Desktop to inspect its assigned area. Change packs while a lever is held on: circuit state, world and camera should persist, with no new Output activation caused solely by the appearance change.
 5. **Reveal Import Cache** should show a UUID folder under `~/Library/Application Support/RedstoneDesktop/ImportedTextures/`, containing semantic PNGs, `pack.json` and `import.json`. **Reload** rereads that cache; **Re-import** rebuilds it from the original JAR. The JAR should remain in its original Minecraft directory. Run `git status --short` from this repository: importing must not add copied game assets to the working tree.
 6. With Java textures selected, quit/reopen: the cached appearance should restore, while Desktop starts stopped. Try **Use Built-In**: original art returns, and cache reveal/re-import remain available. Re-import, then **Remove Imported Assets**: built-in art returns and only the app-owned copy disappears; the original Java JAR remains. You can import it again later.
 
 These steps cover both new slices; manual checkboxes remain pending until you report the results. Selection is global to appearance, independent of world/area selection. One pack is active at a time; missing IDs always resolve to original assets. See the guides for every supported ID, format/size limits, mapping/tint behavior, reload/removal semantics, source rights and contributor tests.
+
+
+## Appearance follow-up — Slice 27A
+
+Quit with **⌘Q**, reopen `build/Build/Products/Debug/RedstoneDesktop.app`, then open **Advanced → Appearance & Packs → Re-import**. This regenerates the old 11-mapping cache into the new **23-mapping** pack, including updated red wire art. **Reload** cannot update old imported images because it only reads that cache. If no prior import is available, select installed **1.21.8 → Import Selected**.
+
+Inspect generated stone/sand regions for coal/iron deposits instead of loose rocks and grass/woodland regions for five flower varieties. These are selected from the world seed/coordinate, so revisit after panning/zooming/reopening: each location should keep its variety. Ore deposits still block placement; no mining or terrain-editing feature is added. Saved terrain/circuits/cameras are preserved.
+
+Start Desktop and press a button/toggle a lever: dust should be broader, connected, dark red when off and bright red when powered. Java stone buttons depress, lever handles lean to opposite sides, and repeater top art rotates with direction while its label retains delay. Icons are larger with transparent backing. Editor browsing of an inactive world shows saved ON lever art as well as its label; it still does not simulate. Check a bend/junction and each repeater direction on an existing circuit or a disposable inactive world.
+
+Try **Use Built-In** to confirm original ore/flower variety and red circuit appearance work without Java art. Switching appearance must leave world/camera/circuit and Finder action behavior intact, without a new Output activation caused solely by switching. These new visual checks await your confirmation. The documentation covers 26 semantic texture IDs, old-pack family fallback and the fixed Java 2D recipes; no downloaded/bundled game assets are needed.

@@ -145,7 +145,8 @@ final class DesktopScene: SKScene {
             node.strokeColor = .clear
             tileLayer.addChild(node)
             if let decoration = tile.decoration {
-                let label = SKLabelNode(text: decoration.rawValue)
+                let appearance = DecorationAppearance.choose(decoration, at: coordinate, seed: world.generation?.seed ?? 0)
+                let label = SKLabelNode(text: appearance.name)
                 label.fontName = "Menlo"
                 label.fontSize = 9
                 label.verticalAlignmentMode = .center

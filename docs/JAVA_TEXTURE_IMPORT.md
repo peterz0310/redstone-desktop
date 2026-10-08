@@ -18,7 +18,7 @@ Discovery checks up to 512 version folders under:
 
 It lists readable, regular, bounded-size JARs; discovery does not import or validate their contents. Version names sort numerically descending, with names starting `1.` first. The importer validates the selected archive when you press Import. Alternative launcher locations are supported through the manual picker.
 
-For this development Mac, read-only discovery found 29 versions, and a temporary import of **1.21.8** successfully produced all 11 mappings with no warnings. Select that version for the first visual check. This observation is local validation, not a promise that every installed/version/modded JAR is supported. No game files are included with this repository.
+For this development Mac, read-only discovery found 29 versions, and a temporary import of **1.21.8** successfully produced all 23 mappings with no warnings after the appearance follow-up. Select that version for the first visual check. This observation is local validation, not a promise that every installed/version/modded JAR is supported. No game files are included with this repository.
 
 ## Import a JAR or Java pack manually
 
@@ -30,7 +30,7 @@ A folder must contain `assets/minecraft/textures/` directly. An archive may have
 
 Modern paths below are relative to `assets/minecraft/textures/block/`. Legacy paths are relative to `assets/minecraft/textures/blocks/`. Modern paths are tried first, then the legacy alternative. Each semantic ID can independently fall back.
 
-| Redstone Desktop ID | Modern PNG | Legacy PNG | Fixed RGB multiplier |
+| Redstone Desktop ID | Modern PNG | Legacy PNG | Tint or 2D recipe |
 | --- | --- | --- | --- |
 | `terrainGrass` | `grass_block_top.png` | `grass_top.png` | 108, 160, 62 |
 | `terrainDirt` | `dirt.png` | `dirt.png` | None |
@@ -41,14 +41,36 @@ Modern paths below are relative to `assets/minecraft/textures/block/`. Legacy pa
 | `decorationTree` | `oak_leaves.png` | `leaves_oak.png` | 70, 145, 50 |
 | `decorationFlower` | `poppy.png` | `flower_rose.png` | None |
 | `decorationReed` | `sugar_cane.png` | `reeds.png` | None |
-| `redstoneDustOff` | `redstone_dust_dot.png` | `redstone_dust_dot.png` | 170, 30, 30 |
-| `redstoneDustOn` | `redstone_dust_dot.png` | `redstone_dust_dot.png` | 255, 190, 50 |
+| `decorationDandelion` | `dandelion.png` | `flower_dandelion.png` | None |
+| `decorationBlueOrchid` | `blue_orchid.png` | `flower_blue_orchid.png` | None |
+| `decorationAllium` | `allium.png` | `flower_allium.png` | None |
+| `decorationOxeyeDaisy` | `oxeye_daisy.png` | `flower_oxeye_daisy.png` | None |
+| `decorationCoal` | `coal_ore.png` | `coal_ore.png` | None |
+| `decorationIron` | `iron_ore.png` | `iron_ore.png` | None |
+| `redstoneButtonUp` | `stone.png` | `stone.png` | Raised 2D stone-button recipe |
+| `redstoneButtonDown` | `stone.png` | `stone.png` | Depressed 2D stone-button recipe |
+| `redstoneLeverOff` | `lever.png` | `lever.png` | Off handle recipe |
+| `redstoneLeverOn` | `lever.png` | `lever.png` | On handle recipe |
+| `redstoneRepeaterOff` | `repeater.png` | `repeater_off.png` | East-facing top/indicator recipe |
+| `redstoneRepeaterOn` | `repeater_on.png` | `repeater_on.png` | East-facing top/indicator recipe |
+| `redstoneDustOff` | `redstone_dust_dot.png` | `redstone_dust_dot.png` | Dark red material recipe |
+| `redstoneDustOn` | `redstone_dust_dot.png` | `redstone_dust_dot.png` | Bright red material recipe |
 
-Tint multiplies each decoded RGB channel by the listed channel divided by 255, preserving alpha. This approximates readable grass/leaves/water and distinguishes powered dust; it does not reproduce Minecraft biome lighting or colormaps. Already-colored pack art receives the same tint.
+For rows with numeric tint, each decoded RGB channel is multiplied by the listed channel divided by 255, preserving alpha. This approximates readable grass/leaves/water; it does not reproduce Minecraft biome lighting or colormaps. Already-colored pack art receives the same tint.
 
 Square PNGs are accepted. Vertical strips whose height is an integer multiple of their width contribute **only the first, top square frame**. Other nonsquare images are skipped. Animation metadata is ignored; there is no animated water. Source PNG dimensions must be 1–1024 on each axis and encoded size at most 4 MiB. Generated terrain is sampled at 16 pixels per tile, with nearest filtering.
 
-Tree/flower/reed images are 2D decoration overlays, not 3D models. Dust uses the existing connected wire geometry with the imported material. Button, lever, repeater, Output, rock decoration, selection overlays and all sounds retain original built-in assets. Importing textures does not change terrain rules, circuits, Finder targets, world data or cameras.
+Tree/flower/reed images are 2D decoration overlays, not 3D models. Dust uses the existing connected wire geometry with the imported material. Output, selection overlays and all sounds retain original built-in assets. Missing individual mappings also use original fallback. Importing textures does not change terrain rules, circuits, Finder targets, world data or cameras.
+
+### Circuit and decoration appearance
+
+Java stone buttons use the validated stone texture cropped into a raised/depressed 16×16 transparent icon with different face shading. Levers use the known handle UV region `[7,6]–[9,16]` scaled from the source raster onto an original gray base; opposite slopes distinguish on/off. Repeaters rotate the top image from north to the semantic east-facing orientation and add two original red/dark indicator marks. Scene rotation then handles all four directions. These fixed 2D recipes do not read/execute Java models or reproduce 3D geometry; labels still show direction and actual configured delay.
+
+Dust converts source-dot luminance into an **opaque** textured material, dark red when off and bright red when on (base RGB 106/12/18 and 255/24/32, luminance strength 184–255/255). Transparent source corners become continuous material so they cannot cut holes in connected traces. The renderer supplies quarter-tile-wide cardinal strips and square junctions, without an orange tint. Generic Redstone Desktop packs can still override semantic wire materials directly.
+
+The existing generator's flower and legacy rock positions are preserved. Stable seed/coordinate selection chooses poppy/dandelion/blue orchid/allium/oxeye daisy or coal/iron. Ore art replaces loose rock art; deposits remain placement-blocking decorations, not mineable resources. This is appearance variety, not a generation/save migration.
+
+**After upgrading from the initial 11-mapping importer, press Re-import once.** Reload reads the old generated cache and cannot create missing variant/component mappings or update its orange dust image. No automatic rewrite of user caches occurs.
 
 ## Cache, reload and removal
 
@@ -88,6 +110,6 @@ Decode/validation happens before cache publication. Writes use fixed semantic fi
 
 The source, original built-in assets and original examples use the repository license. That license does **not** grant rights to imported Minecraft or third-party pack art. Keep local imported assets out of commits, release bundles, shared screenshots/assets where rights do not permit use, and exported world data. Import paths are always Application Support, never the repository or app bundle. Do not add downloads or bundle game assets to make a demo work.
 
-Code: `Assets/MinecraftImport/JavaTextureImporter.swift` owns discovery/mapping/cache records; `Assets/AssetProvider.swift` owns asynchronous selection and lifecycle; `Assets/AssetSettingsView.swift` exposes controls. Renderer consumers only see semantic validated assets; simulation never sees pack paths or depends on SpriteKit.
+Code: `Assets/MinecraftImport/JavaTextureImporter.swift` owns discovery/mapping/cache records; `JavaCircuitArt.swift` owns fixed raster recipes and `World/DecorationAppearance.swift` chooses stable variants; `Assets/AssetProvider.swift` owns asynchronous selection and lifecycle; `Assets/AssetSettingsView.swift` exposes controls. Renderer consumers only see semantic validated assets; simulation never sees pack paths or depends on SpriteKit.
 
 Tests in `JavaTextureImportTests.swift` use original synthetic PNGs in a real deflated ZIP, isolated preferences and temporary roots. They cover discovery, modern/legacy mappings, tint/first frame, ignored unrelated data, partial fallback, rejection/write failure, managed deletion, source preservation, reload/re-import/startup and inactive-cache removal. Extend mappings with original fixtures and explicit fallback expectations. A real local JAR can be validated in a temporary cache without committing its images or changing the owner's active selection.

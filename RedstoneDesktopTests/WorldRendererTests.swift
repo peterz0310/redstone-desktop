@@ -21,10 +21,10 @@ final class WorldRendererTests: XCTestCase {
         let outputNode = try XCTUnwrap(layer.childNode(withName: "OUTPUT") as? SKShapeNode)
         XCTAssertEqual(outputNode.path?.boundingBoxOfPath, mapper.sceneRect(forTile: output, on: screen).insetBy(dx: 8, dy: 8))
         XCTAssertEqual(terrain.children.count, 2)
-        XCTAssertEqual((terrain.children.last as? SKLabelNode)?.text, "rock")
-        let offColor = buttonNode.fillColor
+        XCTAssertEqual((terrain.children.last as? SKLabelNode)?.text, "coal deposit")
+        let offColor = buttonNode.strokeColor
         scene.updateWorld(world, poweredTiles: [button])
-        XCTAssertNotEqual((layer.childNode(withName: "PRESS") as? SKShapeNode)?.fillColor, offColor)
+        XCTAssertNotEqual((layer.childNode(withName: "PRESS") as? SKShapeNode)?.strokeColor, offColor)
         XCTAssertEqual(layer.children.count, 5)
         scene.flashOutput(at: output)
         let flash = try XCTUnwrap(scene.childNode(withName: "output-flash")?.childNode(withName: "output-flash:\(output.x),\(output.y)") as? SKShapeNode)
@@ -59,9 +59,9 @@ final class WorldRendererTests: XCTestCase {
                 }
                 XCTAssertEqual(icon.zRotation, expectedRotation, accuracy: 0.00001)
                 let offTexture = try XCTUnwrap(icon.texture)
-                let off = node.fillColor
+                let off = node.strokeColor
                 scene.updateWorld(world, poweredTiles: [coordinate])
-                XCTAssertNotEqual((layer.childNode(withName: "REPEATER") as? SKShapeNode)?.fillColor, off)
+                XCTAssertNotEqual((layer.childNode(withName: "REPEATER") as? SKShapeNode)?.strokeColor, off)
                 XCTAssertFalse((layer.childNode(withName: "REPEATER")?.childNode(withName: "component-icon:2,2") as? SKSpriteNode)?.texture === offTexture)
                 scene.size = CGSize(width: 600, height: 450)
                 XCTAssertEqual(layer.children.count, 2)

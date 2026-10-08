@@ -14,7 +14,7 @@ enum PlacementFailureReason: Equatable, Sendable {
         case .noSolidSurface: return "This tile has no specified solid terrain."
         case .liquid: return "Circuit components cannot be placed on water."
         case .unsupportedSurface: return "This terrain does not support that component."
-        case let .blockedByDecoration(decoration): return "Placement is blocked by \(decoration.rawValue)."
+        case let .blockedByDecoration(decoration): return "Placement is blocked by \(decoration == .rock ? "ore deposit" : decoration.rawValue)."
         case .circuitOccupied: return "This tile already contains a circuit component."
         }
     }

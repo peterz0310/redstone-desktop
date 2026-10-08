@@ -68,9 +68,10 @@ final class TerrainChunkRenderer {
             for x in 0..<32 {
                 let coordinate = WorldCoordinate(x: origin.x + x, y: origin.y + y)
                 let tile = world.tiles[coordinate] ?? (world.unspecifiedTiles.contains(coordinate) ? nil : chunk.tiles[coordinate])
+                let appearance = tile?.decoration.map { DecorationAppearance.choose($0, at: coordinate, seed: world.generation?.seed ?? 0) }
                 for py in 0..<resolution {
                     for px in 0..<resolution {
-                        let color = tile.map { assets.pixel($0, x: px, y: py) } ?? (0, 0, 0, 0)
+                        let color = tile.map { assets.pixel($0, x: px, y: py, appearance: appearance) } ?? (0, 0, 0, 0)
                         // Raster rows increase downward; global/scene conversion remains in mapper.
                         let offset = ((dimension - 1 - (y * resolution + py)) * dimension + x * resolution + px) * 4
                         bytes[offset] = color.0; bytes[offset + 1] = color.1
@@ -89,7 +90,7 @@ final class TerrainChunkRenderer {
 
 /// Semantic, project-owned placeholder art; no files/assets from another game.
 enum OriginalTerrainPixels {
-    static func pixel(_ tile: Tile, x: Int, y: Int) -> (UInt8, UInt8, UInt8, UInt8) {
+    static func pixel(_ tile: Tile, x: Int, y: Int, appearance: DecorationAppearance? = nil) -> (UInt8, UInt8, UInt8, UInt8) {
         let base: (UInt8, UInt8, UInt8)
         switch tile.terrain {
         case .grass: base = (77, 128, 77)
@@ -100,15 +101,28 @@ enum OriginalTerrainPixels {
         case .deepWater: base = (43, 97, 143)
         }
         if let decoration = tile.decoration {
-            switch decoration {
+            let style = appearance ?? DecorationAppearance.choose(decoration, at: WorldCoordinate(x: 0, y: 0), seed: 0)
+            switch style {
             case .tree:
                 if x == 4 && (1...5).contains(y) { return (95, 61, 35, 255) }
                 if (2...6).contains(x) && (3...6).contains(y) { return (31, 77, 38, 255) }
-            case .flower:
-                if x == 4 && y == 3 { return (242, 213, 66, 255) }
-                if abs(x - 4) + abs(y - 3) == 1 { return (212, 88, 123, 255) }
-            case .rock:
-                if (2...5).contains(x) && (2...4).contains(y) { return (83, 88, 96, 255) }
+            case .poppy, .dandelion, .blueOrchid, .allium, .oxeyeDaisy:
+                if x == 4 && (1...3).contains(y) { return (43, 100, 42, 255) }
+                if x == 4 && y == 5 { return (242, 213, 66, 255) }
+                if abs(x - 4) + abs(y - 5) == 1 {
+                    switch style {
+                    case .poppy: return (225, 40, 54, 255)
+                    case .dandelion: return (247, 205, 48, 255)
+                    case .blueOrchid: return (86, 179, 238, 255)
+                    case .allium: return (190, 120, 216, 255)
+                    default: return (236, 237, 226, 255)
+                    }
+                }
+            case .coal, .iron:
+                if (1...6).contains(x) && (1...6).contains(y) {
+                    if (x * 3 + y * 5) % 7 < 2 { return style == .coal ? (32, 34, 39, 255) : (205, 160, 126, 255) }
+                    return (128, 135, 142, 255)
+                }
             case .reed:
                 if (x == 2 || x == 4 || x == 6) && (2...5).contains(y) { return (71, 116, 48, 255) }
             }

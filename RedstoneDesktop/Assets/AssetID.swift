@@ -3,6 +3,8 @@ import Foundation
 enum TextureAssetID: String, Codable, CaseIterable, Sendable {
     case terrainGrass, terrainDirt, terrainStone, terrainSand, waterShallow, waterDeep
     case decorationTree, decorationFlower, decorationRock, decorationReed
+    case decorationDandelion, decorationBlueOrchid, decorationAllium, decorationOxeyeDaisy
+    case decorationCoal, decorationIron
     case redstoneDustOff, redstoneDustOn, redstoneButtonUp, redstoneButtonDown
     case redstoneLeverOff, redstoneLeverOn, redstoneRepeaterOff, redstoneRepeaterOn
     case redstoneOutputOff, redstoneOutputOn
@@ -27,6 +29,31 @@ enum TextureAssetID: String, Codable, CaseIterable, Sendable {
     }
     var circuitID: CircuitTextureID? {
         CircuitTextureID.allCases.first { $0.assetID == self }
+    }
+
+    static func decoration(_ appearance: DecorationAppearance) -> Self {
+        switch appearance {
+        case .tree: .decorationTree
+        case .poppy: .decorationFlower
+        case .dandelion: .decorationDandelion
+        case .blueOrchid: .decorationBlueOrchid
+        case .allium: .decorationAllium
+        case .oxeyeDaisy: .decorationOxeyeDaisy
+        case .coal: .decorationCoal
+        case .iron: .decorationIron
+        case .reed: .decorationReed
+        }
+    }
+    var decorationAppearance: DecorationAppearance? {
+        DecorationAppearance.allCases.first { Self.decoration($0) == self }
+            ?? (self == .decorationRock ? .coal : nil)
+    }
+    var decorationFallback: Self? {
+        switch self {
+        case .decorationCoal, .decorationIron: .decorationRock
+        case .decorationDandelion, .decorationBlueOrchid, .decorationAllium, .decorationOxeyeDaisy: .decorationFlower
+        default: nil
+        }
     }
 }
 

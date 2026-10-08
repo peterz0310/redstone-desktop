@@ -23,7 +23,7 @@ The intended workflow is:
 
 The project is an experiment first and a polished application second.
 
-Current implementation: **Slices 0–27 are implemented**, with Debug build and all **300 automated tests passing**. Slices 0–19A, 20–21 and 23–25 have owner-reported acceptance; the 19C bookmark/context-menu follow-up and corrected Slice 22 icon-size/marker checks are also accepted. Detailed earlier 19B/19C runtime/deletion checks and Slice 22's real Output-after-resize check remain pending. Slices 26/27 manual checks are pending. Slice 26 adds optional validated folder/ZIP packs with original fallback; Slice 27 imports selected textures from local Java JARs/packs into Application Support without bundling game assets. The actual pack contract and Java mapping/cache lifecycle are documented in docs/RESOURCE_PACKS.md and docs/JAVA_TEXTURE_IMPORT.md. **Slice 28 is next and untouched.** Historical entries record earlier behavior; Sections 3.8, 7.1, 25 and 29 define the world/library contract.
+Current implementation: **Slices 0–27 and the owner-requested 27A appearance follow-up are implemented**, with Debug build and all **304 automated tests passing**. Slices 0–19A, 20–21 and 23–25 have owner-reported acceptance; the 19C bookmark/context-menu follow-up and corrected Slice 22 icon-size/marker checks are also accepted. Detailed earlier 19B/19C runtime/deletion checks and Slice 22's real Output-after-resize check remain pending. The owner accepted local Java texture importing on 2026-10-08; the other specific Slice 26/27 checks and new 27A appearance checks remain pending. Slice 26 adds optional validated folder/ZIP packs with original fallback; Slice 27 imports selected textures from local Java JARs/packs into Application Support without bundling game assets. The actual pack contract and Java mapping/cache lifecycle are documented in docs/RESOURCE_PACKS.md and docs/JAVA_TEXTURE_IMPORT.md. **Slice 28 is next and untouched.** Historical entries record earlier behavior; Sections 3.8, 7.1, 25 and 29 define the world/library contract.
 
 The most important early question is not whether attractive terrain or redstone can be made. Those are comparatively straightforward. The first major feasibility gate is:
 
@@ -929,9 +929,11 @@ Initial terrain:
 Initial decoration:
 
 - tree
-- flower
-- rock
+- flower, displayed as one of five stable seed/coordinate varieties
+- coal/iron deposit, displayed at the legacy generation-version-1 `rock` slots
 - reed
+
+DecorationAppearance chooses presentation only. Preserve stored DecorationID values, generator fingerprints, positions and placement capabilities; do not rewrite existing maps or saves for these visual variants.
 
 Circuit state is separate from terrain/decorations.
 
@@ -983,7 +985,7 @@ Decorations may further block placement.
 Initial policy:
 
 - tree blocks placement
-- rock blocks placement
+- coal/iron deposit (legacy rock slot) blocks placement
 - flower blocks placement instead of silently disappearing
 
 Later tools may support clearing decorations.
@@ -1261,7 +1263,7 @@ The renderer must never directly hard-code asset file paths.
 
 Use semantic IDs.
 
-The implemented format-1 ID catalog is in [docs/RESOURCE_PACKS.md](docs/RESOURCE_PACKS.md). It has 20 texture IDs, including separate button/repeater/Output power frames and `decorationReed`. UI selection/highlight overlays are not pack IDs. Historical hypothetical names are not accepted aliases. Dust uses the connected path renderer with semantic powered/unpowered materials.
+The implemented format-1 ID catalog is in [docs/RESOURCE_PACKS.md](docs/RESOURCE_PACKS.md). It has 26 texture IDs, including separate button/repeater/Output power frames and `decorationReed`. UI selection/highlight overlays are not pack IDs. Historical hypothetical names are not accepted aliases. Dust uses the connected path renderer with semantic powered/unpowered materials.
 
 Implemented texture provider:
 
@@ -1271,7 +1273,7 @@ protocol AssetProvider: AnyObject {
     var revision: UUID { get }
     var terrainResolution: Int { get }
     func texture(for id: TextureAssetID) -> SKTexture?
-    func pixel(_ tile: Tile, x: Int, y: Int) -> (UInt8, UInt8, UInt8, UInt8)
+    func pixel(_ tile: Tile, x: Int, y: Int, appearance: DecorationAppearance?) -> (UInt8, UInt8, UInt8, UInt8)
 }
 ```
 
@@ -1405,7 +1407,7 @@ Texture import first.
 
 ## 23.6 Implemented Slice 27 contract
 
-[docs/JAVA_TEXTURE_IMPORT.md](docs/JAVA_TEXTURE_IMPORT.md) defines actual supported paths and controls. Eleven semantic textures are mapped from modern `block/` and legacy `blocks/` names. Fixed RGB tint and first top square frame approximate Java art; models, animation metadata, biome colormaps and audio are ignored. At least one valid supported PNG is required; missing mappings warn and use original fallback. Java import failure preserves the previous appearance/cache.
+[docs/JAVA_TEXTURE_IMPORT.md](docs/JAVA_TEXTURE_IMPORT.md) defines actual supported paths and controls. Twenty-three semantic textures are mapped from modern `block/` and legacy `blocks/` names. Fixed RGB tint, first top square frame and bounded 2D component raster recipes approximate Java art; models, animation metadata, biome colormaps and audio are ignored. Stable coal/iron and flower presentation preserves version-1 terrain identity. Existing import caches require explicit Re-import to adopt the expanded mappings and bright red dust recipe. At least one valid supported PNG is required; missing mappings warn and use original fallback. Java import failure preserves the previous appearance/cache.
 
 Imported images are re-encoded into `Application Support/RedstoneDesktop/ImportedTextures/<UUID>/` with `pack.json` and `import.json`. Validate a staging directory before publication. One active pack resolves missing IDs to built-in assets; do not stack packs. Successful re-import replaces the last managed cache; Reload reads the generated cache, Re-import reads the original source. Use Built-In retains the last managed cache for re-import/removal. Remove Imported Assets verifies managed directory identity and never deletes the source JAR/pack. Selection preferences remain separate from world saves; no imported images enter the repository or release bundle.
 
@@ -2586,15 +2588,34 @@ Keep this optional if Finder behavior feels awkward.
 - [x] remove/reimport
 - [x] no imported files enter repository
 
-**Status: implemented; owner Mac validation pending.** See docs/JAVA_TEXTURE_IMPORT.md for the 11 mappings, fixed tint/first-frame limits, source/cache distinction, lifecycle, archive limits and contributor/license guidance. Native local 1.21.8 JAR validation succeeded in a temporary cache; this does not mark the UI checks below accepted.
+**Status: implemented; local JAR import owner-accepted, other specific checks pending.** See docs/JAVA_TEXTURE_IMPORT.md for the 23 mappings, fixed tint/first-frame limits, source/cache distinction, lifecycle, archive limits and contributor/license guidance. Native local 1.21.8 JAR validation succeeded in a temporary cache; this does not mark the UI checks below accepted.
 
 ### Manual acceptance
 
-- [ ] MANUAL: selected local JAR imports supported textures.
+- [x] MANUAL: selected local JAR imports supported textures.
 - [ ] MANUAL: project Git working tree remains free of copied assets.
 - [ ] MANUAL: switching back to built-in pack works.
 
 Do not implement sound importing in this slice.
+
+---
+
+## Slice 27A — Owner-requested appearance cleanup
+
+Follow-up to completed 26/27 before Slice 28; keep simulation, generation-version-1 terrain and saved builds intact.
+
+- [x] Display legacy rock decoration positions as stable coal/iron deposits, with original fallback and Java mappings.
+- [x] Choose five flower appearances deterministically from seed/coordinate, with semantic variant overrides and family fallback for older packs.
+- [x] Import bounded 2D Java button/lever/repeater states; retain orientation, delay/state labels and original unsupported fallback.
+- [x] Wider filled cardinal dust traces and square junctions; dark red off/bright red on without orange color multiplication.
+- [x] Larger component icons and transparent backing; show durable inactive lever state in texture as well as label.
+- [x] Regression tests, Debug build, full suite and updated pack/import/cache documentation.
+
+### Manual acceptance
+
+- [ ] MANUAL: after Re-import, coal/iron replace rocks and flowers vary; appearance stays stable across pan/zoom/restart.
+- [ ] MANUAL: imported button/lever/repeater states and rotations remain readable; dust connects correctly and powers bright red in editor/desktop.
+- [ ] MANUAL: Use Built-In retains original ore/flower variants and red circuit states without changing saved builds or Finder actions.
 
 ---
 
@@ -3626,3 +3647,16 @@ Only fixed semantic PNG filenames, pack.json and import.json enter UUID Applicat
 Validation: Debug build and all 300 automated tests pass, including ten new Java import tests with original synthetic deflated ZIP fixtures. Coverage includes discovery/order, modern/legacy and partial mappings, first-frame/tint, ignored unrelated entries, source preservation, no-assets/write failure, managed deletion/symlink refusal, re-import and preference restoration, failed-import preservation and removal while another pack is active. docs/RESOURCE_PACKS.md and docs/JAVA_TEXTURE_IMPORT.md document both formats and sharing/contributor boundaries; fixture provenance is explicit.
 
 Read-only discovery on this development Mac found 29 local versions. A standalone invocation of the actual importer against local 1.21.8 produced 11 textures, zero sounds and zero warnings in a temporary cache; source SHA-256 before/after matched. A temporary contact sheet was visually inspected, managed removal succeeded, and the temporary cache was cleaned. No real game images were added to Git/app bundles or owner selection preferences. This establishes local archive/decode/cache feasibility, separately from the three owner MANUAL checks, which remain unchecked. Slice 28 remains untouched.
+
+
+## 2026-10-08 — Owner confirms Java appearance; Slice 27A cleanup
+
+Context: the owner says importing generally looks good and requests replacing rock art with coal/iron, random flower variety, Java button/lever/repeater textures, thicker dust and bright red power. Record the selected-local-JAR Slice 27 check as owner-reported acceptance. Do not infer the unreported generic grass-pack, Git inspection or built-in-switch checks passed. Insert a scoped 27A follow-up before untouched Slice 28.
+
+Decision: retain generation-version-1 DecorationID/positions/fingerprints and placement rules. A pure, stateless seed/coordinate appearance choice maps legacy rock slots to coal/iron and flowers to five varieties. Renderer/provider receives the chosen semantic variant once per tile. Add six optional texture IDs with family fallback to existing decorationFlower/decorationRock, keeping old packs valid; complete original defaults remain. Inspector/finite fixture names reflect visible ore/flower appearance; placement calls deposits rather than rocks without changing capability decisions.
+
+Expand Java mappings from 11 to 23. Read-only inspection of the local JAR's stone button/lever/repeater definitions established source texture paths/handle UVs; runtime does not parse/execute those models. Fixed raster recipes compose raised/depressed stone buttons, lever handle slopes over an original base, east-facing repeater tops/indicators and opaque luminance-derived dark/bright red wire material. Renderer uses quarter-tile-wide filled cardinal strips/square junctions, white texture modulation, larger component icons and transparent backing. Preserve repeater port exclusion/rotation/delay, occupancy badges, committed lever textures, actions, simulation and cache bounds. Older managed caches update only through explicit Re-import.
+
+Validation: Debug build and all 304 automated tests pass. Four new appearance tests cover stable variant selection including negative/extreme coordinates, family/exact/original fallback and complete texture defaults, distinct component recipes/orientation/opaque bright red material, wider geometry and inactive durable lever art. Updated original synthetic Java fixtures exercise all 23 mappings; existing generator fingerprints, placement, simulation, library and Finder/action tests stay green. Old renderer assertions were updated for deliberate appearance changes; a color-space comparison and an accidentally doubled endpoint expectation in tests were corrected. A real SpriteKit scene capture exposed overlap holes in initial filled junctions; disjoint arm/center geometry and even-odd coverage checks now prevent them. The corrected native scene was inspected separately from owner desktop acceptance. Pure World/Circuit code type-checks without AppKit/SpriteKit.
+
+The actual updated importer successfully produced 23 textures, zero sounds and zero warnings from local 1.21.8 in a temporary cache. A native texture contact sheet was inspected; source SHA-256 remained unchanged and temporary managed removal succeeded. No game art entered repository/app bundles or owner preferences. Guides document new IDs, deterministic variation, fixed circuit recipes and Re-import versus Reload. The new three MANUAL checks remain pending; no physical desktop validation is claimed.

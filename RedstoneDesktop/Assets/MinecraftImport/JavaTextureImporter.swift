@@ -45,6 +45,7 @@ struct JavaTextureMapping: Sendable {
     let id: TextureAssetID
     let paths: [String]
     let tint: [Int]?
+    let art: JavaCircuitArt?
 }
 
 enum JavaTextureImporter {
@@ -58,11 +59,20 @@ enum JavaTextureImporter {
         mapping(.waterShallow, "water_still", tint: [80,180,220]), mapping(.waterDeep, "water_still", tint: [45,95,180]),
         mapping(.decorationTree, "oak_leaves", old: "leaves_oak", tint: [70,145,50]),
         mapping(.decorationFlower, "poppy", old: "flower_rose"), mapping(.decorationReed, "sugar_cane", old: "reeds"),
-        mapping(.redstoneDustOff, "redstone_dust_dot", tint: [170,30,30]),
-        mapping(.redstoneDustOn, "redstone_dust_dot", tint: [255,190,50])
+        mapping(.decorationDandelion, "dandelion", old: "flower_dandelion"),
+        mapping(.decorationBlueOrchid, "blue_orchid", old: "flower_blue_orchid"),
+        mapping(.decorationAllium, "allium", old: "flower_allium"),
+        mapping(.decorationOxeyeDaisy, "oxeye_daisy", old: "flower_oxeye_daisy"),
+        mapping(.decorationCoal, "coal_ore"), mapping(.decorationIron, "iron_ore"),
+        mapping(.redstoneButtonUp, "stone", art: .button(false)), mapping(.redstoneButtonDown, "stone", art: .button(true)),
+        mapping(.redstoneLeverOff, "lever", art: .lever(false)), mapping(.redstoneLeverOn, "lever", art: .lever(true)),
+        mapping(.redstoneRepeaterOff, "repeater", old: "repeater_off", art: .repeater(false)),
+        mapping(.redstoneRepeaterOn, "repeater_on", art: .repeater(true)),
+        mapping(.redstoneDustOff, "redstone_dust_dot", art: .dust(false)),
+        mapping(.redstoneDustOn, "redstone_dust_dot", art: .dust(true))
     ]
-    private static func mapping(_ id: TextureAssetID, _ name: String, old: String? = nil, tint: [Int]? = nil) -> JavaTextureMapping {
-        JavaTextureMapping(id: id, paths: ["assets/minecraft/textures/block/\(name).png", "assets/minecraft/textures/blocks/\(old ?? name).png"], tint: tint)
+    private static func mapping(_ id: TextureAssetID, _ name: String, old: String? = nil, tint: [Int]? = nil, art: JavaCircuitArt? = nil) -> JavaTextureMapping {
+        JavaTextureMapping(id: id, paths: ["assets/minecraft/textures/block/\(name).png", "assets/minecraft/textures/blocks/\(old ?? name).png"], tint: tint, art: art)
     }
     static func importTextures(from sourceURL: URL, cacheRoot: URL) throws -> JavaImportResult {
         let source: PackSource?
@@ -97,6 +107,7 @@ enum JavaTextureImporter {
                             for channel in 0..<3 { raster.pixels[pixel + channel] = UInt8(Int(raster.pixels[pixel + channel]) * tint[channel] / 255) }
                         }
                     }
+                    if let art = mapping.art { raster = art.render(raster) }
                     images[mapping.id] = raster; used[mapping.id.rawValue] = prefix + path
                     accepted = true; break
                 } catch {

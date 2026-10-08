@@ -23,9 +23,9 @@ final class CircuitRendererTests: XCTestCase {
         let layer = try XCTUnwrap(scene.childNode(withName: "circuit"))
         let dust = try XCTUnwrap(layer.children.first as? SKShapeNode)
         let rect = mapper.sceneRect(forTile: coordinate, on: screen)
-        XCTAssertEqual(dust.path?.boundingBoxOfPath, CGRect(x: rect.midX - 4, y: rect.midY - 4, width: rect.width / 2 + 4, height: 8))
-        XCTAssertNotNil(dust.strokeTexture)
-        XCTAssertEqual(dust.strokeTexture?.filteringMode, .nearest)
+        XCTAssertEqual(dust.path?.boundingBoxOfPath, CGRect(x: rect.midX - 8, y: rect.midY - 8, width: rect.width / 2 + 8, height: 16))
+        XCTAssertNotNil(dust.fillTexture)
+        XCTAssertEqual(dust.fillTexture?.filteringMode, .nearest)
         components[cell(2, 3)]?.direction = .north // its rear port now faces this dust
         scene.updateWorld(World(circuit: CircuitWorld(components: components)))
         let connected = try XCTUnwrap(layer.children.first as? SKShapeNode)
@@ -44,10 +44,18 @@ final class CircuitRendererTests: XCTestCase {
             let paths = try XCTUnwrap(scene.childNode(withName: "circuit")).children.compactMap { $0 as? SKShapeNode }
             let originPath = try XCTUnwrap(paths.first { $0.path?.contains(CGPoint(x: rect.midX, y: rect.midY)) == true })
             let bounds = try XCTUnwrap(originPath.path?.boundingBoxOfPath)
-            XCTAssertEqual(bounds.minX, directions.contains(.west) ? rect.minX : rect.midX - 4)
-            XCTAssertEqual(bounds.maxX, directions.contains(.east) ? rect.maxX : rect.midX + 4)
-            XCTAssertEqual(bounds.minY, directions.contains(.south) ? rect.minY : rect.midY - 4)
-            XCTAssertEqual(bounds.maxY, directions.contains(.north) ? rect.maxY : rect.midY + 4)
+            XCTAssertEqual(bounds.minX, directions.contains(.west) ? rect.minX : rect.midX - 8)
+            XCTAssertEqual(bounds.maxX, directions.contains(.east) ? rect.maxX : rect.midX + 8)
+            XCTAssertEqual(bounds.minY, directions.contains(.south) ? rect.minY : rect.midY - 8)
+            XCTAssertEqual(bounds.maxY, directions.contains(.north) ? rect.maxY : rect.midY + 8)
+            // Verify filled coverage under the even-odd rule used by SpriteKit, including joins.
+            for direction in directions {
+                for distance in [CGFloat(4), 9, 24, 31] {
+                    let dx: CGFloat = direction == .east ? distance : (direction == .west ? -distance : 0)
+                    let dy: CGFloat = direction == .north ? distance : (direction == .south ? -distance : 0)
+                    XCTAssertTrue(originPath.path?.contains(CGPoint(x: rect.midX + dx, y: rect.midY + dy), using: .evenOdd) == true)
+                }
+            }
         }
     }
 

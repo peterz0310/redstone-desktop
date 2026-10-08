@@ -56,8 +56,14 @@ All IDs below accept **PNG only**. These are the actual format-1 names; examples
 | `waterShallow` | Shallow-water surface |
 | `waterDeep` | Deep-water surface |
 | `decorationTree` | Tree overlay |
-| `decorationFlower` | Flower overlay |
-| `decorationRock` | Rock overlay |
+| `decorationFlower` | Poppy; also family fallback for other flower variants |
+| `decorationDandelion` | Yellow dandelion overlay |
+| `decorationBlueOrchid` | Blue orchid overlay |
+| `decorationAllium` | Purple allium overlay |
+| `decorationOxeyeDaisy` | White oxeye daisy overlay |
+| `decorationCoal` | Coal deposit surface |
+| `decorationIron` | Iron deposit surface |
+| `decorationRock` | Legacy family fallback for coal/iron deposits; retained for older packs |
 | `decorationReed` | Reed overlay |
 | `redstoneDustOff` | Unpowered wire material |
 | `redstoneDustOn` | Powered wire material |
@@ -70,7 +76,7 @@ All IDs below accept **PNG only**. These are the actual format-1 names; examples
 | `redstoneOutputOff` | Unpowered output icon |
 | `redstoneOutputOn` | Powered output icon |
 
-PNG bounds: 1–1024 pixels in each dimension, at most 4 MiB encoded, one image frame. Square images are recommended; rectangular images stretch to the semantic surface. Transparent decorations overlay the terrain; alpha is decoded as premultiplied RGBA and composited. Texture sampling is nearest-neighbor. Circuit icons retain labels, rotation, power frames and occupancy badges; a pack does not replace interaction geometry. Dust remains a connected geometric path whose material is overridden, not a full-tile vanilla dust model. Highlight/selection/diagnostic overlays remain app UI.
+PNG bounds: 1–1024 pixels in each dimension, at most 4 MiB encoded, one image frame. Square images are recommended; rectangular images stretch to the semantic surface. Transparent decorations overlay the terrain; alpha is decoded as premultiplied RGBA and composited. Texture sampling is nearest-neighbor. There are 26 texture IDs in format 1; the six decoration variant IDs are additive, so earlier manifests remain valid. Circuit icons retain labels, rotation, power frames and occupancy badges; a pack does not replace interaction geometry. Dust uses filled square junctions and cardinal strips one quarter of a tile wide; its material is overridden, not a full-tile vanilla dust model. Built-in powered material is bright red, with dark red when off. Texture colors are displayed without multiplying by a yellow/orange UI tint. Custom packs may deliberately choose other colors. Button/lever/repeater art is larger with transparent backing; state labels and repeater rotation/delay remain. Highlight/selection/diagnostic overlays remain app UI.
 
 Generated terrain is baked into bounded chunk sprites. Built-in terrain uses 8 pixels/tile. A terrain/decoration override uses 16 pixels/tile, sampled from the source PNG (higher-resolution files are reduced with nearest sampling). This keeps memory bounded and preserves standard 16-pixel Java texture detail. Circuit textures retain their source raster resolution. Shelf thumbnails remain schematic summaries rather than pack previews. Explicit non-generated diagnostic terrain uses provider textures; generated legacy overrides use the same terrain pack as their surroundings.
 
@@ -80,13 +86,15 @@ Generated terrain is baked into bounded chunk sprites. Built-in terrain uses 8 p
 
 Sounds require **little-endian RIFF WAV**, PCM 16-bit or IEEE float 32-bit, mono or stereo, 8–96 kHz, at most 2 seconds and 8 MiB encoded. Stereo is averaged to mono, linearly resampled to 44.1 kHz, and peaks above 0.11 are reduced to 0.11 to leave overlap headroom. The engine then applies master volume/mute and per-event stereo pan. NaN/infinite samples are refused. WAV extensible/compressed WAV, OGG, MP3, streaming audio, playlists and code are not supported in format 1.
 
+Decoration type/positions and placement restrictions remain generation-version-1 data. A separate stable seed/coordinate hash chooses five flower appearances and coal/iron at legacy rock positions. These choices never depend on load order, camera or system randomness; changing art does not invalidate saved builds. The inspector names the visible variant. Built-in art supplies every variant without requiring a pack.
+
 Effects replace semantic events only: changing `buttonPress` does not change when a button accepts input. Eight simultaneous voices are retained; at saturation the oldest is recycled. Changing packs clears currently playing effects, preserves volume/mute, and does not replay held circuit events.
 
 ## Fallback and diagnostics
 
 Resolution order is selected custom/imported pack → built-in original assets. Only **one** pack is active; imported Java textures use this same slot.
 
-- An omitted ID uses built-in assets without warning.
+- An omitted ID uses built-in assets without warning, except decoration variants first try their family override: flowers → `decorationFlower`; coal/iron → legacy `decorationRock`. A specific variant override takes priority.
 - Unknown IDs are ignored with a warning (useful for spotting misspellings).
 - Missing, oversized, unsupported or undecodable individual files warn and fall back **only that asset**.
 - Bad manifests, escaping manifest paths, or unsafe/unsupported ZIP structures refuse the whole pack and activate built-in assets.

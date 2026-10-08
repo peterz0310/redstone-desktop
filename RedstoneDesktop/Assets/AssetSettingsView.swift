@@ -52,7 +52,7 @@ struct AssetSettingsView: View {
                         .disabled(assets.importFolder == nil || assets.isLoading)
                 }
                 if let record = assets.importRecord {
-                    Text("Last import source: \(record.sourcePath)\n\(record.mappings.count) supported mappings · first-frame textures with fixed grass/leaves/water tint.")
+                    Text("Last import source: \(record.sourcePath)\n\(record.mappings.count) supported mappings · first-frame textures with fixed tint and 2D circuit art. Re-import updates older cached mappings.")
                         .font(.caption).textSelection(.enabled)
                 }
                 if !assets.warnings.isEmpty {

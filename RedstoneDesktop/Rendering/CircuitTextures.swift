@@ -58,15 +58,15 @@ final class CircuitTextures {
             }
             let dark = NSColor(calibratedWhite: 0.14, alpha: 1)
             let rim = NSColor(calibratedWhite: 0.65, alpha: 1)
-            let hot = NSColor(calibratedRed: 1, green: 0.75, blue: 0.2, alpha: 1)
+            let hot = NSColor(calibratedRed: 1, green: 0.09, blue: 0.12, alpha: 1)
             let red = NSColor(calibratedRed: 0.65, green: 0.12, blue: 0.12, alpha: 1)
             switch id {
             case .dustOff, .dustOn:
                 let color = id == .dustOn ? hot : red
                 fill(CGRect(x: 0, y: 0, width: 32, height: 32), color)
                 fill(CGRect(x: 0, y: 0, width: 32, height: 4), color.blended(withFraction: 0.3, of: dark)!)
-                fill(CGRect(x: 4, y: 20, width: 4, height: 4), rim)
-                fill(CGRect(x: 20, y: 8, width: 4, height: 4), rim)
+                fill(CGRect(x: 4, y: 20, width: 4, height: 4), color)
+                fill(CGRect(x: 20, y: 8, width: 4, height: 4), color)
             case .buttonUp, .buttonDown:
                 fill(CGRect(x: 4, y: 4, width: 24, height: 24), dark)
                 fill(CGRect(x: 6, y: 6, width: 20, height: 20), rim)
