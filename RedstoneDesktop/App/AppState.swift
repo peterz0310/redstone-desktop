@@ -75,6 +75,9 @@ final class AppState: ObservableObject {
     @Published private(set) var finderScale = FinderScale()
     @Published private(set) var finderScaleStatus = "Independent: saved area scale."
     private let preferences: UserDefaults?
+    @Published private(set) var audioSettings = AudioSettings()
+    @Published private(set) var audioStatus = "Sound effects ready."
+    private let soundPlayer: any SoundPlaying
 
     init(screenProviding: @escaping () -> ScreenDescriptor? = {
         NSScreen.screens.first.map { ScreenDescriptor(screen: $0) }
@@ -89,6 +92,7 @@ final class AppState: ObservableObject {
        displayNotificationCenter: NotificationCenter = .default,
        displaySettleDelay: Duration = .milliseconds(500),
        preferences: UserDefaults? = nil,
+       soundPlayer: any SoundPlaying = SilentSoundPlayer(),
        finderReferenceProviding: @escaping () -> ScreenDescriptor? = {
            NSScreen.screens.first.map { ScreenDescriptor(screen: $0) }
        }) {
@@ -109,6 +113,12 @@ final class AppState: ObservableObject {
         openItemAction = OpenItemAction(opener: itemOpener)
         self.displaySettleDelay = displaySettleDelay
         self.preferences = preferences
+        self.soundPlayer = soundPlayer
+        if let data = preferences?.data(forKey: "audioSettings"),
+           let stored = try? JSONDecoder().decode(AudioSettings.self, from: data) {
+            audioSettings = AudioSettings(volume: stored.volume.isFinite ? min(1, max(0, stored.volume)) : 0,
+                muted: stored.muted, effectsEnabled: stored.effectsEnabled)
+        }
         if let data = preferences?.data(forKey: "finderScale"),
            let stored = try? JSONDecoder().decode(FinderScale.self, from: data),
            !stored.enabled || (stored.baselineIconSize.map { (1...4096).contains($0) } ?? false) {
@@ -119,6 +129,7 @@ final class AppState: ObservableObject {
         self.finderDiagnostics = finderDiagnostics
         self.finderReferenceProviding = finderReferenceProviding
         desktopItemTracker = DesktopItemTracker(diagnostics: finderDiagnostics)
+        soundPlayer.configure(audioSettings)
         finderItemsObserver = Publishers.CombineLatest3(finderDiagnostics.$items, finderDiagnostics.$error, finderDiagnostics.$hasRead).sink { [weak self] items, error, hasRead in
             MainActor.assumeIsolated { self?.updateFinderState(items, error: error, hasRead: hasRead) }
         }
@@ -398,6 +409,7 @@ final class AppState: ObservableObject {
     func placeCircuitComponent(_ component: CircuitComponent, at coordinate: WorldCoordinate) -> PlacementResult {
         guard !isEditorConfigurationLocked else {
             developerPlacementStatus = "Disable Desktop World before editing."
+            playSound(.invalidPlacement)
             return .rejected(.reserved)
         }
         var next = editorWorld
@@ -405,8 +417,9 @@ final class AppState: ObservableObject {
         if result.isAllowed {
             editorWorld = next
             worldDidChange()
+            playSound(.placeCircuit)
             developerPlacementStatus = "Placed \(component.kind.rawValue) at (\(coordinate.x), \(coordinate.y)). Saved in the selected world. Activate a saved area to run it."
-        } else { developerPlacementStatus = result.message }
+        } else { developerPlacementStatus = result.message; playSound(.invalidPlacement) }
         return result
     }
 
@@ -424,6 +437,7 @@ final class AppState: ObservableObject {
         next.circuit.components.removeValue(forKey: coordinate)
         editorWorld = next
         worldDidChange()
+        playSound(.removeCircuit)
         developerPlacementStatus = "Erased component at (\(coordinate.x), \(coordinate.y)); terrain preserved."
         return true
     }
@@ -486,6 +500,7 @@ final class AppState: ObservableObject {
 
     /// Used by both disable and the app's termination notification.
     func shutdown(preserveEditorTracking: Bool = false) {
+        soundPlayer.stop()
         if !preserveEditorTracking || !editorFinderItemsVisible {
             displayRefreshTask?.cancel()
             displayRefreshTask = nil
@@ -652,12 +667,18 @@ final class AppState: ObservableObject {
         guard isDesktopWorldEnabled else { return }
         var next = simulator
         let events = next.advanceTick()
+        if !isDisplaySettling && !isFinderLayoutSettling {
+            for (id, tile) in CircuitSounds.transitions(before: simulator, after: next) where outputIsVisible(tile) {
+                playSound(id)
+            }
+        }
         let changedPower = next.power != simulator.power
         if next != simulator { simulator = next }
         if changedPower { desktopController?.scene.updateWorld(desktopWorld, poweredTiles: next.poweredTiles) }
         for case let .outputActivated(coordinate) in events {
             guard !isDisplaySettling, !isFinderLayoutSettling, outputIsVisible(coordinate) else { continue }
             desktopController?.scene.flashOutput(at: coordinate)
+            playSound(.outputActivate)
             // Bound pending I/O independently of simulation, rather than accumulating requests.
             if pendingOutputs.count < 32 { pendingOutputs.append(coordinate) }
             else { lastActionResult = "Output action queue is full; activation skipped." }
@@ -744,9 +765,11 @@ final class AppState: ObservableObject {
             }
             if kind == .button {
                 self.simulator.pressButton(at: tile)
+                self.playSound(.buttonPress)
                 self.lastActionResult = "Button pulse queued; repeats extend it without another rising activation."
             } else {
                 self.simulator.toggleLever(at: tile)
+                self.playSound(self.simulator.activeLevers.contains(tile) ? .leverToggleOn : .leverToggleOff)
                 self.savedLevers = self.simulator.activeLevers
                 self.desktopLeversDidChange()
                 self.lastActionResult = self.simulator.activeLevers.contains(tile)
@@ -796,6 +819,21 @@ final class AppState: ObservableObject {
         } else { finderScale = FinderScale() }
         if let data = try? JSONEncoder().encode(finderScale) { preferences?.set(data, forKey: "finderScale") }
         refreshFinderScale()
+    }
+
+    func setAudioSettings(_ settings: AudioSettings) {
+        audioSettings = AudioSettings(volume: settings.volume.isFinite ? min(1, max(0, settings.volume)) : 0,
+            muted: settings.muted, effectsEnabled: settings.effectsEnabled)
+        soundPlayer.configure(audioSettings)
+        if let data = try? JSONEncoder().encode(audioSettings) { preferences?.set(data, forKey: "audioSettings") }
+    }
+
+    func previewSound(_ id: SoundID) { playSound(id) }
+
+    private func playSound(_ id: SoundID) {
+        guard audioSettings.gain > 0 else { return }
+        soundPlayer.play(id)
+        audioStatus = soundPlayer.status
     }
 
     private func refreshFinderScale() {

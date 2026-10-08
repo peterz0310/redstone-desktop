@@ -20,6 +20,27 @@ struct DesktopDetailsView: View {
                 Text("Off by default. Enable after Finder has connected. Turning it off restores the saved area's camera. Saved areas and editor zoom stay independent.")
                     .font(.caption).foregroundStyle(.secondary)
                 Divider()
+                Text("Sound effects").font(.headline)
+                Toggle("Enable sound effects", isOn: Binding(get: { appState.audioSettings.effectsEnabled }, set: {
+                    var settings = appState.audioSettings; settings.effectsEnabled = $0; appState.setAudioSettings(settings)
+                }))
+                Toggle("Mute", isOn: Binding(get: { appState.audioSettings.muted }, set: {
+                    var settings = appState.audioSettings; settings.muted = $0; appState.setAudioSettings(settings)
+                }))
+                HStack {
+                    Text("Master volume")
+                    Slider(value: Binding(get: { appState.audioSettings.volume }, set: {
+                        var settings = appState.audioSettings; settings.volume = $0; appState.setAudioSettings(settings)
+                    }), in: 0...1)
+                    Text("\(Int(appState.audioSettings.volume * 100))%")
+                }
+                Menu("Preview original sounds") {
+                    ForEach(SoundID.allCases, id: \.self) { id in
+                        Button(id.rawValue) { appState.previewSound(id) }
+                    }
+                }
+                Text(appState.audioStatus).font(.caption).foregroundStyle(.secondary)
+                Divider()
                 Text("Desktop controls and diagnostics")
                     .font(.headline)
                 Text("Finder refreshes automatically while the desktop runs. This window shows input rejection details, camera mapping and the last action for troubleshooting.")

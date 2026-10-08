@@ -35,6 +35,7 @@ enum AppStartup {
         let testing = NSClassFromString("XCTestCase") != nil
             || environment.keys.contains { $0.hasPrefix("XCTest") || $0 == "XCInjectBundleInto" }
         return AppState(libraryStore: testing ? nil : WorldLibraryStore.applicationDefault(), automaticallyRefreshFinder: !testing,
-            preferences: testing ? nil : .standard)
+            preferences: testing ? nil : .standard,
+            soundPlayer: testing ? SilentSoundPlayer() : (try? AudioEngine()) ?? SilentSoundPlayer())
     }
 }

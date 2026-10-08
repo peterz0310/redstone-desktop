@@ -34,6 +34,9 @@ struct FinderDiagnosticsView: View {
                 Spacer()
                 Text(appState.finderScaleStatus)
             }.font(.caption).foregroundStyle(.secondary)
+            if let baseline = model.baselineViewSettings {
+                Text("Read session baseline: \(baseline.iconSize)").font(.caption).foregroundStyle(.secondary)
+            }
             if model.isLayoutSettling {
                 Text("Finder layout is settling; positions and actions wait for a fresh read.").font(.caption)
             }

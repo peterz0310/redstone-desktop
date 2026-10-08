@@ -639,3 +639,13 @@ Please report whether the **size value updates**, **centers stay aligned**, and 
 ```sh
 open /Users/peterzielinski/git/redstone-desktop/build/Build/Products/Debug/RedstoneDesktop.app
 ```
+
+
+## Sound effects — Slice 24
+
+1. In **Advanced → Desktop Details → Sound effects**, keep volume low initially (default 35%). **Preview original sounds** lets you hear each named effect without running a circuit. Raise/lower Master volume; try **Mute** and **Enable sound effects**. Both must silence previews and circuit/editor events; unmuting must not replay queued sounds.
+2. Stop Desktop, then place a component on valid ground, try placing another on that occupied tile, and erase the first. You should hear placement, refusal and removal respectively. Hovering and erasing empty ground should be silent.
+3. Start Desktop and trigger an existing button: hear press, a brief Output activation and release after its pulse. Toggle a lever on/off for distinct effects. A repeater should tick on both powered/unpowered transitions, not continuously while held. An empty Output can still produce its activation sound.
+4. Trigger nearby circuits quickly; short effects should overlap acceptably without long queued playback. Try mute while sounds occur. Stop Desktop: ongoing effects clear. Quit/reopen: settings persist, Desktop remains stopped and no startup circuit sounds play.
+
+Report overlap/volume comfort and whether mute silences all effects. These checks remain pending.
