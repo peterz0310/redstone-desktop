@@ -1,0 +1,103 @@
+import SwiftUI
+
+/// A cached, side-effect-free projection. Selection in the editor is deliberately absent.
+struct DesktopMenuSnapshot: Equatable {
+    struct Area: Identifiable, Equatable {
+        let id: UUID
+        let title: String
+        let assigned: Bool
+    }
+    struct WorldGroup: Identifiable, Equatable {
+        let id: UUID
+        let title: String
+        let areas: [Area]
+    }
+    let status: String
+    let assignedWorld: String
+    let assignedArea: String
+    let groups: [WorldGroup]
+
+    init(library: WorldLibraryDocument, running: Bool, building: Bool, paused: Bool) {
+        status = building ? "Build Mode · Circuit stopped" : running ? (paused ? "Running · Simulation paused" : "Running") : "Stopped"
+        assignedWorld = library.activeArea.flatMap { library.world(id: $0.worldID)?.name } ?? "Unavailable world"
+        assignedArea = library.activeArea?.name ?? "Unavailable area"
+        func titles(_ names: [String]) -> [String] {
+            var occurrences: [String: Int] = [:]
+            return names.map { name in
+                occurrences[name, default: 0] += 1
+                return names.filter { $0 == name }.count > 1 ? "\(name) (\(occurrences[name]!))" : name
+            }
+        }
+        let worldTitles = titles(library.worlds.map(\.name))
+        groups = zip(library.worlds, worldTitles).map { world, title in
+            let areas = library.areas.filter { $0.worldID == world.id }
+            return WorldGroup(id: world.id, title: title, areas: zip(areas, titles(areas.map(\.name))).map { area, label in
+                Area(id: area.id, title: label, assigned: area.id == library.activeAreaID)
+            })
+        }
+    }
+}
+
+extension AppState {
+    var desktopMenu: DesktopMenuSnapshot {
+        DesktopMenuSnapshot(library: library, running: isDesktopWorldEnabled,
+            building: isDesktopBuildMode, paused: isSimulationPaused)
+    }
+}
+
+struct DesktopMenuView: View {
+    @ObservedObject var appState: AppState
+    @Environment(\.openWindow) private var openWindow
+
+    var body: some View {
+        let menu = appState.desktopMenu
+        Text("Redstone Desktop · \(menu.status)")
+        Text("Assigned: \(menu.assignedWorld) / \(menu.assignedArea)")
+        Button(appState.isDesktopWorldEnabled ? "Stop Desktop" : "Start Desktop") {
+            appState.setDesktopRunning(!appState.isDesktopWorldEnabled)
+        }.disabled(appState.isDesktopBuildMode || (!appState.isDesktopWorldEnabled && appState.desktopScreen == nil))
+        Menu("Assign Desktop Area") {
+            Text("Assigning an area stops Desktop. Start explicitly to run.")
+            ForEach(menu.groups) { world in
+                Menu(world.title) {
+                    ForEach(world.areas) { area in
+                        Button { appState.assignDesktopAreaFromMenu(area.id) } label: {
+                            if area.assigned { Label(area.title, systemImage: "checkmark") }
+                            else { Text(area.title) }
+                        }
+                        .accessibilityLabel(area.title + (area.assigned ? ", assigned to Desktop" : ""))
+                    }
+                    if world.areas.isEmpty { Text("No saved areas") }
+                }
+            }
+            if menu.groups.isEmpty { Text("No saved worlds") }
+        }.disabled(!appState.canAssignDesktopArea)
+        if appState.isDesktopBuildMode { Text("Exit Build Mode to start or assign Desktop.") }
+        else if appState.desktopScreen == nil { Text("Desktop display unavailable") }
+        Divider()
+        Button("Open Editor") { appState.exitDesktopBuildMode(); show("editor") }
+        Button("Show Assigned Area in Editor") { appState.requestAssignedAreaInEditor(); show("editor") }
+        Button(appState.isDesktopBuildMode ? "Exit Desktop Build Mode" : "Build on Desktop") {
+            if appState.isDesktopBuildMode { appState.exitDesktopBuildMode() }
+            else { appState.enterDesktopBuildMode() }
+        }.disabled(!appState.isDesktopBuildMode && appState.desktopScreen == nil)
+        Divider()
+        SettingsLink { Text("Settings…") }
+        Button(appState.audioSettings.muted ? "Unmute Sounds" : "Mute Sounds") { appState.toggleAudioMute() }
+        Menu("Tools") {
+            Button("Appearance & Packs…") { show("asset-settings") }
+            Button("Finder Diagnostics…") { show("finder-diagnostics") }
+            Button("Desktop Details…") { show("desktop-controls") }
+            Text(appState.areaStatus)
+            Text(appState.desktopStatus)
+            Text(appState.persistenceStatus)
+        }
+        Divider()
+        Button("Quit Redstone Desktop") { appState.shutdown(); NSApplication.shared.terminate(nil) }
+    }
+
+    private func show(_ id: String) {
+        openWindow(id: id)
+        NSApplication.shared.activate(ignoringOtherApps: true)
+    }
+}

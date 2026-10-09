@@ -294,6 +294,41 @@ final class ScriptExecutionTests: XCTestCase {
     }
 
     @MainActor
+    func testMenuAssignmentInvalidatesPendingAuthorizationAndDoesNotRememberApproval() async throws {
+        let (root, item) = try fixture()
+        defer { try? FileManager.default.removeItem(at: root) }
+        let screen = ScreenDescriptor(id: "fixture", frame: CGRect(x: 0, y: 0, width: 640, height: 480), backingScale: 1)
+        let provider = ScriptFinderFixture(), authorizer = ScriptFixtureAuthorizer(), executor = ScriptFixtureExecutor()
+        let state = AppState(screenProviding: { screen }, clickEventMonitoring: FakeGlobalMouseEventMonitor(),
+            finderDiagnostics: FinderDiagnosticsModel(provider: provider),
+            desktopInteractionAssessment: { _ in DesktopInteractionAssessment(rejectionReason: nil, details: "fixture") },
+            tickScheduler: ManualCircuitTickScheduler(), scriptExecutor: executor, scriptAuthorizer: authorizer,
+            finderReferenceProviding: { screen })
+        defer { state.shutdown() }
+        XCTAssertTrue(state.configureOutput(at: DemoCircuit.output, mode: .executeOccupant))
+        provider.items = [DesktopItem(id: item.id, url: item.url, displayName: item.displayName,
+            position: CGPoint(x: 480, y: 256), estimatedIconSize: nil, kind: .file)]
+        await state.finderDiagnostics.readItems()
+        let requested = expectation(description: "Approval pending")
+        var reply: CheckedContinuation<ScriptApproval, Never>?
+        authorizer.operation = { _ in await withCheckedContinuation { reply = $0; requested.fulfill() } }
+        state.toggleDesktopWorld()
+        state.handleCircuitClick(DemoCircuit.button)
+        await state.activationTask?.value
+        state.advanceCircuitTick()
+        let pending = state.activationTask
+        await fulfillment(of: [requested], timeout: 2)
+        XCTAssertTrue(state.assignDesktopAreaFromMenu(state.library.activeAreaID))
+        XCTAssertFalse(state.isDesktopWorldEnabled)
+        state.setDesktopRunning(true) // A fresh runtime at the same coordinates.
+        reply?.resume(returning: .always)
+        await pending?.value
+        XCTAssertTrue(executor.targets.isEmpty)
+        XCTAssertFalse(state.actionAuthorizations.contains(try ScriptTarget.resolve(item)))
+        XCTAssertNil(state.lastScriptResult)
+    }
+
+    @MainActor
     func testPauseSimulationInvalidatesPendingAuthorizationWithoutApprovalReplay() async throws {
         let (root, item) = try fixture()
         defer { try? FileManager.default.removeItem(at: root) }

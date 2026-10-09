@@ -17,7 +17,7 @@ struct RedstoneDesktopApp: App {
                     else { appState.enterDesktopBuildMode() }
                 }
                 Button(appState.isDesktopWorldEnabled ? "Disable Desktop World" : "Enable Desktop World") {
-                    appState.toggleDesktopWorld()
+                    appState.setDesktopRunning(!appState.isDesktopWorldEnabled)
                 }
                 .disabled(appState.isDesktopBuildMode)
             }
@@ -34,15 +34,14 @@ struct RedstoneDesktopApp: App {
             FinderDiagnosticsView(appState: appState)
         }
         .defaultSize(width: 1200, height: 550)
-        MenuBarExtra("Redstone Desktop", systemImage: appState.isDesktopBuildMode ? "hammer.fill" : "square.grid.3x3.fill") {
-            Text(appState.isDesktopBuildMode ? "BUILD MODE · Circuit stopped" : "Redstone Desktop")
-            Button("Open Editor") { appState.exitDesktopBuildMode(); openWindow(id: "editor") }
-            Button(appState.isDesktopBuildMode ? "Exit Build Mode" : "Build on Desktop") {
-                if appState.isDesktopBuildMode { appState.exitDesktopBuildMode() }
-                else { appState.enterDesktopBuildMode() }
-            }
-            Button("Quit Redstone Desktop") { appState.shutdown(); NSApplication.shared.terminate(nil) }
+        MenuBarExtra {
+            DesktopMenuView(appState: appState)
+        } label: {
+            Image("MenuDust").renderingMode(.template)
+                .accessibilityLabel("Redstone Desktop, \(appState.desktopMenu.status)")
+                .help("Redstone Desktop · \(appState.desktopMenu.status)")
         }
+        .menuBarExtraStyle(.menu)
     }
 }
 

@@ -20,7 +20,7 @@ struct EditorView: View {
                     if appState.isDesktopBuildMode { appState.exitDesktopBuildMode() }
                     else { appState.enterDesktopBuildMode() }
                 }
-                Button(appState.isDesktopWorldEnabled ? "Stop Desktop" : "Start Desktop") { appState.toggleDesktopWorld() }
+                Button(appState.isDesktopWorldEnabled ? "Stop Desktop" : "Start Desktop") { appState.setDesktopRunning(!appState.isDesktopWorldEnabled) }
                     .disabled(appState.isDesktopBuildMode)
                 Menu {
                     SettingsLink { Text("Settings…") }
@@ -83,7 +83,13 @@ struct EditorView: View {
         }
         .frame(minWidth: 1060, minHeight: 760)
         .background(EditorWindowRegistration(windows: appState.editorWindows))
-        .onAppear { editor.syncSelectedWorld(appState) }
+        .onAppear {
+            editor.syncSelectedWorld(appState)
+            if appState.consumeEditorAreaRequest() { editor.showDesktopArea(appState) }
+        }
+        .onChange(of: appState.requestedEditorArea) { _, request in
+            if request != nil, appState.consumeEditorAreaRequest() { editor.showDesktopArea(appState) }
+        }
         .onDisappear { appState.setEditorFinderItemsVisible(false) }
         .sheet(item: $sheet, onDismiss: { if editor.isPreviewing(appState) { editor.cancelPreview(appState) } }) { request in
             LibrarySheetView(kind: request.kind, appState: appState, editor: editor, targetID: request.targetID)

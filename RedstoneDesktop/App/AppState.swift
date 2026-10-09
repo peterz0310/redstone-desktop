@@ -16,6 +16,7 @@ final class AppState: ObservableObject {
     @Published private(set) var persistenceStatus = "Persistence is disabled for this session."
     @Published private(set) var library: WorldLibraryDocument
     @Published private(set) var selectedWorldID: UUID
+    @Published private(set) var requestedEditorArea: UUID?
     @Published private(set) var selectedAreaID: UUID
     @Published private(set) var editorWorld: World
     @Published private(set) var libraryStatus = "Select a saved world, or preview a seed to create one."
@@ -423,9 +424,25 @@ final class AppState: ObservableObject {
 
     @discardableResult
     func activateSelectedArea() -> Bool {
+        return activateArea(selectedAreaID, stopAfterAssignment: false)
+    }
+
+    /// Menu assignment deliberately preserves editor browsing and requires an explicit Start.
+    @discardableResult
+    func assignDesktopAreaFromMenu(_ id: UUID) -> Bool {
+        activateArea(id, stopAfterAssignment: true)
+    }
+
+    var canAssignDesktopArea: Bool { !isDesktopBuildMode && !persistenceBlocked && desktopScreen != nil }
+
+    private func activateArea(_ id: UUID, stopAfterAssignment: Bool) -> Bool {
         guard !isDesktopBuildMode else { areaStatus = "Exit Build Mode before changing the desktop assignment."; return false }
-        let area = selectedArea
-        guard !persistenceBlocked, let world = try? selectedDocument.restoredWorld(),
+        guard let area = library.areas.first(where: { $0.id == id }),
+              let document = library.world(id: area.worldID) else {
+            areaStatus = "That saved area is no longer available. Current desktop preserved."
+            return false
+        }
+        guard !persistenceBlocked, let world = try? document.restoredWorld(),
               (try? area.validate()) != nil, let screen = screenProviding(),
               let mapper = try? CoordinateMapper(canvasFrame: screen.frame, camera: area.camera),
               mapper.tile(atScreen: screen.frame.origin) != nil,
@@ -443,20 +460,44 @@ final class AppState: ObservableObject {
         let sameView = area.worldID == activeWorldID && area.camera == library.activeArea!.camera
         let running = isDesktopWorldEnabled
         // Save succeeds before cancelling the old runtime; shutdown has no pending selection to flush.
-        if !sameView { shutdown(preserveEditorTracking: true) }
+        if !sameView || stopAfterAssignment { shutdown(preserveEditorTracking: true) }
         library = next
-        if !sameView {
+        if !sameView || stopAfterAssignment {
             desktopCamera = area.camera
             desktopWorld = world
-            savedLevers = selectedDocument.activeLevers
+            savedLevers = document.activeLevers
             simulator = CircuitSimulator(world: world.circuit)
-            if running { toggleDesktopWorld() }
+            if running && !stopAfterAssignment { setDesktopRunning(true) }
             else { refreshFinderScale() }
         }
-        areaStatus = running && !isDesktopWorldEnabled
+        areaStatus = running && !isDesktopWorldEnabled && !stopAfterAssignment
             ? "Area saved, but rendering could not start. Desktop World is disabled. \(desktopStatus)"
-            : "Desktop assigned to \(selectedDocument.name) / \(area.name), saved origin (\(area.camera.worldOrigin.x), \(area.camera.worldOrigin.y))."
-        return !running || isDesktopWorldEnabled
+            : "Desktop assigned to \(document.name) / \(area.name), saved origin (\(area.camera.worldOrigin.x), \(area.camera.worldOrigin.y))." + (stopAfterAssignment ? " Stopped; choose Start Desktop to run." : "")
+        return stopAfterAssignment || !running || isDesktopWorldEnabled
+    }
+
+    /// Explicit, idempotent command shared by editor, application menu and status menu.
+    func setDesktopRunning(_ running: Bool) {
+        guard !isDesktopBuildMode, running != isDesktopWorldEnabled else { return }
+        toggleDesktopWorld()
+    }
+
+    func toggleAudioMute() {
+        var settings = audioSettings
+        settings.muted.toggle()
+        setAudioSettings(settings)
+    }
+
+    func requestAssignedAreaInEditor() {
+        exitDesktopBuildMode()
+        guard selectArea(library.activeAreaID) else { return }
+        requestedEditorArea = library.activeAreaID
+    }
+
+    func consumeEditorAreaRequest() -> Bool {
+        guard let id = requestedEditorArea else { return false }
+        requestedEditorArea = nil
+        return id == selectedAreaID
     }
 
     @discardableResult
