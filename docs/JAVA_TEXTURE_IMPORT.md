@@ -18,7 +18,7 @@ Discovery checks up to 512 version folders under:
 
 It lists readable, regular, bounded-size JARs; discovery does not import or validate their contents. Version names sort numerically descending, with names starting `1.` first. The importer validates the selected archive when you press Import. Alternative launcher locations are supported through the manual picker.
 
-For this development Mac, read-only discovery found 29 versions, and a temporary import of **1.21.8** successfully produced all 26 mappings with no warnings after the appearance follow-up. Select that version for the first visual check. This observation is local validation, not a promise that every installed/version/modded JAR is supported. No game files are included with this repository.
+For this development Mac, read-only discovery found 29 versions, and a temporary import of **1.21.8** successfully produced all 26 mappings with no warnings after the appearance follow-up. Select that version for the first visual check. This observation is local validation, not a promise that every installed/version/modded JAR is supported. The repository now includes one owner-requested dust-item icon exception; see [THIRD_PARTY_NOTICES.md](../THIRD_PARTY_NOTICES.md). World-texture imports remain local and are not committed or shipped.
 
 ## Import a JAR or Java pack manually
 

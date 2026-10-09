@@ -101,3 +101,16 @@ struct DesktopMenuView: View {
         NSApplication.shared.activate(ignoringOtherApps: true)
     }
 }
+
+
+/// Identity has no runtime-state dependency. Accessible status belongs inside the menu,
+/// so MenuBarExtra never derives its item width/title from changing status text.
+struct MenuBarIdentityLabel: View {
+    static let side: CGFloat = 18
+    var body: some View {
+        Image("MenuDust").renderingMode(.template).resizable().interpolation(.none)
+            .frame(width: Self.side, height: Self.side)
+            .accessibilityLabel("Redstone Desktop")
+            .help("Redstone Desktop")
+    }
+}

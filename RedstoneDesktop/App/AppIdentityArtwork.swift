@@ -1,10 +1,10 @@
 import AppKit
 
-/// Original MIT-licensed artwork. No imported game textures or fonts.
-/// One branched dust silhouette is used for the full-color app icon and template status item.
+/// Icon framing is original code; the dust image is a separately owned Minecraft texture.
+/// See THIRD_PARTY_NOTICES.md. The same item sprite supplies app and template icons.
 @MainActor
 enum AppIdentityArtwork {
-    static func image(pixels: Int, template: Bool) -> NSImage {
+    static func image(pixels: Int, template: Bool, dust: NSImage) -> NSImage {
         let image = NSImage(size: NSSize(width: pixels, height: pixels))
         // An explicit bitmap avoids inheriting the generator Mac's Retina backing scale.
         let bitmap = NSBitmapImageRep(bitmapDataPlanes: nil, pixelsWide: pixels, pixelsHigh: pixels,
@@ -23,22 +23,16 @@ enum AppIdentityArtwork {
             NSGradient(starting: NSColor(calibratedRed: 0.18, green: 0.21, blue: 0.25, alpha: 1),
                        ending: NSColor(calibratedRed: 0.055, green: 0.065, blue: 0.09, alpha: 1))!.draw(in: plate, angle: -90)
         }
-        let dust = NSBezierPath()
-        // Staggered, pixel-like crumbs and branches; original geometry on a 128-point canvas.
-        for rect in [NSRect(x: 48, y: 49, width: 31, height: 29),
-                     NSRect(x: 30, y: 61, width: 27, height: 12), NSRect(x: 20, y: 71, width: 18, height: 14),
-                     NSRect(x: 71, y: 64, width: 25, height: 12), NSRect(x: 91, y: 75, width: 16, height: 15),
-                     NSRect(x: 57, y: 74, width: 12, height: 22), NSRect(x: 63, y: 91, width: 17, height: 14),
-                     NSRect(x: 40, y: 36, width: 17, height: 20), NSRect(x: 28, y: 26, width: 19, height: 15),
-                     NSRect(x: 71, y: 37, width: 14, height: 21), NSRect(x: 80, y: 26, width: 17, height: 16),
-                     NSRect(x: 20, y: 48, width: 8, height: 8), NSRect(x: 94, y: 51, width: 9, height: 9)] {
-            dust.appendRect(rect)
-        }
-        (template ? NSColor.black : NSColor(calibratedRed: 0.94, green: 0.12, blue: 0.17, alpha: 1)).setFill()
-        dust.fill()
-        if !template {
-            NSColor(calibratedRed: 1, green: 0.38, blue: 0.39, alpha: 1).setFill()
-            NSBezierPath(rect: NSRect(x: 51, y: 66, width: 19, height: 8)).fill()
+        // Preserve the exact item's pixel art, with no filtering or invented branches.
+        NSGraphicsContext.current?.imageInterpolation = .none
+        let rect = template ? NSRect(x: 0, y: 0, width: 128, height: 128)
+                            : NSRect(x: 16, y: 16, width: 96, height: 96)
+        dust.draw(in: rect, from: .zero, operation: .sourceOver, fraction: 1)
+        if template {
+            // Keep the sprite's alpha silhouette; macOS supplies the light/dark foreground.
+            NSColor.black.setFill()
+            NSGraphicsContext.current?.compositingOperation = .sourceAtop
+            NSBezierPath(rect: rect).fill()
         }
         image.isTemplate = template
         return image

@@ -3,7 +3,6 @@ import SwiftUI
 @main
 struct RedstoneDesktopApp: App {
     @StateObject private var appState = AppStartup.makeState()
-    @Environment(\.openWindow) private var openWindow
 
     var body: some Scene {
         WindowGroup("Redstone Desktop", id: "editor") {
@@ -37,9 +36,7 @@ struct RedstoneDesktopApp: App {
         MenuBarExtra {
             DesktopMenuView(appState: appState)
         } label: {
-            Image("MenuDust").renderingMode(.template)
-                .accessibilityLabel("Redstone Desktop, \(appState.desktopMenu.status)")
-                .help("Redstone Desktop · \(appState.desktopMenu.status)")
+            MenuBarIdentityLabel()
         }
         .menuBarExtraStyle(.menu)
     }

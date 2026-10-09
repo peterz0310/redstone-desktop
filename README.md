@@ -4,7 +4,7 @@ An experimental native macOS app exploring a block world beneath real Finder des
 
 ## Current build and next steps
 
-**Implemented: Slices 0–31 plus Slices 30A/31A and the requested appearance/navigation follow-ups (27A/28A/28B/28C/29A/29B).** Debug build and all **406 automated tests** pass. Slice 28 adds explicitly entered Desktop Build Mode with a temporary transparent input window, hotbar and mouse-accessible exits; its real Finder/input checks remain pending. Slices 26/27 add optional validated texture/sound packs and local Minecraft Java texture importing. Original built-in assets remain complete defaults; imported game art stays in local Application Support, outside Git and app bundles. Read the [resource-pack format guide](docs/RESOURCE_PACKS.md) and [Java import guide](docs/JAVA_TEXTURE_IMPORT.md) before making/sharing packs.
+**Implemented: Slices 0–31 plus Slices 30A/31A and the requested appearance/navigation follow-ups (27A/28A/28B/28C/29A/29B).** Debug build and all **408 automated tests** pass. Slice 28 adds explicitly entered Desktop Build Mode with a temporary transparent input window, hotbar and mouse-accessible exits; its real Finder/input checks remain pending. Slices 26/27 add optional validated texture/sound packs and local Minecraft Java texture importing. Original world/circuit assets remain complete defaults; imported world art stays in local Application Support, outside Git and app bundles. The single shipped dust-item icon is an owner-requested exception, documented in [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md). Read the [resource-pack format guide](docs/RESOURCE_PACKS.md) and [Java import guide](docs/JAVA_TEXTURE_IMPORT.md) before making/sharing packs.
 
 Slices 20/21 and 23–25 are owner-accepted, along with corrected Slice 22 icon-size/marker behavior and the 19C bookmark/context-menu follow-up. Earlier detailed 19B/19C checks, Slice 22's real Output-after-resize check and the other specific Slices 26/27 checks and new 27A appearance checks remain pending. Local Java importing is owner-accepted.
 
@@ -20,7 +20,7 @@ Finder Diagnostics remains useful for permission/alignment problems, and Desktop
 
 ## App icon and menu-bar controls — Slice 31A
 
-The red dust app icon and monochrome menu-bar silhouette share original, MIT-licensed artwork. The glyph stays fixed; menu text identifies **Running**, **Stopped**, **Running · Simulation paused** or **Build Mode · Circuit stopped**. The menu shows the **assigned** world/area, independently of editor browsing.
+The red dust app icon and monochrome menu-bar silhouette now use the actual dust item sprite from the owner's local Minecraft Java **1.21.11** installation. This one graphic and its derived icons are committed at the owner's explicit request and excluded from the project's MIT license; [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md) records ownership, source and hash. The menu glyph has a fixed **18 × 18 point** frame and a static accessible name; changing status text lives inside the menu, so it cannot change the identity label's width. The glyph stays fixed; menu text identifies **Running**, **Stopped**, **Running · Simulation paused** or **Build Mode · Circuit stopped**. The menu shows the **assigned** world/area, independently of editor browsing.
 
 - **Start Desktop / Stop Desktop** uses the same lifecycle command as the editor. Launching restores the assignment stopped; opening the menu never starts simulation. Stop invalidates pending Finder reads, script approvals and script execution.
 - **Assign Desktop Area → world → area** checks the assigned bookmark. Duplicate names within a group receive ordinal labels. Assignment saves atomically before stopping the old runtime, preserves the editor's selection and camera, and requires an explicit **Start Desktop**. Even choosing the currently assigned bookmark stops it. Save/display/recovery failures preserve the previous assignment/runtime; see **Tools** for status details.
@@ -37,7 +37,7 @@ To test on your Mac:
 3. Start Desktop, then choose another saved area in the menu. It must change assignment and stop immediately, leave your editor view untouched, and run only after you choose Start. **Show Assigned Area in Editor** should then select/recenter it.
 4. Enter Build Mode from the menu. Start/assignment should be unavailable; Exit and Open Editor should restore normal behavior. Check Settings, all three Tools links, and Mute/Unmute against Settings. With a harmless script awaiting approval, Stop or assign an area, then finish the stale prompt: it must not execute. Check Quit/relaunch restores assignment but starts stopped.
 
-Artwork lives in `RedstoneDesktop/App/AppIdentityArtwork.swift`; generated PNGs and asset metadata live in `RedstoneDesktop/Resources/Assets.xcassets`. No Minecraft art is bundled. Regenerate from the repository root after changing the original drawing:
+The unchanged source sprite lives in `RedstoneDesktop/Resources/Assets.xcassets/RedstoneDust.imageset/redstone.png`. Icon framing/template rendering lives in `RedstoneDesktop/App/AppIdentityArtwork.swift`; generated PNGs and asset metadata live in `RedstoneDesktop/Resources/Assets.xcassets`. This icon is the only bundled game-art exception; optional world imports remain local. Regenerate from the repository root after changing the sprite/framing:
 
 ```sh
 swiftc -swift-version 6 RedstoneDesktop/App/AppIdentityArtwork.swift scripts/GenerateAppIcons.swift -o /tmp/redstone-icon-generator
@@ -45,7 +45,7 @@ swiftc -swift-version 6 RedstoneDesktop/App/AppIdentityArtwork.swift scripts/Gen
 xcodegen generate
 ```
 
-The generator explicitly controls pixel dimensions, independent of the generating Mac's display scale. AppIcon includes all ten native macOS size/scale entries; MenuDust is an 18-point template asset at 1×/2×. `project.yml` selects AppIcon; catalog/bundle metadata and native menu hosting are covered by isolated tests. Mac visual/VoiceOver acceptance remains pending.
+The generator explicitly controls pixel dimensions, independent of the generating Mac's display scale. AppIcon includes all ten native macOS size/scale entries; MenuDust is an 18-point template asset at 1×/2×. `project.yml` selects AppIcon; catalog/bundle metadata and native menu hosting are covered by isolated tests. Mac visual/VoiceOver acceptance remains pending. Quit/relaunch after rebuilding to see the new native icon. Compare menu-bar spacing before/after Start, while paused and during Build Mode; its occupied width should stay the same. The owner reports the menu looks good, but the corrected graphic and actual macOS item spacing still need confirmation.
 
 ## Adopted plan: worlds and saved areas
 

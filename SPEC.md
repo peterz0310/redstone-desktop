@@ -23,7 +23,7 @@ The intended workflow is:
 
 The project is an experiment first and a polished application second.
 
-Current implementation: **Slices 0–31 plus Slices 30A/31A and the owner-requested 27A/28A/28B/28C/29A/29B follow-ups are implemented**, with Debug build and all **406 automated tests passing**. Slice 28's explicit Desktop Build Mode and hover/border/editor-window follow-up are implemented. Slice 28A strengthens the border, polishes terrain/circuit art and consolidates viewport navigation; Slice 28B adds full-tile Output art/occupancy glow, removes ordinary Finder tile boxes and fixes a measured pan stall. Slice 28C moves real Finder polling/metadata work off the UI thread after measuring a remaining periodic stall; the owner accepts responsiveness. Slice 29 adds explicitly configured, separately approved script outputs with asynchronous bounded results; the owner confirms the basic execution/target-movement walkthrough. Slice 29A adds early Desktop-folder access, an optional automatic script/open policy in Settings and remembering checked by default; the owner reports this flow works. Slice 29B retains accepted input during short Finder reads instead of requiring another click. Ordinary desktop Finder crosshairs are removed; editor projections and diagnostic numeric mappings remain. Detailed MANUAL checks and prior unreported Finder/input checks remain pending. Slices 0–19A, 20–21 and 23–25 have owner-reported acceptance; the 19C bookmark/context-menu follow-up and corrected Slice 22 icon-size/marker checks are also accepted. Detailed earlier 19B/19C runtime/deletion checks and Slice 22's real Output-after-resize check remain pending. The owner accepted local Java texture importing on 2026-10-08; the other specific Slice 26/27 checks and detailed 27A appearance checks remain pending. Slice 26 adds optional validated folder/ZIP packs with original fallback; Slice 27 imports selected textures from local Java JARs/packs into Application Support without bundling game assets. The actual pack contract and Java mapping/cache lifecycle are documented in docs/RESOURCE_PACKS.md and docs/JAVA_TEXTURE_IMPORT.md. **Slice 30 implements placed directional NOT torches; Slice 30A implements directed powered-Output pickup. Slice 31 completes cached diagnostics, measured rates and opt-in bounded overlays/pause/freeze controls; Slice 31 is owner-approved without claiming detailed physical checks; Slice 31A implements original dust icons and explicit, grouped menu controls. Slice 32 is next and untouched.** Historical entries record earlier behavior; Sections 3.8, 7.1, 25, 26 and 29 define the world/library/editing contract.
+Current implementation: **Slices 0–31 plus Slices 30A/31A and the owner-requested 27A/28A/28B/28C/29A/29B follow-ups are implemented**, with Debug build and all **408 automated tests passing**. Slice 28's explicit Desktop Build Mode and hover/border/editor-window follow-up are implemented. Slice 28A strengthens the border, polishes terrain/circuit art and consolidates viewport navigation; Slice 28B adds full-tile Output art/occupancy glow, removes ordinary Finder tile boxes and fixes a measured pan stall. Slice 28C moves real Finder polling/metadata work off the UI thread after measuring a remaining periodic stall; the owner accepts responsiveness. Slice 29 adds explicitly configured, separately approved script outputs with asynchronous bounded results; the owner confirms the basic execution/target-movement walkthrough. Slice 29A adds early Desktop-folder access, an optional automatic script/open policy in Settings and remembering checked by default; the owner reports this flow works. Slice 29B retains accepted input during short Finder reads instead of requiring another click. Ordinary desktop Finder crosshairs are removed; editor projections and diagnostic numeric mappings remain. Detailed MANUAL checks and prior unreported Finder/input checks remain pending. Slices 0–19A, 20–21 and 23–25 have owner-reported acceptance; the 19C bookmark/context-menu follow-up and corrected Slice 22 icon-size/marker checks are also accepted. Detailed earlier 19B/19C runtime/deletion checks and Slice 22's real Output-after-resize check remain pending. The owner accepted local Java texture importing on 2026-10-08; the other specific Slice 26/27 checks and detailed 27A appearance checks remain pending. Slice 26 adds optional validated folder/ZIP packs with original fallback; Slice 27 imports selected textures from local Java JARs/packs into Application Support without bundling game assets. The actual pack contract and Java mapping/cache lifecycle are documented in docs/RESOURCE_PACKS.md and docs/JAVA_TEXTURE_IMPORT.md. **Slice 30 implements placed directional NOT torches; Slice 30A implements directed powered-Output pickup. Slice 31 completes cached diagnostics, measured rates and opt-in bounded overlays/pause/freeze controls; Slice 31 is owner-approved without claiming detailed physical checks; Slice 31A implements dust icons and explicit, grouped menu controls; its owner-requested follow-up ships one actual Java dust-item sprite under the narrow Section 35 exception and fixes the identity frame at 18 points. Slice 32 is next and untouched.** Historical entries record earlier behavior; Sections 3.8, 7.1, 25, 26 and 29 define the world/library/editing contract.
 
 The most important early question is not whether attractive terrain or redstone can be made. Those are comparatively straightforward. The first major feasibility gate is:
 
@@ -102,7 +102,7 @@ Expected distribution:
 - no paid product requirement
 - possible GitHub Sponsors/donation link later
 - project must work without Minecraft installed
-- project must work without copyrighted Minecraft assets
+- world/circuit rendering must work without copyrighted Minecraft assets; the single shipped identity-sprite exception is recorded in Section 35
 
 Do not make App Sandbox compatibility a design requirement.
 
@@ -1334,7 +1334,7 @@ The app must never require it.
 
 ## 23.1 Distribution rule
 
-Do not place Mojang/Microsoft textures or audio in GitHub source or release bundles.
+Do not place Mojang/Microsoft world textures or audio in GitHub source or release bundles. The single owner-requested dust-item identity sprite is a narrow exception documented in Section 35 and THIRD_PARTY_NOTICES.md.
 
 Imported files stay local to the user's machine.
 
@@ -1801,13 +1801,15 @@ Even for a personal project:
 
 # 35. Asset/legal notes
 
-The app must contain a complete original asset pack and must not require Minecraft.
+The app must contain a complete original world/circuit asset pack and must not require Minecraft.
+
+Owner-requested exception (2026-10-08): commit and ship the unchanged Java 1.21.11 `item/redstone.png` solely for the app/menu identity and its generated sizes/template silhouette. THIRD_PARTY_NOTICES.md records provenance and exclusions from MIT. This instruction overrides the earlier prohibition for this one graphic only; it does not establish a third-party license grant or assert fair use. All other world/audio imports remain local.
 
 For public GitHub distribution:
 
-- do not commit Mojang/Microsoft textures
+- do not commit other Mojang/Microsoft textures
 - do not commit Minecraft audio
-- do not package extracted assets in releases
+- do not package other extracted assets in releases
 - do not imply Mojang/Microsoft endorsement
 - consider branding that makes unofficial status obvious
 
@@ -2866,9 +2868,9 @@ Acceptance:
 
 ## Slice 31A — App identity and menu-bar controls
 
-Implemented owner-requested slice after Diagnostics (31), before Multi-display (32). Original code-drawn dust artwork supplies native app and template menu icons. Cached menu state and explicit commands share existing lifecycle/assignment paths. Debug build and all 406 tests pass; README documents controls, artwork regeneration and the Mac walkthrough. No game assets, private API, new permission or persistence schema change.
+Implemented owner-requested slice after Diagnostics (31), before Multi-display (32). Native app and template menu icons now use one actual locally extracted dust-item sprite, as explicitly requested by the owner (Section 35). Cached menu state and explicit commands share existing lifecycle/assignment paths. Debug build and all 408 tests pass; README documents controls, artwork regeneration and the Mac walkthrough. No other game assets, private API, new permission or persistence schema change.
 
-- [x] Create an original redstone-dust-inspired glyph for the app icon and menu-bar item; do not copy/bundle Minecraft artwork. Use the same recognizable motif: red in the app icon, a legible macOS template version in the menu bar. Supply the native app-icon asset sizes and configure the build/catalog correctly.
+- [x] Supply native app-icon sizes and a fixed 18-point template menu glyph sharing the dust-item motif. Owner explicitly replaces the original drawing with the actual local Java item graphic and authorizes committing/shipping this one sprite; provenance/license exception is documented in Section 35 and THIRD_PARTY_NOTICES.md.
 - [x] Replace the current grid/hammer menu-bar identity with the dust glyph. Convey Running, Stopped and Build Mode through accessible text/state, without relying only on color or replacing the identity glyph.
 - [x] Show the currently assigned desktop world and area, independently of the world/area being browsed in the editor; keep status and enabled actions current with editor changes, restoration and display failures.
 - [x] Add Start Desktop / Stop Desktop through the existing AppState lifecycle commands. Starting remains explicit; opening the menu, launching the app or selecting an area must never start simulation or execute an Output action.
@@ -2881,7 +2883,9 @@ Implemented owner-requested slice after Diagnostics (31), before Multi-display (
 
 ### Manual acceptance
 
-- [ ] MANUAL: original dust app icon appears correctly in Finder/Dock/app switcher and the matching menu-bar glyph stays legible in light/dark appearance; menu labels work with VoiceOver and do not depend on color.
+- [x] MANUAL: owner reports the menu looks good; reports that the former identity graphic is inaccurate and that Running widens the item. This confirms general menu appearance only; corrected artwork/spacing checks below remain pending.
+
+- [ ] MANUAL: actual dust-item app icon appears correctly in Finder/Dock/app switcher and the matching menu-bar glyph stays legible in light/dark appearance; menu labels work with VoiceOver and do not depend on color; occupied menu-bar width stays constant when stopped/running/paused/in Build Mode.
 - [ ] MANUAL: with the editor hidden/closed, menu Start/Stop and grouped world/area selection work, identify the assigned area correctly and leave it stopped after reassignment; browsing another editor world does not change the assigned checkmark.
 - [ ] MANUAL: Build Mode Exit/Open Editor remain reliable, conflicting controls are unavailable, Settings/tools/mute work, and Stop/Quit during pending work never triggers a late action. Existing editor controls stay synchronized.
 
@@ -4024,3 +4028,12 @@ The owner accepts Slice 31 while noting it was difficult to test. Record broad o
 Changes: original MIT code-drawn dust motif, exact-size generated AppIcon assets and template MenuDust, XcodeGen AppIcon configuration, native menu with cached assigned identity/grouped checkmarked bookmarks and explicit Start/Stop, editor/reveal/build/settings/mute/tools/quit. Shared activation validation and atomic save precede cancellation; menu assignment stops even when choosing the current bookmark, targets the assigned document independently of browsing, leaves editor selection/camera intact and requires explicit Start. Existing editor activation retains runtime-replacement semantics. Reveal requests are consumed by the existing/new editor once. Build Mode guards preserve the existing exit/window lifecycle. Menu observation performs no Finder read, permission request, save or action. No private API, backend, game artwork, resource-pack code or owner-data manipulation.
 
 Validation: Debug build and all **406 tests pass**. Eleven DesktopMenuTests cover independent assigned identity/status/group IDs/checkmarks/duplicate labels, preserved editor camera and world ownership, target-document restoration stopped, failed save/missing-area protection, Build Mode conflict/reveal cleanup, explicit idempotent lifecycle/missing display, synchronized mute, native menu hosting without side effects, late Finder input rejection after assignment/restart, PNG dimensions/template transparency and compiled bundle metadata. An added ScriptExecutionTest rejects stale approval after menu reassignment/restart without executing or remembering it. Existing regressions remain green. Initial image generation inherited Retina scaling; explicit bitmap rendering corrects dimensions and tests guard it. README documents startup/reassignment, artwork generation/licensing and precise Mac checks. All Slice 31A MANUAL groups remain pending; Slice 32 is untouched.
+
+
+## 2026-10-08 — Slice 31A follow-up: actual dust item and stable menu identity
+
+Owner feedback: the menu looks good; the original glyph does not look like dust, and the menu item widens while Running. The owner explicitly authorizes committing and shipping the actual graphic from their local Minecraft installation. This is a narrow exception to the prior asset-distribution rule, documented in Sections 23/35, LICENSE and THIRD_PARTY_NOTICES.md; do not generalize it to other game art or claim that the owner's instruction establishes permission from Mojang/Microsoft.
+
+Copy the unchanged 179-byte 16×16 `assets/minecraft/textures/item/redstone.png` from local Java 1.21.11 into RedstoneDust.imageset. Generate native icon sizes with nearest interpolation on the original dark framing and a monochrome template from the exact source alpha silhouette. Fix MenuBarExtra identity to a state-independent 18×18-point image with a static accessible name; keep Running/Stopped/Paused/Build Mode text inside the menu. No AppKit hierarchy probing, private API, width-adjustment timer or lifecycle/library/action change.
+
+Validation: Debug build and all **408 tests pass**. Two additional tests verify source provenance/hash and per-pixel template alpha/color, plus exact native identity-label fitting size across stopped/running/paused/build states. Prior icon catalog/bundle metadata and lifecycle/cancellation regressions pass. Visual inspection of generated app art matches the actual item. The owner app was inspected read-only; its circuits were not started to validate the reported layout issue. Actual status-item spacing and new icon/VoiceOver appearance remain pending Mac checks; general menu appearance is owner-confirmed. Slice 32 remains untouched.

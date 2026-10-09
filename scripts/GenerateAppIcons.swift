@@ -6,12 +6,15 @@ struct GenerateAppIcons {
     @MainActor static func main() throws {
         guard CommandLine.arguments.count == 2 else { fatalError("Usage: GenerateAppIcons <repository-root>") }
         let root = URL(fileURLWithPath: CommandLine.arguments[1]).appendingPathComponent("RedstoneDesktop/Resources/Assets.xcassets")
+        guard let dust = NSImage(contentsOf: root.appendingPathComponent("RedstoneDust.imageset/redstone.png")) else {
+            fatalError("Missing committed redstone item sprite; see THIRD_PARTY_NOTICES.md")
+        }
         let manager = FileManager.default
         func writeJSON(_ object: [String: Any], at url: URL) throws {
             try JSONSerialization.data(withJSONObject: object, options: [.prettyPrinted, .sortedKeys]).write(to: url)
         }
         func png(_ pixels: Int, template: Bool, to url: URL) throws {
-            let image = AppIdentityArtwork.image(pixels: pixels, template: template)
+            let image = AppIdentityArtwork.image(pixels: pixels, template: template, dust: dust)
             let bitmap = NSBitmapImageRep(data: image.tiffRepresentation!)!
             try bitmap.representation(using: .png, properties: [:])!.write(to: url)
         }

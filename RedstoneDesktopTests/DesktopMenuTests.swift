@@ -1,4 +1,5 @@
 import AppKit
+import CryptoKit
 import SwiftUI
 import XCTest
 @testable import RedstoneDesktop
@@ -212,6 +213,50 @@ final class DesktopMenuTests: XCTestCase {
         XCTAssertTrue(opener.urls.isEmpty)
         XCTAssertEqual(state.simulator.power(at: DemoCircuit.button), .off)
         XCTAssertEqual(state.simulator.power(at: DemoCircuit.output), .off)
+    }
+
+    @MainActor
+    func testMenuIdentityRemainsExactlyEighteenPointsAcrossRuntimeStates() throws {
+        let state = app(); defer { state.shutdown() }
+        let host = NSHostingView(rootView: MenuBarIdentityLabel())
+        func assertSize() {
+            host.layoutSubtreeIfNeeded()
+            XCTAssertEqual(host.fittingSize, NSSize(width: 18, height: 18))
+        }
+        XCTAssertEqual(state.desktopMenu.status, "Stopped"); assertSize()
+        state.setDesktopRunning(true)
+        XCTAssertEqual(state.desktopMenu.status, "Running"); assertSize()
+        state.setSimulationPaused(true)
+        XCTAssertEqual(state.desktopMenu.status, "Running · Simulation paused"); assertSize()
+        XCTAssertTrue(state.enterDesktopBuildMode())
+        XCTAssertEqual(state.desktopMenu.status, "Build Mode · Circuit stopped"); assertSize()
+        state.exitDesktopBuildMode(); assertSize()
+    }
+
+    @MainActor
+    func testCommittedDustSourceAndTemplatePreserveActualItemSilhouette() throws {
+        let root = URL(fileURLWithPath: #filePath).deletingLastPathComponent().deletingLastPathComponent()
+        let url = root.appendingPathComponent("RedstoneDesktop/Resources/Assets.xcassets/RedstoneDust.imageset/redstone.png")
+        let data = try Data(contentsOf: url)
+        let hash = SHA256.hash(data: data).map { String(format: "%02x", $0) }.joined()
+        XCTAssertEqual(hash, "6d0e6a1fd54142cd3de649e1100c428733512b322a0b0a530f62eae9f86881ec")
+        let source = try XCTUnwrap(NSBitmapImageRep(data: data))
+        XCTAssertEqual(source.pixelsWide, 16); XCTAssertEqual(source.pixelsHigh, 16)
+        let dust = try XCTUnwrap(NSImage(data: data))
+        let template = AppIdentityArtwork.image(pixels: 16, template: true, dust: dust)
+        XCTAssertTrue(template.isTemplate)
+        let rendered = try XCTUnwrap(NSBitmapImageRep(data: try XCTUnwrap(template.tiffRepresentation)))
+        for y in 0..<16 {
+            for x in 0..<16 {
+                let color = try XCTUnwrap(rendered.colorAt(x: x, y: y))
+                XCTAssertEqual(color.alphaComponent, source.colorAt(x: x, y: y)?.alphaComponent)
+                if color.alphaComponent > 0 {
+                    XCTAssertEqual(color.redComponent, 0)
+                    XCTAssertEqual(color.greenComponent, 0)
+                    XCTAssertEqual(color.blueComponent, 0)
+                }
+            }
+        }
     }
 
     @MainActor
