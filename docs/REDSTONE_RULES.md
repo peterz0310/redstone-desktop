@@ -36,7 +36,7 @@ Set Torch and Repeater direction to **East**. The torch's rear is the lever at i
 
 With the lever OFF, the torch is ON and powers the downstream circuit. Turning the lever ON extinguishes it after 100 ms; downstream power then clears after the repeater's delay. Turning the lever OFF restores power and creates another Output rising edge. Adjacent sources can feed a wire independently of the torch; avoid parallel connections that bypass the inverter when testing.
 
-In the editor, choose Torch and a Direction, then click a valid empty tile. Navigate/select an existing torch, change Direction and click **Apply torch direction**. Erase works as for other components. In Desktop Build Mode, Torch is hotbar shortcut **7** (existing 1–6 unchanged); hover a torch and press **R**, or select it and use **Rotate Selected**. T/Delay only applies to repeaters; torches always use one redstone tick. Build Mode stops simulation until you explicitly Start Desktop again.
+In the editor, choose Torch and a Direction, then click a valid empty tile. Move/select an existing torch, change Direction (it saves immediately). Erase works as for other components. In Desktop Build Mode, Torch is hotbar shortcut **7** (existing 1–6 unchanged); hover a torch and press **R**, or select it and use **Rotate Selected**. T/Delay only applies to repeaters; torches always use one redstone tick. Build Mode stops simulation until you explicitly Start Desktop again.
 
 ## Actions and startup
 
@@ -54,7 +54,7 @@ Each solve starts fresh from sources and matured delay history. An open chain cl
 2. Build the example above in a clear strip (use other coordinates if occupied). Leave the Output empty initially. Save/update and activate an area that includes the new circuit, then Start Desktop.
 3. With the lever OFF, check the torch is bright red and the downstream wire/repeater are powered. Toggle the lever ON: torch and downstream power should go off shortly. Toggle OFF: they should return.
 4. Put a harmless folder on the Output. Toggle ON, wait until the path is off, then toggle OFF. The folder should open once. Leaving power held must not reopen it.
-5. Stop Desktop. Select the torch in Navigate mode, change direction (it saves immediately). Verify the rear moves accordingly; restore East. Enter Desktop Build Mode, hover it and press R, and verify T does not change its fixed delay. Erase/re-place if desired; Exit, then explicitly Start.
+5. Stop Desktop. Select the torch in Move mode, change direction (it saves immediately). Verify the rear moves accordingly; restore East. Enter Desktop Build Mode, hover it and press R, and verify T does not change its fixed delay. Erase/re-place if desired; Exit, then explicitly Start.
 6. Quit/reopen: torch placement/direction should survive, Desktop should start stopped. Existing button/lever/repeater circuits should work as before.
 7. Optional: use built-in artwork, then Re-import a local Java version to get torch textures. Older generated packs fall back to the original torch artwork until re-imported. Toggle mute/effects and verify logic remains identical.
 

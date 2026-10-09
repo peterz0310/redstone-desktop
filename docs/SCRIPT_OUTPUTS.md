@@ -1,6 +1,6 @@
 # Script Output actions — Slices 29/29A/29B
 
-Outputs use the app’s **Default** behavior, initially **Open occupant**, including components decoded from older saves. To opt in, stop the active desktop, choose Navigate, select an Output and change **Output action → Execute script** in the Inspector. **None** disables its file action while preserving its simulation/visual activation. Tools place ordinary Default outputs; no imported pack can configure an action. Editing an inactive world never runs it.
+Outputs use the app’s **Default** behavior, initially **Open occupant**, including components decoded from older saves. To opt in, stop the active desktop, choose Move, select an Output and change **Output action → Execute script** in the Inspector. **None** disables its file action while preserving its simulation/visual activation. Tools place ordinary Default outputs; no imported pack can configure an action. Editing an inactive world never runs it.
 
 ## Supported targets and execution
 
@@ -46,7 +46,7 @@ Fixed paths, arbitrary interpreter selection, developer bypass, terminal UI, adv
 
 1. Quit the previous build with ⌘Q and reopen `build/Build/Products/Debug/RedstoneDesktop.app` (or Run in Xcode). Confirm ordinary desktop Finder items have no pink crosshairs. The tile hover and Output occupancy glow should still work.
 2. In Finder open this repository's `examples/Scripts` folder. **Copy** `hello.sh` onto your Desktop (⌘C, click Desktop, ⌘V). It prints a greeting and example stderr without modifying files. Do not use an unfamiliar script for this check.
-3. Stop Desktop. In the editor choose Navigate, select a visible existing Output and set **Output action → Execute script**. If using a repeater circuit, retain its direction/delay. Save Now, quit/reopen and confirm the selected Output retains this mode while Desktop starts stopped.
+3. Stop Desktop. In the editor choose Move, select a visible existing Output and set **Output action → Execute script**. If using a repeater circuit, retain its direction/delay. Save Now, quit/reopen and confirm the selected Output retains this mode while Desktop starts stopped.
 4. Move the copied `hello.sh` icon onto that Output on the physical desktop. Keep it away from the input. Start Desktop and click the circuit's button. The wire/repeater should activate before the confirmation appears. Check the preview points to your Desktop copy, then click **Cancel**: nothing runs.
 5. Wait for power to turn off, then press again. Uncheck **Remember my choice for this script**, then click **Run Script**. Open **Advanced → Desktop Details**, expand **Last script result**, and check greeting stdout, example stderr, exit 0 and duration. Held power must not run it again. A later fresh activation should ask again.
 6. Repeat with **Remember my choice for this script** enabled. Later activations of that unchanged file skip the prompt. Use **Settings → Forget Script Approvals** to restore prompting. Editing the file also requires fresh approval.

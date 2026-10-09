@@ -5,14 +5,14 @@ These are physical-Mac checks, separate from automated tests. Report which numbe
 
 ## Latest polish checks — awaiting owner confirmation
 
-Backup/reset testing remains deferred; the polish changes do not require Start Over.
+Backup/reset testing remains deferred; the polish changes do not require Start Over. Owner feedback on 2026-10-09 confirms the tool icons look good and menus work better. The latest follow-up changes still need these checks: pan zone labels offscreen and back, check their position above the top lines, and switch menu areas with Desktop both running and stopped.
 
 1. Quit the old app and launch the updated build. Open Settings → General → Open Setup. Read each page, try Next/Back and confirm all text fits. Try the help buttons in Build and Appearance.
 2. Start Desktop, open the dust menu and hover **Assign Desktop Area**, its world submenus and **Tools** for several seconds. Move the mouse between menu items; submenus should remain open without flicker while the circuit runs.
 3. Check **Build on Desktop** at the viewport’s upper-left, **Advanced** then **Start Desktop** at the header’s right. Start/Stop should show play/stop icons. Enter desktop build mode: check horizontal padding, all tool icons and shortcuts. Exit normally.
 4. Place dust, a repeater and an Output on coal/iron in stone. Trees and cactuses should still reject placement. Try the same in desktop build mode. Existing ore decorations should survive erasing and reopening.
 5. Select a repeater and change Direction and Delay. The component should update immediately without Apply. Quit/reopen and check the saved values. Inspecting a component alone should not change it; running worlds remain locked for editing.
-6. Create a new world, then save a new area after panning. The blue saved-area outline should be visible initially. Blue and orange rectangles should have small persistent labels; in an inactive world blue means **Saved area**, while the assigned world says **Desktop area**. Your actual desktop assignment should stay unchanged.
+6. Create a new world, then save a new area after panning. The blue saved-area outline should be visible initially. Blue and orange rectangles should have labels above their top edges, following the outlines offscreen as you pan; in an inactive world blue means **Saved area**, while the assigned world says **Desktop area**. Your actual desktop assignment should stay unchanged.
 7. In Appearance, the installed-game choice and **Use Minecraft Textures** should be prominent. Choose a version, import and try **Use Original Look**. Expand More Options for custom packs and cache controls. Check monochrome icons in both toolbars with light/dark appearance.
 8. Settings → Data: export a library outside app storage. Import it, review world/area counts, cancel once, then confirm **Add Worlds**. Original builds should stay intact; imported worlds should be separate copies with their own areas. Current desktop selection must not change. Invalid JSON should show an error without changing the library. Importing adds copies and cannot be undone with one click; delete the test copies in the world list when finished.
 
@@ -23,7 +23,7 @@ Backup/reset testing remains deferred; the polish changes do not require Start O
 1. Quit the previous Redstone Desktop app using its dust menu → Quit. Keep your usual Finder desktop intact.
 2. From the repo, run `xcodegen generate`, then open `RedstoneDesktop.xcodeproj`. Select **RedstoneDesktop → My Mac**, then **⌘R**. If Xcode asks about signing for local development, the unsigned Terminal build/run commands in README also work.
 3. Confirm existing worlds/areas/circuits remain. New Setup should appear once after this update, without resetting them. Desktop must start stopped. Move/close windows and open the menu: status spacing should stay constant in Stopped, Running, Paused and Build Mode. Check the real dust icon in Dock/Finder/⌘Tab; restart after building if macOS cached the old icon.
-4. In the dust menu, verify Start/Stop, assigned-world/area checkmarks, Open Editor, Show Assigned Area, Build Mode, Settings, Mute and Tools. Browsing an editor area should not change the desktop assignment. Choosing a menu area stops Desktop and requires explicit Start.
+4. In the dust menu, verify Start/Stop, assigned-world/area checkmarks, Open Editor, Show Assigned Area, Build Mode, Settings, Mute and Tools. Browsing an editor area should not change the desktop assignment. Choosing a menu area automatically resumes Desktop if it was running; a stopped desktop stays stopped.
 
 ## 2. Setup and Settings (Slice 33)
 

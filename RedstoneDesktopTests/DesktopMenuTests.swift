@@ -79,7 +79,7 @@ final class DesktopMenuTests: XCTestCase {
     }
 
     @MainActor
-    func testMenuAssignmentStopsAndPreservesEditorCameraAndWorldOwnership() throws {
+    func testMenuAssignmentResumesAndPreservesEditorCameraAndWorldOwnership() throws {
         let state = app(), editor = EditorSession(); defer { state.shutdown() }
         let target = state.library.activeAreaID
         XCTAssertTrue(state.createWorld(name: "Editor", generation: WorldGenerationSettings(seed: 42)))
@@ -88,16 +88,16 @@ final class DesktopMenuTests: XCTestCase {
         let camera = editor.camera, selected = state.selectedAreaID, world = state.editorWorld
         state.setDesktopRunning(true)
         XCTAssertTrue(state.assignDesktopAreaFromMenu(target))
-        XCTAssertFalse(state.isDesktopWorldEnabled)
+        XCTAssertTrue(state.isDesktopWorldEnabled)
         XCTAssertEqual(state.selectedAreaID, selected)
         XCTAssertEqual(editor.camera, camera)
         XCTAssertEqual(state.editorWorld, world)
         XCTAssertEqual(state.library.activeAreaID, target)
-        XCTAssertTrue(state.areaStatus.contains("Start Desktop"))
+        XCTAssertFalse(state.areaStatus.contains("Start Desktop"))
     }
 
     @MainActor
-    func testAssignmentUsesTargetDocumentInsteadOfBrowsedDocumentAndRestoresStopped() throws {
+    func testAssignmentResumesTargetDocumentInsteadOfBrowsedDocumentAndRelaunchesStopped() throws {
         let store = MenuStore(), state = app(store: store); defer { state.shutdown() }
         let original = state.selectedAreaID
         XCTAssertTrue(state.createWorld(name: "Target", generation: WorldGenerationSettings(seed: 42)))
@@ -107,10 +107,20 @@ final class DesktopMenuTests: XCTestCase {
         XCTAssertTrue(state.assignDesktopAreaFromMenu(target))
         XCTAssertEqual(state.desktopWorld, targetWorld)
         XCTAssertEqual(state.selectedAreaID, original)
-        XCTAssertFalse(state.isDesktopWorldEnabled)
+        XCTAssertTrue(state.isDesktopWorldEnabled)
         let restored = app(store: store); defer { restored.shutdown() }
         XCTAssertEqual(restored.library.activeAreaID, target)
         XCTAssertFalse(restored.isDesktopWorldEnabled)
+    }
+
+    @MainActor
+    func testMenuAssignmentWhileStoppedDoesNotStartDesktop() {
+        let state = app(); defer { state.shutdown() }
+        XCTAssertTrue(state.saveArea(name: "East", camera: CameraState(worldOrigin: WorldPoint(x: 20, y: 0), pointsPerTile: 64)))
+        let target = state.selectedAreaID
+        XCTAssertTrue(state.assignDesktopAreaFromMenu(target))
+        XCTAssertEqual(state.library.activeAreaID, target)
+        XCTAssertFalse(state.isDesktopWorldEnabled)
     }
 
     @MainActor

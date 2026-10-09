@@ -166,7 +166,7 @@ struct EditorView: View {
                         appState.eraseCircuitComponent(at: coordinate, audioMapper: editor.mapper(size: editor.viewport))
                     }
                         .disabled(appState.isEditorConfigurationLocked || editor.isPreviewing(appState) || editor.browsingWorld(appState).circuit.components[coordinate] == nil)
-                } else { Text("Navigate: click to inspect, drag to pan. Pinch or scroll to zoom.").foregroundStyle(.secondary) }
+                } else { Text("Move: click to inspect, drag to pan. Pinch or scroll to zoom.").foregroundStyle(.secondary) }
                 Divider()
                 if editor.tool == .repeater || editor.tool == .torch || editor.selectedTile.flatMap({ editor.browsingWorld(appState).circuit.components[$0]?.kind }).map({ [.repeater, .torch].contains($0) }) == true {
                     Picker("Direction", selection: Binding(get: { editor.direction }, set: { editor.setDirection($0, appState: appState) })) {

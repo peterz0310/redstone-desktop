@@ -5,7 +5,7 @@ import Foundation
 @MainActor
 final class EditorSession: ObservableObject {
     enum Tool: String, CaseIterable {
-        case select = "Navigate", dust = "Dust", button = "Button"
+        case select = "Move", dust = "Dust", button = "Button"
         case lever = "Lever", repeater = "Repeater", output = "Output", erase = "Erase", torch = "Torch"
 
         var componentKind: CircuitComponentKind? {
@@ -28,7 +28,7 @@ final class EditorSession: ObservableObject {
     @Published var delay = RepeaterDelay.one
     @Published var selectedTile: WorldCoordinate?
     @Published var hoveredTile: WorldCoordinate?
-    @Published private(set) var status = "Navigate: click to inspect, drag to pan. Pinch or scroll to zoom."
+    @Published private(set) var status = "Move: click to inspect, drag to pan. Pinch or scroll to zoom."
     @Published var seedText = "2026"
     @Published var newWorldName = "New World"
     @Published private(set) var previewGeneration: WorldGenerationSettings?

@@ -319,8 +319,7 @@ final class ScriptExecutionTests: XCTestCase {
         let pending = state.activationTask
         await fulfillment(of: [requested], timeout: 2)
         XCTAssertTrue(state.assignDesktopAreaFromMenu(state.library.activeAreaID))
-        XCTAssertFalse(state.isDesktopWorldEnabled)
-        state.setDesktopRunning(true) // A fresh runtime at the same coordinates.
+        XCTAssertTrue(state.isDesktopWorldEnabled) // Automatically resumed in a fresh runtime.
         reply?.resume(returning: .always)
         await pending?.value
         XCTAssertTrue(executor.targets.isEmpty)

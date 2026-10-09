@@ -13,7 +13,7 @@ Build little redstone circuits underneath your real Mac desktop files. A button 
 - **Settings → Data** exports every world, area and circuit. **Import Library** adds independent copies, preserving your existing builds and desktop assignment. Texture packs, desktop files and script approvals are excluded.
 - **Start Over** creates a recovery backup before resetting app data. Read [the recovery guide](docs/RECOVERY.md) first. Backup/reset acceptance is still awaiting the owner’s manual testing.
 
-The dust menu in the macOS menu bar provides Start/Stop, area selection, editor, build mode, Settings and sound controls. Setup can be reopened from Settings → General. Connect to Finder when asked; script access is a separate optional permission.
+The dust menu in the macOS menu bar provides Start/Stop, area selection, editor, build mode, Settings and sound controls. Choosing an area automatically resumes Desktop when it was running; a stopped desktop stays stopped. Setup can be reopened from Settings → General. Connect to Finder when asked; script access is a separate optional permission.
 
 ## Launching without Xcode
 

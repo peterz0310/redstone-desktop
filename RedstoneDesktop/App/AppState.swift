@@ -467,18 +467,18 @@ final class AppState: ObservableObject {
 
     @discardableResult
     func activateSelectedArea() -> Bool {
-        return activateArea(selectedAreaID, stopAfterAssignment: false)
+        return activateArea(selectedAreaID, resetRuntime: false)
     }
 
-    /// Menu assignment deliberately preserves editor browsing and requires an explicit Start.
+    /// Menu assignment preserves editor browsing and resumes a previously running desktop.
     @discardableResult
     func assignDesktopAreaFromMenu(_ id: UUID) -> Bool {
-        activateArea(id, stopAfterAssignment: true)
+        activateArea(id, resetRuntime: true)
     }
 
     var canAssignDesktopArea: Bool { !isMaintenanceLocked && !isDesktopBuildMode && !persistenceBlocked && desktopScreen != nil }
 
-    private func activateArea(_ id: UUID, stopAfterAssignment: Bool) -> Bool {
+    private func activateArea(_ id: UUID, resetRuntime: Bool) -> Bool {
         guard !isMaintenanceLocked else { return false }
         guard !isDesktopBuildMode else { areaStatus = "Exit Build Mode before changing the desktop assignment."; return false }
         guard let area = library.areas.first(where: { $0.id == id }),
@@ -504,20 +504,20 @@ final class AppState: ObservableObject {
         let sameView = area.worldID == activeWorldID && area.camera == library.activeArea!.camera
         let running = isDesktopWorldEnabled
         // Save succeeds before cancelling the old runtime; shutdown has no pending selection to flush.
-        if !sameView || stopAfterAssignment { shutdown(preserveEditorTracking: true) }
+        if !sameView || resetRuntime { shutdown(preserveEditorTracking: true) }
         library = next
-        if !sameView || stopAfterAssignment {
+        if !sameView || resetRuntime {
             desktopCamera = area.camera
             desktopWorld = world
             savedLevers = document.activeLevers
             simulator = CircuitSimulator(world: world.circuit)
-            if running && !stopAfterAssignment { setDesktopRunning(true) }
+            if running { setDesktopRunning(true) }
             else { refreshFinderScale() }
         }
-        areaStatus = running && !isDesktopWorldEnabled && !stopAfterAssignment
+        areaStatus = running && !isDesktopWorldEnabled
             ? "Area saved, but rendering could not start. Desktop World is disabled. \(desktopStatus)"
-            : "Desktop assigned to \(document.name) / \(area.name), saved origin (\(area.camera.worldOrigin.x), \(area.camera.worldOrigin.y))." + (stopAfterAssignment ? " Stopped; choose Start Desktop to run." : "")
-        return stopAfterAssignment || !running || isDesktopWorldEnabled
+            : "Desktop assigned to \(document.name) / \(area.name), saved origin (\(area.camera.worldOrigin.x), \(area.camera.worldOrigin.y))."
+        return !running || isDesktopWorldEnabled
     }
 
     /// Explicit, idempotent command shared by editor, application menu and status menu.

@@ -20,7 +20,7 @@ struct ToolIcon: View {
     let name: String
     var body: some View {
         Group {
-            if name == "Select" || name == "Navigate" { Image(systemName: "cursorarrow") }
+            if name == "Select" || name == "Move" { Image(systemName: "cursorarrow") }
             else if name == "Erase" { Image(systemName: "eraser.fill") }
             else { Image("Tool" + name).renderingMode(.template).resizable().interpolation(.none).scaledToFit() }
         }.frame(width: 18, height: 18).accessibilityHidden(true)

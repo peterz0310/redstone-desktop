@@ -168,6 +168,18 @@ final class SeedBrowserTests: XCTestCase {
         let current = try XCTUnwrap(layer.childNode(withName: "current-desktop") as? SKShapeNode)
         XCTAssertEqual(chosen.path?.boundingBoxOfPath, CGRect(x: 0, y: 0, width: 800, height: 500))
         XCTAssertEqual(current.path?.boundingBoxOfPath, CGRect(x: 400, y: -200, width: 800, height: 500))
+        for name in ["current-desktop", "chosen-desktop"] {
+            let outline = try XCTUnwrap(layer.childNode(withName: name) as? SKShapeNode)
+            let rect = try XCTUnwrap(outline.path?.boundingBoxOfPath)
+            let label = try XCTUnwrap(layer.childNode(withName: name + "-label") as? SKLabelNode)
+            XCTAssertEqual(label.position.x, rect.minX + 8)
+            XCTAssertGreaterThan(label.calculateAccumulatedFrame().minY, rect.maxY)
+        }
+        editor.pan(by: CGSize(width: -1600, height: 1400), size: size)
+        _ = renderer.update(appState: state, editor: editor, size: size)
+        let offscreen = try XCTUnwrap(scene.childNode(withName: "editor-desktop-viewport/current-desktop-label") as? SKLabelNode)
+        XCTAssertLessThan(offscreen.position.x, 0)
+        XCTAssertGreaterThan(offscreen.position.y, size.height)
         XCTAssertEqual(state.desktopCamera.worldOrigin, WorldPoint(x: 0, y: 0))
     }
 

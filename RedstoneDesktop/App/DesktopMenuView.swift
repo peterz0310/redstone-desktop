@@ -60,7 +60,7 @@ struct DesktopMenuView: View {
             appState.setDesktopRunning(!state.running)
         }.disabled(state.locked || state.building || (!state.running && !state.hasDisplay))
         Menu("Assign Desktop Area") {
-            Text("Choose a view, then press Start Desktop.")
+            Text("Choose an area. A running desktop switches automatically.")
             ForEach(menu.groups) { world in
                 Menu(world.title) {
                     ForEach(world.areas) { area in
