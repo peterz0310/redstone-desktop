@@ -49,10 +49,11 @@ struct DiagnosticSummaryView: View {
             if let screen = appState.diagnosticFinderReferenceScreen { Text("Finder reference \(screen.id): \(rect(screen.frame)) · scale \(screen.backingScale)") }
             else { Text("Finder reference display unavailable") }
             DisclosureGroup("Current macOS displays (logical points)") {
-                ForEach(NSScreen.screens.map { ScreenDescriptor(screen: $0) }, id: \.id) { screen in
+                ForEach(appState.desktopScreens, id: \.id) { screen in
                     Text("\(screen.id): \(rect(screen.frame)) · scale \(screen.backingScale)")
                 }
             }
+            Text("Continuous canvas: \(appState.desktopControllers.count) renderer windows · one simulator/input monitor")
             if let window = appState.desktopController?.window {
                 Text("Desktop window: \(rect(window.frame)) · level \(window.level.rawValue) · \(window.isVisible ? "visible" : "hidden") · ignores mouse \(window.ignoresMouseEvents ? "yes" : "no")")
             }

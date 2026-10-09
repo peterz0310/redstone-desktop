@@ -54,6 +54,7 @@ enum AppStartup {
         return AppState(desktopScriptAccess: testing ? nil : DesktopScriptAccess.applicationDefault(),
             libraryStore: testing ? nil : WorldLibraryStore.applicationDefault(), automaticallyRefreshFinder: !testing,
             preferences: testing ? nil : .standard,
-            soundPlayer: testing ? SilentSoundPlayer() : (try? AudioEngine()) ?? SilentSoundPlayer(), assets: assets)
+            soundPlayer: testing ? SilentSoundPlayer() : (try? AudioEngine()) ?? SilentSoundPlayer(), assets: assets,
+            screensProviding: testing ? nil : { NSScreen.screens.map { ScreenDescriptor(screen: $0) } })
     }
 }

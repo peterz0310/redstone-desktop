@@ -48,10 +48,15 @@ struct DesktopOccupancyResolver {
         finderReference: ScreenDescriptor,
         activeScreen: ScreenDescriptor
     ) -> DesktopOccupancySnapshot {
+        resolve(items: items, mapper: mapper, finderReference: finderReference, activeScreens: [activeScreen])
+    }
+
+    func resolve(items: [DesktopItem], mapper: CoordinateMapper, finderReference: ScreenDescriptor,
+                 activeScreens: [ScreenDescriptor]) -> DesktopOccupancySnapshot {
         var groups: [WorldCoordinate: [DesktopItem]] = [:]
         for item in items {
             let mapping = mapper.finderMapping(for: item, referenceScreen: finderReference)
-            guard activeScreen.contains(mapping.screenCenter) else { continue }
+            guard activeScreens.contains(where: { $0.contains(mapping.screenCenter) }) else { continue }
             guard let tile = mapping.tile else {
                 return .unavailable("A Finder item center could not be mapped to a valid world tile.")
             }

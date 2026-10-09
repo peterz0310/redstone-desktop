@@ -65,7 +65,7 @@ struct DesktopClickSnapshot: Equatable, Sendable {
 
 @MainActor
 final class DesktopClickMonitor {
-    private let screen: ScreenDescriptor
+    private let screens: [ScreenDescriptor]
     private let mapper: CoordinateMapper
     private let eventMonitoring: any GlobalMouseEventMonitoring
     private let onClick: (DesktopClickSnapshot) -> Void
@@ -80,10 +80,17 @@ final class DesktopClickMonitor {
         eventMonitoring: any GlobalMouseEventMonitoring = AppKitGlobalMouseEventMonitor(),
         onClick: @escaping (DesktopClickSnapshot) -> Void
     ) {
-        self.screen = screen
+        self.screens = [screen]
         self.mapper = mapper
         self.eventMonitoring = eventMonitoring
         self.onClick = onClick
+    }
+
+    init(screens: [ScreenDescriptor], mapper: CoordinateMapper,
+         eventMonitoring: any GlobalMouseEventMonitoring = AppKitGlobalMouseEventMonitor(),
+         onClick: @escaping (DesktopClickSnapshot) -> Void) {
+        self.screens = screens; self.mapper = mapper
+        self.eventMonitoring = eventMonitoring; self.onClick = onClick
     }
 
     @discardableResult
@@ -94,7 +101,7 @@ final class DesktopClickMonitor {
         token = eventMonitoring.addLeftMouseDownMonitor { [weak self] observation in
             let point = observation.screenPoint
             guard let self, self.registrationID == id,
-                  self.screen.contains(point), let tile = self.mapper.tile(atScreen: point) else { return }
+                  self.screens.contains(where: { $0.contains(point) }), let tile = self.mapper.tile(atScreen: point) else { return }
             self.onClick(DesktopClickSnapshot(screenPoint: point, tile: tile, identity: observation.identity))
         }
         if token == nil { registrationID = nil }

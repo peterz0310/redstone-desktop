@@ -27,4 +27,5 @@ final class DisplayChangeMonitor {
 struct DisplayGeometry: Equatable, Sendable {
     let target: ScreenDescriptor?
     let finderReference: ScreenDescriptor?
+    var screens: [ScreenDescriptor] = []
 }

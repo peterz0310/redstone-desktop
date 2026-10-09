@@ -10,7 +10,7 @@ struct PointerSnapshot: Equatable, Sendable {
 /// Samples position without receiving, consuming, or monitoring mouse events.
 @MainActor
 final class PointerMonitor {
-    private let screen: ScreenDescriptor
+    private let screens: [ScreenDescriptor]
     private let mapper: CoordinateMapper
     private let mouseLocation: () -> CGPoint
     private let onChange: (PointerSnapshot) -> Void
@@ -24,10 +24,17 @@ final class PointerMonitor {
         mouseLocation: @escaping () -> CGPoint = { NSEvent.mouseLocation },
         onChange: @escaping (PointerSnapshot) -> Void
     ) {
-        self.screen = screen
+        self.screens = [screen]
         self.mapper = mapper
         self.mouseLocation = mouseLocation
         self.onChange = onChange
+    }
+
+    init(screens: [ScreenDescriptor], mapper: CoordinateMapper,
+         mouseLocation: @escaping () -> CGPoint = { NSEvent.mouseLocation },
+         onChange: @escaping (PointerSnapshot) -> Void) {
+        self.screens = screens; self.mapper = mapper
+        self.mouseLocation = mouseLocation; self.onChange = onChange
     }
 
     func start() {
@@ -53,10 +60,11 @@ final class PointerMonitor {
     func sample() {
         guard isRunning else { return }
         let point = mouseLocation()
-        let inside = screen.contains(point)
+        let screen = screens.first { $0.contains(point) }
+        let inside = screen != nil
         let snapshot = PointerSnapshot(
             screenPoint: point,
-            screenID: inside ? screen.id : nil,
+            screenID: screen?.id,
             worldPoint: inside ? mapper.worldPoint(fromScreen: point) : nil,
             tile: inside ? mapper.tile(atScreen: point) : nil
         )
