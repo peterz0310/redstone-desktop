@@ -4,6 +4,14 @@ import Combine
 @MainActor
 final class AppState: ObservableObject {
     @Published private(set) var isDesktopWorldEnabled = false
+    @Published private(set) var isMaintenanceLocked = false
+    @Published private(set) var maintenanceStatus = "Export preserves every world, area and circuit; it includes no Finder data or imported assets."
+    @Published private(set) var lastBackup: URL?
+    @Published private(set) var setupCompleted = false
+    var needsSetup: Bool { preferences != nil && !setupCompleted }
+    private let maintenanceStore: LibraryMaintenanceStore?
+    private let preferencesDomain: String?
+    private let relauncher: any AppRelaunching
     @Published private(set) var desktopStatus = "Desktop checker is disabled."
     @Published private(set) var pointer: PointerSnapshot?
     @Published private(set) var lastClick: DesktopClickSnapshot?
@@ -25,7 +33,7 @@ final class AppState: ObservableObject {
     var activeWorldName: String { library.world(id: activeWorldID)!.name }
     var selectedArea: SavedArea { library.areas.first { $0.id == selectedAreaID }! }
     var selectedAreaCamera: CameraState { selectedArea.camera }
-    var isEditorConfigurationLocked: Bool { (isDesktopWorldEnabled || isDesktopBuildMode) && isEditingActiveWorld }
+    var isEditorConfigurationLocked: Bool { isMaintenanceLocked || ((isDesktopWorldEnabled || isDesktopBuildMode) && isEditingActiveWorld) }
     var editorConfigurationLockMessage: String {
         isDesktopBuildMode ? "Exit Build Mode before editing this world in the editor." : "Disable Desktop World before editing."
     }
@@ -145,10 +153,22 @@ final class AppState: ObservableObject {
        buildControllerFactory: @escaping (DesktopBuildSession, ScreenDescriptor, AppState) -> any DesktopBuildPresenting = {
            DesktopBuildController(session: $0, screen: $1, appState: $2)
        },
+       maintenanceStore: LibraryMaintenanceStore? = nil,
+       preferencesDomain: String? = nil,
+       relauncher: any AppRelaunching = NativeAppRelauncher(),
        screensProviding: (() -> [ScreenDescriptor])? = nil,
        finderReferenceProviding: @escaping () -> ScreenDescriptor? = {
            NSScreen.screens.first.map { ScreenDescriptor(screen: $0) }
        }) {
+        var recoveryError: String?
+        if let maintenanceStore, let preferences, let preferencesDomain {
+            do {
+                try maintenanceStore.recoverInterruptedReset { saved in
+                    preferences.setPersistentDomain(saved, forName: preferencesDomain)
+                    guard preferences.synchronize() else { throw MaintenanceError(message: "Recovered preferences could not be synchronized.") }
+                }
+            } catch { recoveryError = error.localizedDescription }
+        }
         // No-store construction is an isolated prototype fixture for integration tests.
         // Normal app startup injects a library store and creates procedural worlds when absent.
         let initial = libraryStore == nil
@@ -171,6 +191,10 @@ final class AppState: ObservableObject {
         executeScriptAction = ExecuteScriptAction(executor: scriptExecutor, authorizer: scriptAuthorizer, store: authorizations)
         self.displaySettleDelay = displaySettleDelay
         self.preferences = preferences
+        self.maintenanceStore = maintenanceStore
+        self.preferencesDomain = preferencesDomain
+        self.relauncher = relauncher
+        setupCompleted = preferences?.bool(forKey: "setupCompleted") ?? false
         self.desktopScriptAccess = desktopScriptAccess
         if let data = preferences?.data(forKey: "scriptOutputSettings"),
            let stored = try? JSONDecoder().decode(ScriptOutputSettings.self, from: data) { scriptOutputSettings = stored }
@@ -231,6 +255,7 @@ final class AppState: ObservableObject {
         simulator = CircuitSimulator(world: desktopWorld.circuit)
         if let libraryStore {
             do {
+                if let recoveryError { throw MaintenanceError(message: recoveryError) }
                 if let restored = try libraryStore.load() {
                     try restored.validate()
                     library = restored
@@ -321,6 +346,7 @@ final class AppState: ObservableObject {
 
     @discardableResult
     func createWorld(name: String, generation: WorldGenerationSettings) -> Bool {
+        guard !isMaintenanceLocked else { return false }
         let document = WorldDocument(name: name, generation: generation)
         guard let world = try? document.restoredWorld() else { libraryStatus = "Enter a nonempty name and a supported seed."; return false }
         var next = library
@@ -343,6 +369,7 @@ final class AppState: ObservableObject {
 
     @discardableResult
     func renameWorld(_ id: UUID, name: String) -> Bool {
+        guard !isMaintenanceLocked else { return false }
         let name = name.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !(isDesktopWorldEnabled && id == activeWorldID), !name.isEmpty,
               let index = library.worlds.firstIndex(where: { $0.id == id }) else {
@@ -365,6 +392,7 @@ final class AppState: ObservableObject {
 
     @discardableResult
     func saveArea(name: String, camera: CameraState) -> Bool {
+        guard !isMaintenanceLocked else { return false }
         let area = SavedArea(name: name.trimmingCharacters(in: .whitespacesAndNewlines), worldID: selectedWorldID, camera: camera)
         guard (try? area.validate()) != nil else { areaStatus = "Enter an area name and a valid camera."; return false }
         library.areas.append(area)
@@ -381,6 +409,7 @@ final class AppState: ObservableObject {
 
     @discardableResult
     func renameArea(_ id: UUID, name: String) -> Bool {
+        guard !isMaintenanceLocked else { return false }
         let name = name.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !name.isEmpty, let index = library.areas.firstIndex(where: { $0.id == id }) else {
             areaStatus = "Enter a nonempty name for an existing area."
@@ -396,6 +425,7 @@ final class AppState: ObservableObject {
 
     @discardableResult
     func updateSelectedArea(camera: CameraState) -> Bool {
+        guard !isMaintenanceLocked else { return false }
         guard !isSelectedAreaRunning else {
             areaStatus = isDesktopBuildMode ? "Exit Build Mode before updating its active area's saved view." : "Stop Desktop before updating its active area's saved view."
             return false
@@ -445,9 +475,10 @@ final class AppState: ObservableObject {
         activateArea(id, stopAfterAssignment: true)
     }
 
-    var canAssignDesktopArea: Bool { !isDesktopBuildMode && !persistenceBlocked && desktopScreen != nil }
+    var canAssignDesktopArea: Bool { !isMaintenanceLocked && !isDesktopBuildMode && !persistenceBlocked && desktopScreen != nil }
 
     private func activateArea(_ id: UUID, stopAfterAssignment: Bool) -> Bool {
+        guard !isMaintenanceLocked else { return false }
         guard !isDesktopBuildMode else { areaStatus = "Exit Build Mode before changing the desktop assignment."; return false }
         guard let area = library.areas.first(where: { $0.id == id }),
               let document = library.world(id: area.worldID) else {
@@ -490,7 +521,7 @@ final class AppState: ObservableObject {
 
     /// Explicit, idempotent command shared by editor, application menu and status menu.
     func setDesktopRunning(_ running: Bool) {
-        guard !isDesktopBuildMode, running != isDesktopWorldEnabled else { return }
+        guard !isMaintenanceLocked, !isDesktopBuildMode, running != isDesktopWorldEnabled else { return }
         toggleDesktopWorld()
     }
 
@@ -525,6 +556,7 @@ final class AppState: ObservableObject {
     }
 
     private func commitDeletion(_ next: WorldLibraryDocument) -> Bool {
+        guard !isMaintenanceLocked else { return false }
         guard !persistenceBlocked, autosaver?.commit(next, operation: "Deletion") ?? true else {
             libraryStatus = "Could not save deletion. Nothing deleted; check save/recovery status and retry."
             return false
@@ -638,6 +670,7 @@ final class AppState: ObservableObject {
     }
 
     func setRunScriptsOpenOtherItems(_ enabled: Bool) {
+        guard !isMaintenanceLocked else { return }
         guard enabled != scriptOutputSettings.runScriptsOpenOtherItems else { return }
         scriptOutputSettings.runScriptsOpenOtherItems = enabled
         if let data = try? JSONEncoder().encode(scriptOutputSettings) { preferences?.set(data, forKey: "scriptOutputSettings") }
@@ -650,6 +683,7 @@ final class AppState: ObservableObject {
     }
 
     func requestDesktopScriptAccess(retry: Bool = false) {
+        guard !isMaintenanceLocked else { return }
         guard let desktopScriptAccess, desktopScriptAccessTask == nil,
               retry || !desktopScriptAccessAttempted else { return }
         desktopScriptAccessAttempted = true
@@ -707,6 +741,7 @@ final class AppState: ObservableObject {
     /// are stopped before the temporary capture window can be created.
     @discardableResult
     func enterDesktopBuildMode() -> Bool {
+        guard !isMaintenanceLocked else { return false }
         if isDesktopBuildMode { return true }
         guard !persistenceBlocked, !isDisplaySettling, !isFinderLayoutSettling,
               let screen = screenProviding(),
@@ -867,6 +902,59 @@ final class AppState: ObservableObject {
         lastActionResult = paused ? "Simulation paused; pending actions cancelled. Inputs wait until Resume." : "Simulation resumed; held Output power is not replayed."
     }
 
+    func finishSetup() {
+        guard !isMaintenanceLocked else { return }
+        setupCompleted = true; preferences?.set(true, forKey: "setupCompleted")
+    }
+
+    @discardableResult
+    func startOver() async -> Bool {
+        guard !isMaintenanceLocked, !persistenceBlocked, let maintenanceStore,
+              let preferences, let preferencesDomain else {
+            maintenanceStatus = "Start Over is unavailable; check library recovery/save status."; return false
+        }
+        guard autosaver?.flush() ?? true else {
+            maintenanceStatus = "Save failed. Nothing reset; use Save Now and retry."; return false
+        }
+        isMaintenanceLocked = true
+        let pendingAction = activationTask
+        shutdown()
+        await finderDiagnostics.suspendReads()
+        await assets.suspendForMaintenance()
+        await pendingAction?.value
+        let savedPreferences = preferences.persistentDomain(forName: preferencesDomain) ?? [:]
+        do {
+            let backup = try maintenanceStore.reset(library: library, preferences: savedPreferences,
+                clearPreferences: {
+                    preferences.removePersistentDomain(forName: preferencesDomain)
+                    guard preferences.synchronize() else { throw MaintenanceError(message: "Preference reset could not be synchronized.") }
+                }, restorePreferences: {
+                    preferences.setPersistentDomain(savedPreferences, forName: preferencesDomain); _ = preferences.synchronize()
+                })
+            lastBackup = backup
+            autosaver?.discard(); autosaver = nil // termination cannot resurrect the old library
+            persistenceBlocked = true
+            maintenanceStatus = "Reset saved. Backup: \(backup.path). Relaunching stopped into Setup…"
+        } catch {
+            if FileManager.default.fileExists(atPath: maintenanceStore.backups.appendingPathComponent("reset-in-progress.json").path) {
+                persistenceBlocked = true
+                autosaver?.discard(); autosaver = nil
+                // Interrupted rollback is fail-closed; next startup recovers before any write.
+            } else {
+                isMaintenanceLocked = false; assets.resumeAfterMaintenance(); finderDiagnostics.resumeReads()
+            }
+            maintenanceStatus = error.localizedDescription
+            return false
+        }
+        do {
+            try await relauncher.relaunch()
+            return true // UI terminates this instance only after the new process launches.
+        } catch {
+            maintenanceStatus = "Reset succeeded; relaunch failed: \(error.localizedDescription) Quit and reopen the app. Backup: \(lastBackup!.path)"
+            return false // keep old instance locked and its writer permanently discarded
+        }
+    }
+
     func saveWorldNow() { autosaver?.flush() }
 
     /// Used by both disable and the app's termination notification.
@@ -919,6 +1007,7 @@ final class AppState: ObservableObject {
     }
 
     func toggleDesktopWorld() {
+        guard !isMaintenanceLocked else { return }
         exitDesktopBuildMode()
         displayChangeMonitor?.start()
         if isDesktopWorldEnabled {
@@ -1001,6 +1090,7 @@ final class AppState: ObservableObject {
 
     /// Geometry changes preserve saved cameras/configuration and the current simulator.
     func displayParametersDidChange() {
+        guard !isMaintenanceLocked else { return }
         let next = DisplayGeometry(target: screenProviding(), finderReference: finderReferenceProviding(), screens: screensProviding?() ?? [])
         guard next != lastObservedGeometry else { return }
         exitDesktopBuildMode()
@@ -1296,6 +1386,7 @@ final class AppState: ObservableObject {
     }
 
     func setFinderScaleEnabled(_ enabled: Bool) {
+        guard !isMaintenanceLocked else { return }
         if enabled {
             guard finderDiagnostics.hasRead, finderDiagnostics.error == nil else {
                 finderScaleStatus = "Read Finder successfully first. Check Finder Diagnostics if access failed."
@@ -1317,13 +1408,14 @@ final class AppState: ObservableObject {
     }
 
     func setAudioSettings(_ settings: AudioSettings) {
+        guard !isMaintenanceLocked else { return }
         audioSettings = AudioSettings(volume: settings.volume.isFinite ? min(1, max(0, settings.volume)) : 0,
             muted: settings.muted, effectsEnabled: settings.effectsEnabled)
         soundPlayer.configure(audioSettings)
         if let data = try? JSONEncoder().encode(audioSettings) { preferences?.set(data, forKey: "audioSettings") }
     }
 
-    func previewSound(_ id: SoundID, pan: Float = 0) { playSound(id, pan: pan) }
+    func previewSound(_ id: SoundID, pan: Float = 0) { guard !isMaintenanceLocked else { return }; playSound(id, pan: pan) }
 
     private func playSound(_ id: SoundID, pan: Float = 0) {
         guard audioSettings.gain > 0 else { return }

@@ -14,46 +14,14 @@ struct DesktopDetailsView: View {
                     .foregroundStyle(.secondary)
                 DiagnosticSummaryView(appState: appState)
                 Divider()
-                Text("Optional world scale experiment").font(.headline)
-                Toggle("Synchronize desktop scale to Finder icon size", isOn: Binding(
-                    get: { appState.finderScale.enabled }, set: { appState.setFinderScaleEnabled($0) }))
-                Text(appState.finderScaleStatus).font(.caption)
-                Text("Off by default. Makes world tiles grow/shrink when you change Finder's desktop icon size. Enable after Finder has connected. Turning it off restores the saved area's camera. Saved areas and editor zoom stay independent.")
-                    .font(.caption).foregroundStyle(.secondary)
-                Divider()
-                Text("Sound effects").font(.headline)
-                Toggle("Enable sound effects", isOn: Binding(get: { appState.audioSettings.effectsEnabled }, set: {
-                    var settings = appState.audioSettings; settings.effectsEnabled = $0; appState.setAudioSettings(settings)
-                }))
-                Toggle("Mute", isOn: Binding(get: { appState.audioSettings.muted }, set: {
-                    var settings = appState.audioSettings; settings.muted = $0; appState.setAudioSettings(settings)
-                }))
-                HStack {
-                    Text("Master volume")
-                    Slider(value: Binding(get: { appState.audioSettings.volume }, set: {
-                        var settings = appState.audioSettings; settings.volume = $0; appState.setAudioSettings(settings)
-                    }), in: 0...1)
-                    Text("\(Int(appState.audioSettings.volume * 100))%")
-                }
-                Menu("Preview original sounds") {
-                    ForEach(SoundID.allCases, id: \.self) { id in
-                        Button(id.rawValue) { appState.previewSound(id) }
-                    }
-                }
-                Text(appState.audioStatus).font(.caption).foregroundStyle(.secondary)
-                HStack {
-                    Text("Stereo check")
-                    Button("Left") { appState.previewSound(.buttonPress, pan: -1) }
-                    Button("Center") { appState.previewSound(.buttonPress) }
-                    Button("Right") { appState.previewSound(.buttonPress, pan: 1) }
-                }
+                SettingsLink { Text("Sound, Appearance, Scale and Setup Settings…") }
                 Divider()
                 Text("Desktop controls and diagnostics")
                     .font(.headline)
                 Text("Finder refreshes automatically while the desktop runs. This window shows input rejection details, camera mapping and the last action for troubleshooting.")
                     .fixedSize(horizontal: false, vertical: true)
                 Button(appState.isDesktopWorldEnabled ? "Disable Desktop World" : "Enable Desktop World") {
-                    appState.toggleDesktopWorld()
+                    appState.setDesktopRunning(!appState.isDesktopWorldEnabled)
                 }
                 .disabled(appState.isDesktopBuildMode)
                 Button("Finder Diagnostics…") {

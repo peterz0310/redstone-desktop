@@ -24,6 +24,8 @@ final class FinderDiagnosticsModel: ObservableObject {
     private(set) var layoutGeneration = UUID()
     private let layoutSettleDelay: Duration
     private var geometryGeneration = UUID()
+    private var readTask: Task<FinderDesktopSnapshot, Error>?
+    private var readsSuspended = false
     private let provider: any DesktopItemProviding
 
     init(provider: any DesktopItemProviding = FinderDesktopItemProvider(), layoutSettleDelay: Duration = .milliseconds(500)) {
@@ -39,9 +41,24 @@ final class FinderDiagnosticsModel: ObservableObject {
         // Preserve permission and its error; this does not send an Apple Event or prompt again.
     }
 
+    private func readSnapshot() async throws -> FinderDesktopSnapshot {
+        let task = Task { try await provider.currentDesktopSnapshot() }
+        readTask = task
+        defer { readTask = nil }
+        return try await withTaskCancellationHandler { try await task.value } onCancel: { task.cancel() }
+    }
+    func suspendReads() async {
+        readsSuspended = true
+        invalidateDisplayPositions()
+        let task = readTask
+        task?.cancel()
+        _ = try? await task?.value
+    }
+    func resumeReads() { readsSuspended = false }
+
     @discardableResult
     func readItems() async -> Bool {
-        guard !isReading else { return false }
+        guard !isReading, !readsSuspended else { return false }
         let generation = geometryGeneration
         let started = ProcessInfo.processInfo.systemUptime
         readAttempts += 1
@@ -54,7 +71,7 @@ final class FinderDiagnosticsModel: ObservableObject {
         await Task.yield()
         guard !Task.isCancelled, generation == geometryGeneration else { return false }
         do {
-            var snapshot = try await provider.currentDesktopSnapshot()
+            var snapshot = try await readSnapshot()
             guard !Task.isCancelled, generation == geometryGeneration else { return false }
             let changedSize = viewSettings != nil && snapshot.viewSettings != nil && viewSettings != snapshot.viewSettings
             if !snapshot.layoutIsStable || changedSize {
@@ -66,7 +83,7 @@ final class FinderDiagnosticsModel: ObservableObject {
                 repeat {
                     try await Task.sleep(for: layoutSettleDelay)
                     guard !Task.isCancelled, generation == geometryGeneration else { return false }
-                    snapshot = try await provider.currentDesktopSnapshot()
+                    snapshot = try await readSnapshot()
                     guard !Task.isCancelled, generation == geometryGeneration else { return false }
                     if snapshot.layoutIsStable && (snapshot.viewSettings == nil || snapshot.viewSettings == candidate) { break }
                     candidate = snapshot.viewSettings

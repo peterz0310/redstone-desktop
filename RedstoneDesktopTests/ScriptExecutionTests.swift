@@ -447,9 +447,9 @@ final class ScriptExecutionTests: XCTestCase {
         XCTAssertFalse(invalid.scriptOutputSettings.runScriptsOpenOtherItems)
         XCTAssertEqual(access.calls, 0)
         let host = NSHostingView(rootView: AppSettingsView(appState: invalid))
-        host.frame = CGRect(x: 0, y: 0, width: 560, height: 400)
+        host.frame = CGRect(x: 0, y: 0, width: 700, height: 600)
         host.layoutSubtreeIfNeeded()
-        XCTAssertEqual(host.fittingSize.width, 560)
+        XCTAssertEqual(host.fittingSize.width, 700)
     }
 
     @MainActor

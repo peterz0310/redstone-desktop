@@ -27,6 +27,8 @@ final class WorldAutosaver {
         }
     }
 
+    func discard() { task?.cancel(); task = nil; pending = nil }
+
     /// Commit a proposed selection without leaving a failed selection queued for autosave.
     func commit(_ document: WorldLibraryDocument, operation: String = "Activation") -> Bool {
         guard flush() else { return false }

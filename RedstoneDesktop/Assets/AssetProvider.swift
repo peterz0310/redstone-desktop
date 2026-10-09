@@ -66,6 +66,8 @@ final class AssetLibrary: ObservableObject, AssetProvider {
     private let builtIn = BuiltInAssetProvider()
     private var textures: [TextureAssetID: SKTexture] = [:]
     private var generation = UUID()
+    private var maintenanceSuspended = false
+    private var activeImports = 0
     private let preferences: UserDefaults?
     let importCacheRoot: URL?
     @Published private(set) var installedVersions: [InstalledJavaVersion] = []
@@ -84,8 +86,11 @@ final class AssetLibrary: ObservableObject, AssetProvider {
     }
 
     func discoverJava(in directory: URL? = nil) async {
+        guard !maintenanceSuspended else { return }
+        let request = generation
         guard importCacheRoot != nil || directory != nil else { return } // Isolated test hosts never scan the owner's installation.
         let result = await Task.detached { Result { try JavaInstallation.discover(in: directory ?? JavaInstallation.defaultVersionsDirectory) } }.value
+        guard !maintenanceSuspended, generation == request else { return }
         switch result {
         case .success(let versions):
             installedVersions = versions
@@ -97,6 +102,9 @@ final class AssetLibrary: ObservableObject, AssetProvider {
     }
 
     func importJava(_ url: URL) async {
+        guard !maintenanceSuspended else { return }
+        activeImports += 1
+        defer { activeImports -= 1 }
         guard let root = importCacheRoot else { status = "Local import cache is unavailable."; return }
         generation = UUID(); let request = generation
         isLoading = true; status = "Importing supported Java textures…"
@@ -128,6 +136,7 @@ final class AssetLibrary: ObservableObject, AssetProvider {
     }
 
     func removeImportedAssets() {
+        guard !maintenanceSuspended else { return }
         guard let folder = importFolder, let root = importCacheRoot else { return }
         generation = UUID(); isLoading = false
         do {
@@ -143,6 +152,7 @@ final class AssetLibrary: ObservableObject, AssetProvider {
         await load(URL(fileURLWithPath: path))
     }
     func load(_ url: URL) async {
+        guard !maintenanceSuspended else { return }
         generation = UUID(); let request = generation
         isLoading = true; status = "Loading \(url.lastPathComponent)…"
         let result = await Task.detached(priority: .userInitiated) { Result { try ResourcePackLoader.load(url) } }.value
@@ -160,10 +170,23 @@ final class AssetLibrary: ObservableObject, AssetProvider {
         isLoading = false
     }
     func useBuiltIn() {
+        guard !maintenanceSuspended else { return }
         generation = UUID(); isLoading = false; source = nil
         apply(nil); status = "Built-in original assets active."
         preferences?.removeObject(forKey: "assetPackPath")
     }
+    /// Invalidate publication, then wait for cache-writing workers to finish before a reset rename.
+    func suspendForMaintenance() async {
+        maintenanceSuspended = true; generation = UUID(); isLoading = false
+        while activeImports > 0 {
+            // Cancellation cannot turn this quiescence wait into a busy main-actor loop.
+            await withCheckedContinuation { continuation in
+                DispatchQueue.main.asyncAfter(deadline: .now() + 0.01) { continuation.resume() }
+            }
+        }
+    }
+    func resumeAfterMaintenance() { maintenanceSuspended = false }
+
     func apply(_ value: LoadedPack?) {
         pack = value; textures = [:]; name = value?.manifest.name ?? "Built-in original assets"
         terrainResolution = value?.textures.keys.contains(where: { $0.circuitID == nil }) == true ? 16 : 8

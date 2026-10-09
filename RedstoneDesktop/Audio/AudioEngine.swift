@@ -31,12 +31,16 @@ final class AudioEngine: SoundPlaying {
     private let voices = (0..<8).map { _ in AVAudioPlayerNode() }
     private var buffers: [SoundID: AVAudioPCMBuffer] = [:]
     private var builtInBuffers: [SoundID: AVAudioPCMBuffer] = [:]
+    private var idleStopTask: Task<Void, Never>?
+    private let idleDelay: Duration
+    var isRunning: Bool { engine.isRunning }
     private var nextVoice = 0
     private var settings = AudioSettings()
     private var configurationObserver: AnyCancellable?
     private(set) var status = "Sound effects ready."
 
-    init(offline: Bool = false) throws {
+    init(offline: Bool = false, idleDelay: Duration = .seconds(2)) throws {
+        self.idleDelay = idleDelay
         let mono = AVAudioFormat(standardFormatWithSampleRate: BuiltInSounds.sampleRate, channels: 1)!
         for voice in voices {
             engine.attach(voice)
@@ -94,6 +98,12 @@ final class AudioEngine: SoundPlaying {
             voice.scheduleBuffer(buffer, at: nil)
             voice.play()
             status = "Sound effects ready."
+            idleStopTask?.cancel()
+            idleStopTask = Task { @MainActor [weak self, idleDelay] in
+                do { try await Task.sleep(for: idleDelay) } catch { return }
+                guard !Task.isCancelled else { return }
+                self?.stop()
+            }
         } catch {
             stop()
             status = "Audio unavailable: \(error.localizedDescription). Next effect will retry."
@@ -101,6 +111,7 @@ final class AudioEngine: SoundPlaying {
     }
 
     func stop() {
+        idleStopTask?.cancel(); idleStopTask = nil
         for voice in voices { voice.stop() }
         engine.stop()
         nextVoice = 0

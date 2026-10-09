@@ -81,10 +81,12 @@ struct EditorView: View {
                 }.font(.caption).padding(8)
             }
         }
+        .disabled(appState.isMaintenanceLocked)
         .frame(minWidth: 1060, minHeight: 760)
         .background(EditorWindowRegistration(windows: appState.editorWindows))
         .onAppear {
             editor.syncSelectedWorld(appState)
+            if appState.needsSetup { openWindow(id: "setup") }
             if appState.consumeEditorAreaRequest() { editor.showDesktopArea(appState) }
         }
         .onChange(of: appState.requestedEditorArea) { _, request in

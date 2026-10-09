@@ -23,6 +23,8 @@ final class DesktopScene: SKScene {
     private var renderedPower: Set<WorldCoordinate> = []
     private var renderedPowerLevels: [WorldCoordinate: PowerLevel]?
     private var renderedLevers: Set<WorldCoordinate>?
+    var reduceMotionProviding: () -> Bool = { NSWorkspace.shared.accessibilityDisplayShouldReduceMotion }
+    private(set) var feedbackUsesReducedMotion = false
     private(set) var highlightedTile: WorldCoordinate?
 
     init(screen: ScreenDescriptor, mapper: CoordinateMapper, terrainRenderer: TerrainChunkRenderer = TerrainChunkRenderer()) {
@@ -115,7 +117,8 @@ final class DesktopScene: SKScene {
         clickFlash.path = CGPath(rect: mapper.sceneRect(forTile: coordinate, on: screen).insetBy(dx: 1, dy: 1), transform: nil)
         clickFlash.alpha = 1
         clickFlash.isHidden = false
-        clickFlash.run(.sequence([.fadeOut(withDuration: 0.3), .hide()]))
+        feedbackUsesReducedMotion = reduceMotionProviding()
+        clickFlash.run(.sequence([feedbackUsesReducedMotion ? .wait(forDuration: 0.2) : .fadeOut(withDuration: 0.3), .hide()]))
     }
 
     func updateFinderMarkers(_ mappings: [FinderItemMapping]) {
@@ -203,7 +206,8 @@ final class DesktopScene: SKScene {
         flash.lineWidth = 4
         flash.alpha = 1
         if flash.parent == nil { outputFlash.addChild(flash) }
-        flash.run(.sequence([.fadeOut(withDuration: 0.5), .removeFromParent()]))
+        feedbackUsesReducedMotion = reduceMotionProviding()
+        flash.run(.sequence([feedbackUsesReducedMotion ? .wait(forDuration: 0.2) : .fadeOut(withDuration: 0.5), .removeFromParent()]))
     }
 
     private func rebuildChecker() {

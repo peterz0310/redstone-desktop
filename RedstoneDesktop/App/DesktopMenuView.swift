@@ -55,7 +55,7 @@ struct DesktopMenuView: View {
         Text("Assigned: \(menu.assignedWorld) / \(menu.assignedArea)")
         Button(appState.isDesktopWorldEnabled ? "Stop Desktop" : "Start Desktop") {
             appState.setDesktopRunning(!appState.isDesktopWorldEnabled)
-        }.disabled(appState.isDesktopBuildMode || (!appState.isDesktopWorldEnabled && appState.desktopScreen == nil))
+        }.disabled(appState.isMaintenanceLocked || appState.isDesktopBuildMode || (!appState.isDesktopWorldEnabled && appState.desktopScreen == nil))
         Menu("Assign Desktop Area") {
             Text("Assigning an area stops Desktop. Start explicitly to run.")
             ForEach(menu.groups) { world in
@@ -80,7 +80,7 @@ struct DesktopMenuView: View {
         Button(appState.isDesktopBuildMode ? "Exit Desktop Build Mode" : "Build on Desktop") {
             if appState.isDesktopBuildMode { appState.exitDesktopBuildMode() }
             else { appState.enterDesktopBuildMode() }
-        }.disabled(!appState.isDesktopBuildMode && appState.desktopScreen == nil)
+        }.disabled(appState.isMaintenanceLocked || (!appState.isDesktopBuildMode && appState.desktopScreen == nil))
         Divider()
         SettingsLink { Text("Settings…") }
         Button(appState.audioSettings.muted ? "Unmute Sounds" : "Mute Sounds") { appState.toggleAudioMute() }
@@ -92,6 +92,7 @@ struct DesktopMenuView: View {
             Text(appState.desktopStatus)
             Text(appState.persistenceStatus)
         }
+        if appState.isMaintenanceLocked { Text(appState.maintenanceStatus) }
         Divider()
         Button("Quit Redstone Desktop") { appState.shutdown(); NSApplication.shared.terminate(nil) }
     }

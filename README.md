@@ -2,9 +2,13 @@
 
 An experimental native macOS app exploring a block world beneath real Finder desktop icons. This is an early prototype, not an MVP. `SPEC.md` is the source of truth; development follows its roadmap one slice at a time.
 
+![Synthetic native circuit power demo](docs/media/circuit-demo.gif)
+
+*Original-art SpriteKit fixture: button → dust → repeater → Output. This demonstrates power rendering; it does not show or open real Finder files.*
+
 ## Current build and next steps
 
-**Implemented: Slices 0–32 plus Slices 30A/31A and the requested appearance/navigation follow-ups (27A/28A/28B/28C/29A/29B).** Debug build and all **417 automated tests** pass. Slice 28 adds explicitly entered Desktop Build Mode with a temporary transparent input window, hotbar and mouse-accessible exits; its real Finder/input checks remain pending. Slices 26/27 add optional validated texture/sound packs and local Minecraft Java texture importing. Original world/circuit assets remain complete defaults; imported world art stays in local Application Support, outside Git and app bundles. The single shipped dust-item icon is an owner-requested exception, documented in [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md). Read the [resource-pack format guide](docs/RESOURCE_PACKS.md) and [Java import guide](docs/JAVA_TEXTURE_IMPORT.md) before making/sharing packs.
+**Implemented: Slices 0–33 plus Slices 30A/31A and the requested appearance/navigation follow-ups (27A/28A/28B/28C/29A/29B).** Debug build and all **433 automated tests** pass. Slice 28 adds explicitly entered Desktop Build Mode with a temporary transparent input window, hotbar and mouse-accessible exits; its real Finder/input checks remain pending. Slices 26/27 add optional validated texture/sound packs and local Minecraft Java texture importing. Original world/circuit assets remain complete defaults; imported world art stays in local Application Support, outside Git and app bundles. The single shipped dust-item icon is an owner-requested exception, documented in [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md). Read the [resource-pack format guide](docs/RESOURCE_PACKS.md) and [Java import guide](docs/JAVA_TEXTURE_IMPORT.md) before making/sharing packs.
 
 Slices 20/21 and 23–25 are owner-accepted, along with corrected Slice 22 icon-size/marker behavior and the 19C bookmark/context-menu follow-up. Earlier detailed 19B/19C checks, Slice 22's real Output-after-resize check and the other specific Slices 26/27 checks and new 27A appearance checks remain pending. Local Java importing is owner-accepted.
 
@@ -16,7 +20,7 @@ Configuration still saves to `~/Library/Application Support/RedstoneDesktop/libr
 
 Finder Diagnostics remains useful for permission/alignment problems, and Desktop Details for input rejection/action results. They moved to **Advanced**. The obsolete Developer Placement window and fixed-demo diagnostic rows are removed; automated tests and migration fixtures remain, and no existing saved circuits were cleared. Shelf previews remain bounded schematic terrain/circuit snapshots. Finder markers now appear separately in the main editor canvas when enabled.
 
-**Next: test the new icon/menu controls below; Slice 32 is now implemented; polish and release engineering follow.** Slice 31 diagnostics is owner-approved, with detailed physical checks explicitly unverified because they were difficult to test. The Slice 30A Output-chain walkthrough is owner-accepted. Basic Slice 29/29A/29B behavior and Finder responsiveness are owner-accepted; other detailed checks remain pending.
+**Next: Slice 34 release engineering; use the detailed Mac checklist for the new multi-display/setup/reset work.** Slice 31 diagnostics is owner-approved, with detailed physical checks explicitly unverified because they were difficult to test. The Slice 30A Output-chain walkthrough is owner-accepted. Basic Slice 29/29A/29B behavior and Finder responsiveness are owner-accepted; other detailed checks remain pending.
 
 ## App icon and menu-bar controls — Slice 31A
 
@@ -46,6 +50,14 @@ xcodegen generate
 ```
 
 The generator explicitly controls pixel dimensions, independent of the generating Mac's display scale. AppIcon includes all ten native macOS size/scale entries; MenuDust is an 18-point template asset at 1×/2×. `project.yml` selects AppIcon; catalog/bundle metadata and native menu hosting are covered by isolated tests. Mac visual/VoiceOver acceptance remains pending. Quit/relaunch after rebuilding to see the new native icon. Compare menu-bar spacing before/after Start, while paused and during Build Mode; its occupied width should stay the same. The owner reports the menu looks good, but the corrected graphic and actual macOS item spacing still need confirmation.
+
+## Setup, Settings and Start Over (Slice 33)
+
+On first launch after this update, Setup explains worlds/areas and optional Finder/script permissions. **Skip Setup** and **Finish Setup** remember completion without starting Desktop. Reopen it in **Settings → General → Open Setup…**. Permission checks are explicit; per-script approval stays separate. Your existing library is preserved.
+
+**Settings (⌘,)** now groups General/scale/setup, Sound, Appearance, Outputs and Data. **Data → Export Library…** saves all worlds/areas/circuits as JSON. **Start Over…** requires confirmation, preserves a validated timestamped backup outside the active save/cache directory, resets only app-owned data/settings/imports, and uses public macOS relaunch into one empty procedural world with Desktop stopped. macOS privacy choices, Desktop files and source packs/JARs stay intact. Interrupted resets recover before loading/saving; relaunch failure leaves the old instance locked with Quit/reopen guidance.
+
+Read [recovery and restore instructions](docs/RECOVERY.md) before resetting your real builds. Detailed [Mac acceptance checklist](docs/TESTING.md), [profiling evidence](docs/PROFILING.md) and [known limitations](docs/KNOWN_LIMITATIONS.md) distinguish automated results from pending physical validation. The tiny CPU/renderer profile is not a live battery-power guarantee.
 
 ## Adopted plan: worlds and saved areas
 
