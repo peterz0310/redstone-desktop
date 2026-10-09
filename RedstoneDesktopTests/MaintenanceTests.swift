@@ -19,6 +19,52 @@ final class MaintenanceTests: XCTestCase {
         try store.save(library)
         return (directory, maintenance, store, library)
     }
+    @MainActor
+    func testRevealCreatesMissingConfiguredFolderBeforeOpeningAndPreservesData() throws {
+        let (directory, maintenance, store, library) = try fixture()
+        defer { try? FileManager.default.removeItem(at: directory) }
+        let state = AppState(libraryStore: store, maintenanceStore: maintenance)
+        defer { state.shutdown() }
+        let before = try Data(contentsOf: store.fileURL)
+        XCTAssertFalse(FileManager.default.fileExists(atPath: maintenance.backups.path))
+        var opened: [URL] = []
+        state.revealBackupsFolder { folder in
+            opened.append(folder)
+            XCTAssertTrue(FileManager.default.fileExists(atPath: folder.path))
+            return true
+        }
+        XCTAssertEqual(opened, [maintenance.backups])
+        XCTAssertEqual(try FileManager.default.contentsOfDirectory(atPath: maintenance.backups.path), [])
+        XCTAssertEqual(state.backupRevealStatus, "")
+        XCTAssertEqual(state.library, library)
+        XCTAssertEqual(try Data(contentsOf: store.fileURL), before)
+        XCTAssertNil(state.lastBackup)
+        XCTAssertFalse(state.isMaintenanceLocked)
+        try Data("existing backup".utf8).write(to: maintenance.backups.appendingPathComponent("keep.txt"))
+        state.revealBackupsFolder { folder in opened.append(folder); return true }
+        XCTAssertEqual(opened.count, 2)
+        XCTAssertEqual(try String(contentsOf: maintenance.backups.appendingPathComponent("keep.txt"), encoding: .utf8), "existing backup")
+    }
+    @MainActor
+    func testRevealReportsFolderCreationAndFinderFailures() throws {
+        let (directory, maintenance, store, _) = try fixture()
+        defer { try? FileManager.default.removeItem(at: directory) }
+        let state = AppState(libraryStore: store, maintenanceStore: maintenance)
+        defer { state.shutdown() }
+        try Data("not a directory".utf8).write(to: maintenance.backups)
+        var called = false
+        state.revealBackupsFolder { _ in called = true; return true }
+        XCTAssertFalse(called)
+        XCTAssertTrue(state.backupRevealStatus.contains("Couldn’t open the backups folder"))
+        XCTAssertEqual(try String(contentsOf: maintenance.backups, encoding: .utf8), "not a directory")
+        try FileManager.default.removeItem(at: maintenance.backups)
+        state.revealBackupsFolder { _ in false }
+        XCTAssertTrue(state.backupRevealStatus.contains("Couldn’t open Finder"))
+        XCTAssertTrue(state.backupRevealStatus.contains(maintenance.backups.path))
+        state.revealBackupsFolder { _ in true }
+        XCTAssertEqual(state.backupRevealStatus, "")
+    }
+
     func testResetPreservesValidatedLibraryLegacyPreferencesAndUnknownFilesAndNoMigrationReplay() throws {
         let (directory, maintenance, store, library) = try fixture(); defer { try? FileManager.default.removeItem(at: directory) }
         let legacy = try JSONEncoder().encode(LegacyWorldDocument())

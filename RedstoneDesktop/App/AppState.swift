@@ -8,6 +8,7 @@ final class AppState: ObservableObject {
     @Published private(set) var isMaintenanceLocked = false
     @Published private(set) var maintenanceStatus = ""
     @Published private(set) var lastBackup: URL?
+    @Published private(set) var backupRevealStatus = ""
     @Published private(set) var setupCompleted = false
     var needsSetup: Bool { preferences != nil && !setupCompleted }
     private let maintenanceStore: LibraryMaintenanceStore?
@@ -906,6 +907,23 @@ final class AppState: ObservableObject {
     func finishSetup() {
         guard !isMaintenanceLocked else { return }
         setupCompleted = true; preferences?.set(true, forKey: "setupCompleted")
+    }
+
+    func revealBackupsFolder(openFolder: (URL) -> Bool = { NSWorkspace.shared.open($0) }) {
+        guard !isMaintenanceLocked, let maintenanceStore else {
+            backupRevealStatus = "Backups aren’t available in this session."
+            return
+        }
+        do {
+            let folder = try maintenanceStore.prepareBackupsFolder()
+            guard openFolder(folder) else {
+                backupRevealStatus = "Couldn’t open Finder. Your backups folder is at \(folder.path)."
+                return
+            }
+            backupRevealStatus = ""
+        } catch {
+            backupRevealStatus = "Couldn’t open the backups folder: \(error.localizedDescription)"
+        }
     }
 
     @discardableResult

@@ -60,8 +60,9 @@ struct AppSettingsView: View {
                     if let backup = appState.lastBackup {
                         Button("Reveal Reset Backup") { NSWorkspace.shared.activateFileViewerSelecting([backup]) }
                     } else {
-                        Button("Reveal Backups Folder") { NSWorkspace.shared.open(URL.applicationSupportDirectory.appendingPathComponent("RedstoneDesktopBackups")) }
+                        Button("Reveal Backups Folder") { appState.revealBackupsFolder() }
                     }
+                    if !appState.backupRevealStatus.isEmpty { Text(appState.backupRevealStatus).font(.caption).textSelection(.enabled) }
                 }
                 Section("Start over") {
                     Button("Start Over…", role: .destructive) { confirmingReset = true }

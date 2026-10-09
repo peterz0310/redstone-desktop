@@ -16,6 +16,12 @@ struct LibraryMaintenanceStore {
              backups: URL.applicationSupportDirectory.appendingPathComponent("RedstoneDesktopBackups"))
     }
 
+    /// Browsing backups works before the first reset; only an empty directory is created.
+    func prepareBackupsFolder() throws -> URL {
+        try FileManager.default.createDirectory(at: backups, withIntermediateDirectories: true)
+        return backups
+    }
+
     private var journal: URL { backups.appendingPathComponent("reset-in-progress.json") }
 
     /// A crash between directory renames rolls back at next launch before any migration/save.
