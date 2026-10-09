@@ -9,18 +9,18 @@ struct DesktopDetailsView: View {
             VStack(alignment: .leading, spacing: 16) {
                 Text("Desktop Diagnostics")
                     .font(.largeTitle)
-                Text("Experimental macOS desktop world")
+                Text("Check how your desktop is working")
                     .font(.title3)
                     .foregroundStyle(.secondary)
                 DiagnosticSummaryView(appState: appState)
                 Divider()
-                SettingsLink { Text("Sound, Appearance, Scale and Setup Settings…") }
+                SettingsLink { Text("Open Settings…") }
                 Divider()
                 Text("Desktop controls and diagnostics")
                     .font(.headline)
-                Text("Finder refreshes automatically while the desktop runs. This window shows input rejection details, camera mapping and the last action for troubleshooting.")
+                Text("Finder refreshes automatically while the desktop runs. If a button or Output isn’t responding, use the details below to see what happened.")
                     .fixedSize(horizontal: false, vertical: true)
-                Button(appState.isDesktopWorldEnabled ? "Disable Desktop World" : "Enable Desktop World") {
+                Button(appState.isDesktopWorldEnabled ? "Stop Desktop" : "Start Desktop") {
                     appState.setDesktopRunning(!appState.isDesktopWorldEnabled)
                 }
                 .disabled(appState.isDesktopBuildMode)

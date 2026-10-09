@@ -74,11 +74,11 @@ struct ScriptConfirmationView: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 14) {
             Text("Run this script?").font(.title2)
-            Text("It runs with your account's access to files and applications.")
+            Text("Only run scripts you trust. This script can access the files and applications your account can.")
             ScrollView { Text(target.url.path).font(.callout.monospaced()).textSelection(.enabled).frame(maxWidth: .infinity, alignment: .leading) }
                 .frame(height: 70)
-            Text("Interpreter: \(target.interpreter.path) · working folder: script's folder").font(.caption).foregroundStyle(.secondary)
-            Toggle("Always allow this exact file", isOn: $remember)
+            HStack { Text("Runs in its own folder.").font(.caption).foregroundStyle(.secondary); HelpButton(title: "How this script runs", text: "Interpreter: \(target.interpreter.path). The script runs from its containing folder, with your account’s access.") }
+            Toggle("Remember my choice for this script", isOn: $remember)
             Text("Changing its contents or replacing the file requires approval again.").font(.caption).foregroundStyle(.secondary)
             HStack {
                 Spacer()

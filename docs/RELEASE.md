@@ -39,7 +39,7 @@ macOS chooses prompt timing and stores privacy decisions across reinstall/reset.
 
 Project code/original world art/sound: [MIT](../LICENSE). No third-party runtime packages/backend are bundled; SwiftUI/AppKit/SpriteKit/AVFoundation are system frameworks. XcodeGen is a development tool, not part of the app.
 
-The single committed Minecraft dust item plus its derived app/menu icons is excluded from MIT; [THIRD_PARTY_NOTICES.md](../THIRD_PARTY_NOTICES.md) records original owner/source/hash and the user's explicit exception. That instruction is not a rightsholder license grant. The owner must resolve that asset's public-distribution status or replace it with original art before publishing. Other game assets remain optional local imports and are absent from releases. Pack data is validated images/PCM/metadata; no resource-pack code executes. Both MIT/license and notices are embedded inside the app and included in the review ZIP.
+The committed Minecraft dust item and derived app/menu/build-tool icons is excluded from MIT; [THIRD_PARTY_NOTICES.md](../THIRD_PARTY_NOTICES.md) records original owner/source/hash and the user's explicit exception. That instruction is not a rightsholder license grant. The owner must resolve those assets’ public-distribution status or replace it with original art before publishing. World textures remain optional local imports and are absent from releases. Pack data is validated images/PCM/metadata; no resource-pack code executes. Both MIT/license and notices are embedded inside the app and included in the review ZIP.
 
 ## Local Release archive
 

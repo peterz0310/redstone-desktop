@@ -12,6 +12,12 @@ The project's MIT license applies to its own code and original artwork. It does 
 - SHA-256: `6d0e6a1fd54142cd3de649e1100c428733512b322a0b0a530f62eae9f86881ec`.
 - Derived files: the PNGs in `AppIcon.appiconset` and `MenuDust.imageset`. The generator scales the item with nearest-neighbor interpolation, adds an original app-icon background, and renders the item's alpha silhouette in monochrome for the template menu icon.
 
-The repository owner explicitly requested committing and shipping this one graphic on 2026-10-08. That request is a narrow exception to the project's previous no-bundled-game-assets rule, not a license grant from the artwork's owner or a conclusion that distribution is permitted. No other game texture, audio, model or executable is included through this exception. Optional world-texture imports still stay local and outside Git/release bundles.
+The repository owner explicitly requested committing and shipping this one graphic on 2026-10-08. That request is a narrow exception to the project’s previous no-bundled-game-assets rule, not a license grant from the artwork’s owner or a conclusion that distribution is permitted. The owner additionally requested derived toolbar icons on 2026-10-09, as identified below. No game audio, model or executable is included. Optional world-texture imports still stay local and outside Git/release bundles.
 
 Regeneration instructions are in README.md. Replacing the source PNG and regenerating the catalogs replaces this icon artwork; update this notice and its provenance test at the same time.
+
+## Monochrome build-tool icons
+
+At the owner’s explicit request on 2026-10-09, six template icons are bundled in `ToolDust`, `ToolButton`, `ToolLever`, `ToolRepeater`, `ToolOutput` and `ToolTorch` image sets. They derive from the local Minecraft Java 1.21.11 textures listed in `scripts/tool-icon-sources.json`, with source entry paths and SHA-256 hashes. Mojang/Microsoft’s original source rights apply; these icons are excluded from MIT.
+
+`scripts/generate-tool-icons.swift` retains item/torch alpha silhouettes, rotates the lever handle and adds a mounting base, makes an inset stone-button shape, and derives a monochrome command-block outline/pattern. Only these small derived PNGs are shipped; the game JAR and general world textures are not bundled. The source/hash manifest and generation instructions allow contributors to replace the artwork without distributing the JAR. This icon exception is not permission to add other game artwork.

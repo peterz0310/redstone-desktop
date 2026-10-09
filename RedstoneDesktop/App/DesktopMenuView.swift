@@ -46,18 +46,21 @@ extension AppState {
 }
 
 struct DesktopMenuView: View {
-    @ObservedObject var appState: AppState
+    let appState: AppState
+    @ObservedObject private var presentation: MenuPresentation
+    init(appState: AppState) { self.appState = appState; presentation = appState.menuPresentation }
     @Environment(\.openWindow) private var openWindow
 
     var body: some View {
-        let menu = appState.desktopMenu
+        let state = presentation.snapshot
+        let menu = state.menu
         Text("Redstone Desktop · \(menu.status)")
-        Text("Assigned: \(menu.assignedWorld) / \(menu.assignedArea)")
-        Button(appState.isDesktopWorldEnabled ? "Stop Desktop" : "Start Desktop") {
-            appState.setDesktopRunning(!appState.isDesktopWorldEnabled)
-        }.disabled(appState.isMaintenanceLocked || appState.isDesktopBuildMode || (!appState.isDesktopWorldEnabled && appState.desktopScreen == nil))
+        Text("Desktop: \(menu.assignedWorld) / \(menu.assignedArea)")
+        Button(state.running ? "Stop Desktop" : "Start Desktop") {
+            appState.setDesktopRunning(!state.running)
+        }.disabled(state.locked || state.building || (!state.running && !state.hasDisplay))
         Menu("Assign Desktop Area") {
-            Text("Assigning an area stops Desktop. Start explicitly to run.")
+            Text("Choose a view, then press Start Desktop.")
             ForEach(menu.groups) { world in
                 Menu(world.title) {
                     ForEach(world.areas) { area in
@@ -71,28 +74,26 @@ struct DesktopMenuView: View {
                 }
             }
             if menu.groups.isEmpty { Text("No saved worlds") }
-        }.disabled(!appState.canAssignDesktopArea)
-        if appState.isDesktopBuildMode { Text("Exit Build Mode to start or assign Desktop.") }
-        else if appState.desktopScreen == nil { Text("Desktop display unavailable") }
+        }.disabled(!state.canAssign)
+        if state.building { Text("Exit Build Mode to start or assign Desktop.") }
+        else if !state.hasDisplay { Text("Desktop display unavailable") }
         Divider()
         Button("Open Editor") { appState.exitDesktopBuildMode(); show("editor") }
         Button("Show Assigned Area in Editor") { appState.requestAssignedAreaInEditor(); show("editor") }
-        Button(appState.isDesktopBuildMode ? "Exit Desktop Build Mode" : "Build on Desktop") {
-            if appState.isDesktopBuildMode { appState.exitDesktopBuildMode() }
+        Button(state.building ? "Exit Desktop Build Mode" : "Build on Desktop") {
+            if state.building { appState.exitDesktopBuildMode() }
             else { appState.enterDesktopBuildMode() }
-        }.disabled(appState.isMaintenanceLocked || (!appState.isDesktopBuildMode && appState.desktopScreen == nil))
+        }.disabled(state.locked || (!state.building && !state.hasDisplay))
         Divider()
         SettingsLink { Text("Settings…") }
-        Button(appState.audioSettings.muted ? "Unmute Sounds" : "Mute Sounds") { appState.toggleAudioMute() }
+        Button(state.muted ? "Unmute Sounds" : "Mute Sounds") { appState.toggleAudioMute() }
         Menu("Tools") {
             Button("Appearance & Packs…") { show("asset-settings") }
             Button("Finder Diagnostics…") { show("finder-diagnostics") }
             Button("Desktop Details…") { show("desktop-controls") }
-            Text(appState.areaStatus)
-            Text(appState.desktopStatus)
-            Text(appState.persistenceStatus)
+
         }
-        if appState.isMaintenanceLocked { Text(appState.maintenanceStatus) }
+        if state.locked { Text(state.maintenance) }
         Divider()
         Button("Quit Redstone Desktop") { appState.shutdown(); NSApplication.shared.terminate(nil) }
     }

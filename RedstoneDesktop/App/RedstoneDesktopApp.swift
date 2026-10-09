@@ -2,25 +2,14 @@ import SwiftUI
 
 @main
 struct RedstoneDesktopApp: App {
-    @StateObject private var appState = AppStartup.makeState()
+    @State private var appState = AppStartup.makeState()
 
     var body: some Scene {
         WindowGroup("Redstone Desktop", id: "editor") {
             EditorView(appState: appState)
         }
         .defaultSize(width: 1200, height: 820)
-        .commands {
-            CommandGroup(after: .windowArrangement) {
-                Button(appState.isDesktopBuildMode ? "Exit Desktop Build Mode" : "Enter Desktop Build Mode") {
-                    if appState.isDesktopBuildMode { appState.exitDesktopBuildMode() }
-                    else { appState.enterDesktopBuildMode() }
-                }
-                Button(appState.isDesktopWorldEnabled ? "Disable Desktop World" : "Enable Desktop World") {
-                    appState.setDesktopRunning(!appState.isDesktopWorldEnabled)
-                }
-                .disabled(appState.isDesktopBuildMode)
-            }
-        }
+        .commands { DesktopAppCommands(appState: appState) }
         Settings { AppSettingsView(appState: appState) }
         Window("Welcome to Redstone Desktop", id: "setup") { SetupWizardView(appState: appState) }
             .windowResizability(.contentSize)
@@ -72,5 +61,22 @@ enum AppStartup {
             maintenanceStore: testing ? nil : .applicationDefault(),
             preferencesDomain: testing ? nil : Bundle.main.bundleIdentifier,
             screensProviding: testing ? nil : { NSScreen.screens.map { ScreenDescriptor(screen: $0) } })
+    }
+}
+
+
+struct DesktopAppCommands: Commands {
+    let appState: AppState
+    @ObservedObject private var presentation: MenuPresentation
+    init(appState: AppState) { self.appState = appState; presentation = appState.menuPresentation }
+    var body: some Commands {
+        CommandGroup(after: .windowArrangement) {
+            Button(presentation.snapshot.building ? "Exit Build Mode" : "Build on Desktop") {
+                if presentation.snapshot.building { appState.exitDesktopBuildMode() } else { appState.enterDesktopBuildMode() }
+            }.disabled(presentation.snapshot.locked)
+            Button(presentation.snapshot.running ? "Stop Desktop" : "Start Desktop") {
+                appState.setDesktopRunning(!presentation.snapshot.running)
+            }.disabled(presentation.snapshot.building || presentation.snapshot.locked)
+        }
     }
 }

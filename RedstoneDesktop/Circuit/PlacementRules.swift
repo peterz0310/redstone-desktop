@@ -52,7 +52,7 @@ struct PlacementRules: PlacementRuleEvaluating {
             return .rejected(.unsupportedSurface)
         }
         // Decorations are preserved, including reeds, until a deliberate clearing tool exists.
-        if let decoration = tile.decoration { return .rejected(.blockedByDecoration(decoration)) }
+        if let decoration = tile.decoration, !(decoration == .rock && tile.terrain == .stone) { return .rejected(.blockedByDecoration(decoration)) }
         if let existing = world.circuit.components[coordinate], existing.kind != .empty {
             return .rejected(.circuitOccupied)
         }

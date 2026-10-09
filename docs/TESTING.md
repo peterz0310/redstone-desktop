@@ -1,6 +1,22 @@
-# Mac acceptance checklist: final roadmap slices
+# Mac acceptance checklist
 
-These are physical-Mac checks, separate from automated tests. Report which numbered groups you actually tried and what failed; untested SPEC MANUAL groups remain unchecked. Use harmless folders/text files first. Place new test circuits on clear ground **to the right** of your existing builds. Do not use scripts for display-calibration tests.
+These are physical-Mac checks, separate from automated tests. Report which numbered groups you actually tried and what failed; untested groups remain unverified. Use harmless folders/text files first. Place new test circuits on clear ground **to the right** of your existing builds. Do not use scripts for display-calibration tests.
+
+
+## Latest polish checks — awaiting owner confirmation
+
+Backup/reset testing remains deferred; the polish changes do not require Start Over.
+
+1. Quit the old app and launch the updated build. Open Settings → General → Open Setup. Read each page, try Next/Back and confirm all text fits. Try the help buttons in Build and Appearance.
+2. Start Desktop, open the dust menu and hover **Assign Desktop Area**, its world submenus and **Tools** for several seconds. Move the mouse between menu items; submenus should remain open without flicker while the circuit runs.
+3. Check **Build on Desktop** at the viewport’s upper-left, **Advanced** then **Start Desktop** at the header’s right. Start/Stop should show play/stop icons. Enter desktop build mode: check horizontal padding, all tool icons and shortcuts. Exit normally.
+4. Place dust, a repeater and an Output on coal/iron in stone. Trees and cactuses should still reject placement. Try the same in desktop build mode. Existing ore decorations should survive erasing and reopening.
+5. Select a repeater and change Direction and Delay. The component should update immediately without Apply. Quit/reopen and check the saved values. Inspecting a component alone should not change it; running worlds remain locked for editing.
+6. Create a new world, then save a new area after panning. The blue saved-area outline should be visible initially. Blue and orange rectangles should have small persistent labels; in an inactive world blue means **Saved area**, while the assigned world says **Desktop area**. Your actual desktop assignment should stay unchanged.
+7. In Appearance, the installed-game choice and **Use Minecraft Textures** should be prominent. Choose a version, import and try **Use Original Look**. Expand More Options for custom packs and cache controls. Check monochrome icons in both toolbars with light/dark appearance.
+8. Settings → Data: export a library outside app storage. Import it, review world/area counts, cancel once, then confirm **Add Worlds**. Original builds should stay intact; imported worlds should be separate copies with their own areas. Current desktop selection must not change. Invalid JSON should show an error without changing the library. Importing adds copies and cannot be undone with one click; delete the test copies in the world list when finished.
+
+## Earlier integration checks
 
 ## 1. Build and launch the updated app
 
@@ -14,7 +30,7 @@ These are physical-Mac checks, separate from automated tests. Report which numbe
 1. In Setup, move Next/Back through all four pages. Text/buttons should fit without truncation. Close or **Skip Setup**: no circuit should run and no script should execute. Quit/reopen: skipped/completed Setup should not appear automatically again.
 2. Open **Settings → General → Open Setup…**. It should reopen even after Skip/Finish. Completing it should preserve all builds and keep Desktop stopped.
 3. Only choose **Connect to Finder…** when you want tracking. If permission was already allowed, no new prompt is expected. If denied, the app should explain the refusal and keep the editor usable. To retry, enable Redstone Desktop under **System Settings → Privacy & Security → Automation → Finder**, then explicitly retry the read. Do not reset system privacy settings just to repeat this test.
-4. On the script page, **Check Desktop Access for Scripts…** checks the separate folder access. It must not execute a file or enable automatic routing. Inspect **Settings → Outputs**: automatic script/open routing should remain your existing preference, off on fresh setup.
+4. On the script page, **Allow Access to Desktop Scripts…** checks the separate folder access. It must not execute a file or enable automatic routing. Inspect **Settings → Outputs**: automatic script/open routing should remain your existing preference, off on fresh setup.
 5. Open each Settings tab: **General, Sound, Appearance, Outputs, Data**. Check fit, scrolling, native tab switching and Settings keyboard shortcut **⌘,**. General scale controls should match their existing behavior. Appearance/Packs and Tools windows should still work.
 6. In Sound, lower volume, try Left/Center/Right previews and an effect. Mute should stop current sound; further previews/inputs should be silent. Restore low volume and unmute. After a few quiet seconds, a new effect should still play. Quit/reopen and check volume/mute persist. No microphone permission should appear.
 7. Enable **System Settings → Accessibility → Display → Reduce Motion**. In Desktop Build Mode the border should stay steady; click/Output feedback should appear briefly without fading. Turn Reduce Motion off and check the ordinary border/feedback returns. This should not alter circuit timing or files.
@@ -63,4 +79,4 @@ These are physical-Mac checks, separate from automated tests. Report which numbe
 3. Extract to a separate folder and launch that app after quitting the development copy. It uses the same production library unless you use a separate account. Check icon/menu/setup/settings, explicit Start/Stop and Quit/reopen. Unsigned download Gatekeeper behavior, Developer ID/notarized distribution and older macOS/Intel require separate validation.
 4. Inspect the GitHub Actions run after pushing: build, tests and Release archive must actually pass there. A local successful build is not a hosted-CI result. Signing/notarization remains optional and requires your credentials/asset distribution decision.
 
-Please report acceptance by group/substep, e.g. “1, 2, 4 passed; 3 skipped (one screen); 5 not attempted.” That keeps SPEC accurate without claiming untested destructive, permission or multi-display behavior.
+Please report acceptance by group/substep, e.g. “1, 2, 4 passed; 3 skipped (one screen); 5 not attempted.” That keeps the testing record accurate without claiming untested destructive, permission or multi-display behavior.

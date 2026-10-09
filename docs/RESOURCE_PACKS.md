@@ -6,7 +6,7 @@ To use an already-installed Minecraft Java version or native Java pack, see [Loc
 
 ## Try the included original example
 
-Open **Advanced → Appearance & Packs → Choose Pack Folder or ZIP…**. Select `examples/GrassOnly` or `examples/GrassOnly.zip` from this repository. Grass becomes a purple/teal checker; every other terrain, decoration, circuit and sound uses its built-in default. Both forms should look the same. Choose **Use Built-In** to restore the original appearance.
+Open **Advanced → Appearance & Packs → More options & custom packs → Choose Custom Pack Folder or ZIP…**. Select `examples/GrassOnly` or `examples/GrassOnly.zip` from this repository. Grass becomes a purple/teal checker; every other terrain, decoration, circuit and sound uses its built-in default. Both forms should look the same. Choose **Use Original Look** to restore the original appearance.
 
 This example is original project art under the repository's MIT license, not Minecraft art. It is safe to commit/share. The ZIP includes one wrapper folder, as macOS Finder's Compress action normally does.
 
@@ -41,7 +41,7 @@ MyPack/
 
 Paths are relative to **the folder containing pack.json**, including inside ZIPs. Use `/`, not `\`. Absolute paths, drive prefixes/colons, control characters, empty path components, `.` and `..` are refused. Asset symlinks are ignored with diagnostics; assets may not escape the selected root. Do not use URLs, executable scripts or compiled plugins as asset paths.
 
-To ZIP on macOS, right-click the pack folder → **Compress**. A ZIP can have its manifest directly at root or below one wrapper folder. It must contain exactly one `pack.json`. Reload reads the originally selected folder/ZIP again; no automatic file watcher is installed.
+To ZIP on macOS, right-click the pack folder → **Compress**. A ZIP can have its manifest directly at root or below one wrapper folder. It must contain exactly one `pack.json`. Reload Current Pack reads the originally selected folder/ZIP again; no automatic file watcher is installed.
 
 ## Texture IDs (case-sensitive)
 
@@ -103,9 +103,9 @@ Resolution order is selected custom/imported pack → built-in original assets. 
 - Bad manifests, escaping manifest paths, or unsafe/unsupported ZIP structures refuse the whole pack and activate built-in assets.
 - Appearance & Packs shows active name, selected source, counts and expandable per-asset diagnostics.
 
-The loader constructs a complete immutable snapshot before applying it. A newer selection or Use Built-In supersedes a pending load; a late load cannot switch the pack back. Snapshot/revision changes invalidate circuit/terrain appearance caches while retaining world data, simulator, camera, input monitors and Finder targets. Assets are decoded off the main thread; renderers never read paths from disk. Audio receives validated sample arrays, not pack code.
+The loader constructs a complete immutable snapshot before applying it. A newer selection or Use Original Look supersedes a pending load; a late load cannot switch the pack back. Snapshot/revision changes invalidate circuit/terrain appearance caches while retaining world data, simulator, camera, input monitors and Finder targets. Assets are decoded off the main thread; renderers never read paths from disk. Audio receives validated sample arrays, not pack code.
 
-Selection is stored in app preferences, **not library.json**. Reopening revalidates the selected source, starts Desktop disabled, and falls back if the source was moved/damaged. A successful reload updates the snapshot. Use Built-In clears the remembered selection. Tests construct isolated preferences and temporary packs; the application test host does not restore the owner's selection.
+Selection is stored in app preferences, **not library.json**. Reopening revalidates the selected source, starts Desktop disabled, and falls back if the source was moved/damaged. A successful reload updates the snapshot. Use Original Look clears the remembered selection. Tests construct isolated preferences and temporary packs; the application test host does not restore the owner's selection.
 
 ## Archive contract and limits
 

@@ -285,7 +285,7 @@ final class WorldLibraryTests: XCTestCase {
     }
 
     @MainActor
-    func testSelectingWorldResetsEditorStateAndHidesOtherWorldViewportAndOccupancy() throws {
+    func testSelectingWorldResetsEditorStateAndShowsSavedAreaWithoutOtherWorldOccupancy() throws {
         let app = AppState(), editor = EditorSession(), renderer = EditorCanvasRenderer()
         let active = app.activeWorldID
         editor.selectedTile = DemoCircuit.button; editor.hoveredTile = DemoCircuit.output
@@ -294,7 +294,8 @@ final class WorldLibraryTests: XCTestCase {
         XCTAssertEqual(editor.camera.worldOrigin, SavedArea.homeCamera.worldOrigin)
         XCTAssertNil(editor.selectedTile); XCTAssertNil(editor.hoveredTile)
         let scene = try XCTUnwrap(renderer.update(appState: app, editor: editor, size: CGSize(width: 800, height: 600)))
-        XCTAssertNil(scene.childNode(withName: "editor-desktop-viewport/current-desktop"))
+        XCTAssertNotNil(scene.childNode(withName: "editor-desktop-viewport/current-desktop"))
+        XCTAssertEqual((scene.childNode(withName: "editor-desktop-viewport/current-desktop-label") as? SKLabelNode)?.text, "Saved area")
         editor.showDesktopArea(app)
         XCTAssertEqual(app.selectedWorldID, active)
         XCTAssertEqual(editor.camera.worldOrigin, app.desktopCamera.worldOrigin)

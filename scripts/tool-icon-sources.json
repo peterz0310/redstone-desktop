@@ -1,0 +1,36 @@
+{
+  "version": "Minecraft Java 1.21.11",
+  "recipe": "Alpha silhouettes for items and torch; rotated lever handle with a stone mounting base. Stone inset rounded button. Command-block outline and luminance-cut pattern. See generate-tool-icons.swift.",
+  "sources": [
+    {
+      "tool": "Dust",
+      "source": "assets/minecraft/textures/item/redstone.png",
+      "sha256": "6d0e6a1fd54142cd3de649e1100c428733512b322a0b0a530f62eae9f86881ec"
+    },
+    {
+      "tool": "Repeater",
+      "source": "assets/minecraft/textures/item/repeater.png",
+      "sha256": "d2a06fb81b5fff5e7164778519f79e3ce4d1001d9534a11120d4d4fe52312faf"
+    },
+    {
+      "tool": "Lever",
+      "source": "assets/minecraft/textures/block/lever.png",
+      "sha256": "0ee6f47a1b5b86c8277dc2248d0a717b92e656f8f8d6d9cb89e6c2cb0f39d5c7"
+    },
+    {
+      "tool": "Torch",
+      "source": "assets/minecraft/textures/block/redstone_torch.png",
+      "sha256": "160caba109123055dc002a7471439cb32502cbcb07074524be564782586872a6"
+    },
+    {
+      "tool": "Button",
+      "source": "assets/minecraft/textures/block/stone.png",
+      "sha256": "b5e10adc72442bfb257ce7ba0b9bbe36475a0c8cdfec89b80dc9517203ff3e9f"
+    },
+    {
+      "tool": "Output",
+      "source": "assets/minecraft/textures/block/command_block_front.png",
+      "sha256": "cb1594f5b62e212cea5dc0b703e527343c1a8607e4ada7a277342552c6bed299"
+    }
+  ]
+}

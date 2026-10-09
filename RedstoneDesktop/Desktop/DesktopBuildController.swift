@@ -48,7 +48,7 @@ final class DesktopBuildController: NSObject, DesktopBuildPresenting, NSWindowDe
         surface.changeDelay = { [weak appState] tile in appState?.editHoveredBuildRepeater(at: tile, rotate: false) }
         surface.exit = exit
 
-        palette = NSPanel(contentRect: CGRect(x: screen.frame.midX - 330, y: screen.frame.maxY - 220, width: 660, height: 160),
+        palette = NSPanel(contentRect: CGRect(x: screen.frame.midX - min(760, screen.frame.width - 32) / 2, y: screen.frame.maxY - 250, width: min(760, screen.frame.width - 32), height: 190),
                           styleMask: [.titled, .closable, .utilityWindow], backing: .buffered, defer: false)
         palette.title = "Desktop Build Mode — Circuit stopped"
         palette.level = .floating
@@ -233,25 +233,25 @@ private struct DesktopBuildHotbar: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 10) {
             HStack {
-                Label("BUILD MODE", systemImage: "hammer.fill").font(.headline).foregroundStyle(.orange)
+                Label("Build on Desktop", systemImage: "hammer.fill").font(.headline).foregroundStyle(.orange)
                 Text(session.title).lineLimit(1)
                 Spacer()
                 Button("Exit Build Mode") { appState.exitDesktopBuildMode() }.keyboardShortcut(.cancelAction)
             }
             Picker("Tool", selection: $session.tool) {
                 ForEach(Array(DesktopBuildSession.Tool.allCases.enumerated()), id: \.element) { index, tool in
-                    Text("\(index + 1) \(tool.rawValue)").tag(tool)
+                    Label { Text("\(index + 1) \(tool.rawValue)") } icon: { ToolIcon(name: tool.rawValue) }.tag(tool)
                 }
             }.pickerStyle(.segmented)
             HStack {
-                Button("Rotate Selected") { appState.rotateBuildRepeater() }
+                Button("Rotate") { appState.rotateBuildRepeater() }
                 Text(session.direction.rawValue.capitalized).frame(width: 45)
                 Picker("Delay", selection: Binding(get: { session.delay }, set: { appState.setBuildRepeaterDelay($0) })) {
                     ForEach(RepeaterDelay.allCases, id: \.self) { Text("\($0.rawValue) tick\($0 == .one ? "" : "s")").tag($0) }
                 }.frame(width: 160)
-                Text("Hover: R rotates torch/repeater · T repeater delay").font(.caption).foregroundStyle(.secondary)
+                Text("Hover a component: R rotates · T changes delay").font(.caption).foregroundStyle(.secondary)
             }
             Text(session.status).font(.caption).lineLimit(2)
-        }.padding(12).frame(width: 636)
+        }.padding(.horizontal, 24).padding(.vertical, 16).frame(maxWidth: .infinity)
     }
 }

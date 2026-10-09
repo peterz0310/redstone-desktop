@@ -77,6 +77,7 @@ final class EditorSession: ObservableObject {
         guard !isPreviewing(appState) else { status = "Create or cancel the preview before saving an area."; return false }
         let result = appState.saveArea(name: areaName, camera: proposedDesktopCamera(appState))
         status = appState.areaStatus
+        if result { fitSavedArea(appState) }
         return result
     }
 
@@ -111,6 +112,7 @@ final class EditorSession: ObservableObject {
             return false
         }
         syncSelectedWorld(appState)
+        fitSavedArea(appState)
         status = appState.libraryStatus
         return true
     }
@@ -128,6 +130,28 @@ final class EditorSession: ObservableObject {
         camera = CameraState(worldOrigin: appState.selectedAreaCamera.worldOrigin, pointsPerTile: camera.pointsPerTile)
         hoveredTile = nil
         selectedTile = nil
+    }
+
+    func fitSavedArea(_ appState: AppState) {
+        let area = appState.selectedAreaCamera
+        let display = appState.desktopScreen?.frame.size ?? CGSize(width: 1440, height: 900)
+        let worldWidth = display.width / area.pointsPerTile, worldHeight = display.height / area.pointsPerTile
+        let scale = min(128, max(16, min((viewport.width - 32) / worldWidth, (viewport.height - 32) / worldHeight)))
+        camera = CameraState(worldOrigin: area.worldOrigin, pointsPerTile: scale)
+        hoveredTile = nil
+    }
+    /// Picker setters commit immediately; loading a selection never edits it.
+    func setDirection(_ value: Direction, appState: AppState) {
+        direction = value; saveSelectedConfiguration(appState)
+    }
+    func setDelay(_ value: RepeaterDelay, appState: AppState) {
+        delay = value; saveSelectedConfiguration(appState)
+    }
+    private func saveSelectedConfiguration(_ appState: AppState) {
+        guard !isPreviewing(appState), !appState.isEditorConfigurationLocked,
+              let selectedTile, let component = browsingWorld(appState).circuit.components[selectedTile] else { return }
+        if component.kind == .repeater { appState.configureRepeater(at: selectedTile, direction: direction, delay: delay) }
+        if component.kind == .torch { appState.configureTorch(at: selectedTile, direction: direction) }
     }
 
     func showDesktopArea(_ appState: AppState) {

@@ -6,9 +6,9 @@ For packs made specifically for Redstone Desktop, use [RESOURCE_PACKS.md](RESOUR
 
 ## Import an installed version
 
-1. Open **Advanced → Appearance & Packs**.
-2. Under **Local Minecraft Java textures**, choose an **Installed version**, then **Import Selected**. Opening the window attempts discovery; **Find Installed Versions** refreshes the list.
-3. Wait for the imported texture count. Inspect **Pack diagnostics** for missing mappings. Browse the generated world in the editor, or Start Desktop to see the assigned area.
+1. Open **Settings → Appearance** (or Advanced → Appearance & Packs).
+2. Under **Use your Minecraft textures**, choose a **Minecraft version**, then **Use Minecraft Textures**. The first discovered version is selected automatically. **More options & custom packs → Look for Installed Versions Again** refreshes the list.
+3. Wait for the imported texture count. Inspect **Import details** for missing mappings. Browse the generated world in the editor, or Start Desktop to see the assigned area.
 
 Discovery checks up to 512 version folders under:
 
@@ -18,11 +18,11 @@ Discovery checks up to 512 version folders under:
 
 It lists readable, regular, bounded-size JARs; discovery does not import or validate their contents. Version names sort numerically descending, with names starting `1.` first. The importer validates the selected archive when you press Import. Alternative launcher locations are supported through the manual picker.
 
-For this development Mac, read-only discovery found 29 versions, and a temporary import of **1.21.8** successfully produced all 26 mappings with no warnings after the appearance follow-up. Select that version for the first visual check. This observation is local validation, not a promise that every installed/version/modded JAR is supported. The repository now includes one owner-requested dust-item icon exception; see [THIRD_PARTY_NOTICES.md](../THIRD_PARTY_NOTICES.md). World-texture imports remain local and are not committed or shipped.
+For this development Mac, read-only discovery found 29 versions, and a temporary import of **1.21.8** successfully produced all 26 mappings with no warnings after the appearance follow-up. Select that version for the first visual check. This observation is local validation, not a promise that every installed/version/modded JAR is supported. The repository now includes owner-requested dust and derived toolbar-icon exceptions; see [THIRD_PARTY_NOTICES.md](../THIRD_PARTY_NOTICES.md). World-texture imports remain local and are not committed or shipped.
 
 ## Import a JAR or Java pack manually
 
-Choose **Choose Java JAR / Pack…**, then select a version `.jar`, Java pack `.zip`, or unpacked Java pack folder. If navigating to Library is awkward, press **⌘⇧G** in the picker and paste `~/Library/Application Support/minecraft/versions/`.
+Choose **Choose a Texture Pack…**, then select a version `.jar`, Java pack `.zip`, or unpacked Java pack folder. If navigating to Library is awkward, press **⌘⇧G** in the picker and paste `~/Library/Application Support/minecraft/versions/`.
 
 A folder must contain `assets/minecraft/textures/` directly. An archive may have those paths directly or under one unambiguous wrapper root. If matching textures occur under multiple roots, the archive is refused. `pack.mcmeta` is not interpreted: only the mappings below are used. Bedrock packs, launcher asset indexes, custom model definitions and mod-specific namespaces are not supported.
 
@@ -77,7 +77,7 @@ Dust converts source-dot luminance into an **opaque** textured material, dark re
 
 The existing generator's flower and legacy rock positions are preserved. Stable seed/coordinate selection chooses poppy/dandelion/blue orchid/allium/oxeye daisy, with cactus on sand (including sandy shores) and coal/iron elsewhere. Generated dirt is presented with the imported grass-block top; explicit saved dirt overrides remain dirt. Ore art replaces loose rock art; deposits remain placement-blocking decorations, not mineable resources. This is appearance variety, not a generation/save migration.
 
-**After upgrading from an older 11-, 23- or 26-mapping importer, press Re-import once to generate the current 28-mapping pack.** Reload reads the old generated cache and cannot create missing variant/component mappings or update its orange dust image. No automatic rewrite of user caches occurs.
+**After upgrading from an older 11-, 23- or 26-mapping importer, press **More options & custom packs → Refresh Imported Minecraft Textures** once to generate the current 28-mapping pack.** Reload reads the old generated cache and cannot create missing variant/component mappings or update its orange dust image. No automatic rewrite of user caches occurs.
 
 ## Cache, reload and removal
 
@@ -97,11 +97,11 @@ There is **one active pack**, shared by editor and desktop. Importing Java textu
 
 | Control | Behavior |
 | --- | --- |
-| **Reload** | Re-read the currently selected pack. For a Java import, this reads the generated cache, not the original JAR. |
-| **Re-import** | Read the last original JAR/folder/ZIP again and build a fresh cache. Requires that source to remain readable at its recorded path. |
-| **Reveal Import Cache** | Show the last managed import directory in Finder. |
-| **Use Built-In** | Restore original appearance and clear the active selection preference. Keep the last import cache available for re-import/reveal/removal. |
-| **Remove Imported Assets** | Delete the last managed cache and clear its record. If active, restore built-in assets; if another custom pack is active, preserve it. Never delete or modify the original source. |
+| **Reload Current Pack** | Re-read the currently selected pack. For a Java import, this reads the generated cache, not the original JAR. |
+| **Refresh Imported Minecraft Textures** | Read the last original JAR/folder/ZIP again and build a fresh cache. Requires that source to remain readable at its recorded path. |
+| **Show Imported Textures in Finder** | Show the last managed import directory in Finder. |
+| **Use Original Look** | Restore original appearance and clear the active selection preference. Keep the last import cache available for re-import/reveal/removal. |
+| **Remove Imported Textures** | Delete the last managed cache and clear its record. If active, restore built-in assets; if another custom pack is active, preserve it. Never delete or modify the original source. |
 
 Selection and the last import UUID are app preferences, separate from `library.json`. Reopening validates the cached pack and starts Desktop stopped. Moving the original JAR does not break a valid cache, but prevents Re-import until you choose the source again. A missing/damaged active cache falls back to built-in assets. Import warnings are recorded in `import.json`; startup/Reload diagnostics describe the generated pack, while a fresh import displays mapping warnings.
 
@@ -115,7 +115,7 @@ Decode/validation happens before cache publication. Writes use fixed semantic fi
 
 ## Sharing the project and contributing
 
-The source, original built-in assets and original examples use the repository license. That license does **not** grant rights to imported Minecraft or third-party pack art. Keep local imported assets out of commits, release bundles, shared screenshots/assets where rights do not permit use, and exported world data. Import paths are always Application Support, never the repository or app bundle. Do not add downloads or bundle game assets to make a demo work.
+The source, original built-in assets and original examples use the repository license. That license does **not** grant rights to imported Minecraft or third-party pack art. Keep local imported assets out of commits, release bundles, shared screenshots/assets where rights do not permit use, and exported world data. Import paths are always Application Support, never the repository or app bundle. Do not add downloads or bundle world assets to make a demo work. The separately owner-authorized app/menu/tool icon artwork is documented in THIRD_PARTY_NOTICES.md; it does not extend to world textures.
 
 Code: `Assets/MinecraftImport/JavaTextureImporter.swift` owns discovery/mapping/cache records; `JavaCircuitArt.swift` owns fixed raster recipes and `World/DecorationAppearance.swift` chooses stable variants; `Assets/AssetProvider.swift` owns asynchronous selection and lifecycle; `Assets/AssetSettingsView.swift` exposes controls. Renderer consumers only see semantic validated assets; simulation never sees pack paths or depends on SpriteKit.
 

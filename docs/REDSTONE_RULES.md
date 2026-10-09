@@ -1,6 +1,10 @@
 # Redstone Desktop circuit rules
 
-This is a deterministic 2D simulation, separate from SpriteKit, Finder and file/script actions. These rules describe the implemented app through Slice 30A. They do not promise Minecraft update-order parity. Packs supply validated pixels/audio, never logic. There is no vertical wiring, attachment/support-block simulation, burnout, quasi-connectivity or full powered-block conduction.
+This is a deterministic 2D simulation, separate from SpriteKit, Finder and file/script actions. These rules describe the implemented circuit model. They do not promise Minecraft update-order parity. Packs supply validated pixels/audio, never logic. There is no vertical wiring, attachment/support-block simulation, burnout, quasi-connectivity or full powered-block conduction.
+
+## Placement
+
+Components can be built on dry grass, dirt, stone and sand. Coal/iron deposits on stone are part of the buildable surface; placing or erasing a component preserves the ore decoration. Water, trees, cactuses and other decorations remain blocked. Placement never overwrites an existing component silently.
 
 ## Ports and timing
 
@@ -50,7 +54,7 @@ Each solve starts fresh from sources and matured delay history. An open chain cl
 2. Build the example above in a clear strip (use other coordinates if occupied). Leave the Output empty initially. Save/update and activate an area that includes the new circuit, then Start Desktop.
 3. With the lever OFF, check the torch is bright red and the downstream wire/repeater are powered. Toggle the lever ON: torch and downstream power should go off shortly. Toggle OFF: they should return.
 4. Put a harmless folder on the Output. Toggle ON, wait until the path is off, then toggle OFF. The folder should open once. Leaving power held must not reopen it.
-5. Stop Desktop. Select the torch in Navigate mode, change direction and Apply. Verify the rear moves accordingly; restore East. Enter Desktop Build Mode, hover it and press R, and verify T does not change its fixed delay. Erase/re-place if desired; Exit, then explicitly Start.
+5. Stop Desktop. Select the torch in Navigate mode, change direction (it saves immediately). Verify the rear moves accordingly; restore East. Enter Desktop Build Mode, hover it and press R, and verify T does not change its fixed delay. Erase/re-place if desired; Exit, then explicitly Start.
 6. Quit/reopen: torch placement/direction should survive, Desktop should start stopped. Existing button/lever/repeater circuits should work as before.
 7. Optional: use built-in artwork, then Re-import a local Java version to get torch textures. Older generated packs fall back to the original torch artwork until re-imported. Toggle mute/effects and verify logic remains identical.
 

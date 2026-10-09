@@ -31,7 +31,7 @@ struct LibrarySheetView: View {
         case .renameWorld: "Rename World"
         case .renameArea: "Rename Area"
         case .deleteWorld: "Delete World?"
-        case .deleteArea: "Delete Bookmark?"
+        case .deleteArea: "Delete Area?"
         }
     }
     private var deletes: Bool { kind == .deleteWorld || kind == .deleteArea }
@@ -42,12 +42,12 @@ struct LibrarySheetView: View {
             if deletes {
                 Text(kind == .deleteWorld
                     ? "Delete “\(originalName)” and all its areas, circuit components and saved lever settings? This cannot be undone."
-                    : "Remove “\(originalName)” from this world's bookmarks? Its circuit components stay on the map and can be seen from other views.")
+                    : "Remove “\(originalName)” from this world’s saved areas? Its circuit components stay on the map and can be seen from other views.")
                 Text("Your Finder files are unaffected.").font(.caption).foregroundStyle(.secondary)
             } else {
                 TextField("Name", text: $name).textFieldStyle(.roundedBorder)
                 if kind == .newWorld {
-                    Text("A new independent map with empty builds. To continue an existing world, choose it in the sidebar.")
+                    Text("Start a fresh map for new builds. Your other worlds stay in the sidebar.")
                         .font(.callout).foregroundStyle(.secondary)
                     HStack {
                         TextField("Seed", text: $seed).textFieldStyle(.roundedBorder)
@@ -59,10 +59,10 @@ struct LibrarySheetView: View {
                             camera: SavedArea.homeCamera, displaySize: appState.desktopScreen?.frame.size ?? CGSize(width: 1440, height: 900)))
                         Text("Seed \(String(generation.seed)) · Home view").font(.caption).foregroundStyle(.secondary)
                     }
-                    Text("The seed stays fixed after creation. This will select the new world for editing without activating it.")
+                    Text("The seed chooses the landscape. Your new world will open in the editor; your desktop keeps its current area.")
                         .font(.caption).foregroundStyle(.secondary)
                 } else if kind == .saveArea {
-                    Text("Bookmark the current view in \(appState.selectedDocument.name). Components stay at their map coordinates; your desktop stays unchanged.")
+                    Text("Bookmark the current view in \(appState.selectedDocument.name). You can return to this spot later. Your builds and current desktop stay as they are.")
                         .font(.callout).foregroundStyle(.secondary)
                 }
             }

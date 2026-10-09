@@ -51,13 +51,21 @@ final class EditorCanvasRenderer {
         let areas = overlay("editor-desktop-viewport", in: scene)
         areas.removeAllChildren()
         if let display = appState.desktopScreen {
-            for (name, camera, color) in [("current-desktop", appState.desktopCamera, NSColor.systemBlue),
+            for (name, camera, color) in [("current-desktop", appState.isEditingActiveWorld ? appState.desktopCamera : appState.selectedAreaCamera, NSColor.systemBlue),
                                           ("chosen-desktop", editor.proposedDesktopCamera(appState), NSColor.systemOrange)] {
-                if name == "current-desktop" && (!appState.isEditingActiveWorld || editor.isPreviewing(appState)) { continue }
+                if name == "current-desktop" && editor.isPreviewing(appState) { continue }
                 if let rect = mapper.desktopViewportRect(camera: camera, displaySize: display.frame.size, on: scene.screen) {
                     let node = SKShapeNode(rect: rect)
                     node.name = name; node.strokeColor = color; node.fillColor = .clear; node.lineWidth = 3
                     areas.addChild(node)
+                    let title = name == "current-desktop" ? (appState.isEditingActiveWorld ? "Desktop area" : "Saved area") : "Current view"
+                    let label = SKLabelNode(fontNamed: "AvenirNext-DemiBold")
+                    label.name = name + "-label"; label.text = title; label.fontSize = 12; label.fontColor = color
+                    label.horizontalAlignmentMode = .left; label.verticalAlignmentMode = .top
+                    label.position = CGPoint(x: max(8, rect.minX + 8), y: min(scene.size.height - 60, rect.maxY - 8) - (name == "chosen-desktop" ? 20 : 0))
+                    let background = SKShapeNode(rect: CGRect(x: -4, y: -18, width: label.frame.width + 8, height: 22), cornerRadius: 4)
+                    background.fillColor = NSColor.black.withAlphaComponent(0.8); background.strokeColor = .clear; background.zPosition = -1
+                    label.addChild(background); areas.addChild(label)
                 }
             }
         }

@@ -3,9 +3,10 @@ import Combine
 
 @MainActor
 final class AppState: ObservableObject {
+    lazy var menuPresentation = MenuPresentation(self)
     @Published private(set) var isDesktopWorldEnabled = false
     @Published private(set) var isMaintenanceLocked = false
-    @Published private(set) var maintenanceStatus = "Export preserves every world, area and circuit; it includes no Finder data or imported assets."
+    @Published private(set) var maintenanceStatus = ""
     @Published private(set) var lastBackup: URL?
     @Published private(set) var setupCompleted = false
     var needsSetup: Bool { preferences != nil && !setupCompleted }
@@ -953,6 +954,18 @@ final class AppState: ObservableObject {
             maintenanceStatus = "Reset succeeded; relaunch failed: \(error.localizedDescription) Quit and reopen the app. Backup: \(lastBackup!.path)"
             return false // keep old instance locked and its writer permanently discarded
         }
+    }
+
+    @discardableResult
+    func importLibrary(_ document: WorldLibraryDocument) -> Bool {
+        guard !isMaintenanceLocked, !persistenceBlocked else { return false }
+        do {
+            let next = try LibraryImport.adding(document, to: library)
+            guard autosaver?.commit(next, operation: "Import") ?? true else { libraryStatus = persistenceStatus; return false }
+            library = next
+            libraryStatus = "Added \(document.worlds.count) world(s). Choose one in the sidebar to explore it."
+            return true
+        } catch { libraryStatus = "Couldn’t import this library: \(error.localizedDescription)"; return false }
     }
 
     func saveWorldNow() { autosaver?.flush() }

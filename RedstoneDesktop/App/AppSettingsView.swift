@@ -8,13 +8,16 @@ struct AppSettingsView: View {
     @State private var exporting = false
     @State private var exportDocument: LibraryExportDocument?
     @State private var exportStatus = ""
+    @State private var importing = false
+    @State private var incoming: WorldLibraryDocument?
+    @State private var confirmingImport = false
 
     var body: some View {
         TabView {
             Form {
                 Section("Setup and permissions") {
                     Button("Open Setup…") { openWindow(id: "setup") }
-                    Text("Finder Automation reads desktop icon positions. Desktop-folder access reads chosen scripts. Script approval is separate; Accessibility is not required.")
+                    Text("Connect to Finder so Outputs can find your desktop files. Your Mac may ask for permission.")
                         .font(.caption).foregroundStyle(.secondary)
                     Button("Finder Diagnostics…") { openWindow(id: "finder-diagnostics") }
                 }
@@ -22,7 +25,7 @@ struct AppSettingsView: View {
                     Toggle("Synchronize desktop scale to Finder icon size", isOn: Binding(
                         get: { appState.finderScale.enabled }, set: { appState.setFinderScaleEnabled($0) }))
                     Text(appState.finderScaleStatus).font(.caption)
-                    Text("Off by default. Enable after Finder connects. Uses the logical canvas center; saved areas and editor zoom remain independent. Turning off restores the saved camera.").font(.caption).foregroundStyle(.secondary)
+                    Text("Match block size to your Finder icons. Try this if files don’t fit comfortably on Output blocks; turn it off to return to your saved size.").font(.caption).foregroundStyle(.secondary)
                 }
             }.formStyle(.grouped).tabItem { Label("General", systemImage: "gearshape") }
             Form {
@@ -38,17 +41,21 @@ struct AppSettingsView: View {
                     }
                     Menu("Preview Effects") { ForEach(SoundID.allCases, id: \.self) { id in Button(id.rawValue) { appState.previewSound(id) } } }
                     Text(appState.audioStatus).font(.caption)
-                    Text("Effects use one bounded audio engine. Mute stops active voices; offscreen events are silent.").font(.caption).foregroundStyle(.secondary)
+                    Text("Sounds follow your circuit across the screen. Components outside the visible desktop stay quiet.").font(.caption).foregroundStyle(.secondary)
                 }
             }.formStyle(.grouped).tabItem { Label("Sound", systemImage: "speaker.wave.2") }
             AssetSettingsView(assets: appState.assets).tabItem { Label("Appearance", systemImage: "paintpalette") }
             scriptSettings.tabItem { Label("Outputs", systemImage: "terminal") }
             Form {
-                Section("Export and recovery") {
+                Section("Your worlds") {
                     Button("Export Library…") {
                         exportDocument = LibraryExportDocument(library: appState.library); exporting = true
                     }
-                    Text("Exports all worlds, bookmarks, circuits and lever positions as validated JSON. Finder data, scripts, approvals and imported art are excluded.").font(.caption).foregroundStyle(.secondary)
+                    Button("Import Library…") { importing = true }
+                    HStack {
+                        Text("Save a copy of all your worlds, areas and circuits, or add worlds from a previous export.").font(.caption).foregroundStyle(.secondary)
+                        HelpButton(title: "Library files", text: "Exports include every world, saved area and circuit. They don’t include your desktop files, script permissions or texture packs. Import adds independent copies to your library and keeps your current desktop assignment.")
+                    }
                     if !exportStatus.isEmpty { Text(exportStatus).font(.caption).textSelection(.enabled) }
                     if let backup = appState.lastBackup {
                         Button("Reveal Reset Backup") { NSWorkspace.shared.activateFileViewerSelecting([backup]) }
@@ -58,8 +65,8 @@ struct AppSettingsView: View {
                 }
                 Section("Start over") {
                     Button("Start Over…", role: .destructive) { confirmingReset = true }
-                    Text("Creates a timestamped recovery backup, resets app saves/settings/approvals/import caches, and restarts into Setup. Desktop files, source packs/JARs and macOS privacy permissions remain untouched.").font(.caption).foregroundStyle(.secondary)
-                    Text(appState.maintenanceStatus).font(.caption).textSelection(.enabled)
+                    Text("Backs up your app data, then starts fresh with an empty world and default settings. Your desktop files stay safe.").font(.caption).foregroundStyle(.secondary)
+                    if !appState.maintenanceStatus.isEmpty { Text(appState.maintenanceStatus).font(.caption).textSelection(.enabled) }
                 }
             }.formStyle(.grouped).tabItem { Label("Data", systemImage: "externaldrive") }
         }
@@ -77,7 +84,31 @@ struct AppSettingsView: View {
                 Task { if await appState.startOver() { NSApplication.shared.terminate(nil) } }
             }
         } message: {
-            Text("Back up all worlds/areas/circuits, the legacy save, app preferences/approvals and managed imported textures. Then replace app data with one empty world and default settings. macOS permissions and your Desktop files/source packs stay unchanged. Backup/staging failures abort the reset. See README recovery instructions to restore a backup.")
+            Text("Your worlds, settings and imported textures will be backed up before the app restarts with a fresh setup. Your desktop files and Mac permissions won’t change. You can restore the backup using the recovery guide.")
+        }
+        .fileImporter(isPresented: $importing, allowedContentTypes: [.json]) { result in
+            switch result {
+            case .success(let url):
+                let access = url.startAccessingSecurityScopedResource()
+                defer { if access { url.stopAccessingSecurityScopedResource() } }
+                do {
+                    incoming = try LibraryImport.read(from: url)
+                    confirmingImport = true
+                } catch { exportStatus = "Couldn’t import this library: \(error.localizedDescription)" }
+            case .failure(let error): exportStatus = "Couldn’t open this library: \(error.localizedDescription)"
+            }
+        }
+        .alert("Add these worlds?", isPresented: $confirmingImport) {
+            Button("Cancel", role: .cancel) { incoming = nil }
+            Button("Add Worlds") {
+                if let incoming {
+                    let added = appState.importLibrary(incoming)
+                    exportStatus = added ? "Worlds added. Find them in the editor’s world list." : appState.libraryStatus
+                }
+                incoming = nil
+            }
+        } message: {
+            Text(incoming.map { "\($0.worlds.count) world(s) and \($0.areas.count) area(s): \($0.worlds.map(\.name).joined(separator: ", ")). These will be added as separate copies. Your current desktop stays selected." } ?? "")
         }
         .fileExporter(isPresented: $exporting, document: exportDocument, contentType: .json, defaultFilename: "RedstoneDesktop-library") { result in
             switch result { case .success: exportStatus = "Library exported."; case .failure(let error): exportStatus = "Export failed: \(error.localizedDescription)" }
@@ -93,14 +124,14 @@ struct AppSettingsView: View {
             Section("Output behavior") {
                 Toggle("Run supported scripts; open other items", isOn: Binding(
                     get: { appState.scriptOutputSettings.runScriptsOpenOtherItems }, set: { appState.setRunScriptsOpenOtherItems($0) }))
-                Text("Applies to Default Outputs: .sh, .command and .zsh use exact-file approval; other items open. Explicit Execute stays script-only and None stays disabled. Remembering starts checked; changed files ask again.")
+                Text("When enabled, Outputs run .sh, .command and .zsh scripts and open other files normally. You’ll be asked before running a new or changed script.")
                     .font(.caption).foregroundStyle(.secondary)
                 Button("Forget Script Approvals") { appState.actionAuthorizations.revokeAll() }
             }
             Section("Desktop-folder access") {
                 Text(appState.desktopScriptAccessStatus).font(.callout).textSelection(.enabled)
                 Button("Check Desktop Access…") { appState.requestDesktopScriptAccess(retry: true) }.disabled(appState.desktopScriptAccessTask != nil)
-                Text("Only explicit script opt-in/checks request this access. macOS chooses prompt timing and remembers privacy decisions across Start Over. Finder Automation and per-script approval are separate.")
+                Text("Your Mac needs to allow access before the app can read desktop scripts. You’ll still choose which scripts may run.")
                     .font(.caption).foregroundStyle(.secondary)
             }
         }.formStyle(.grouped)
