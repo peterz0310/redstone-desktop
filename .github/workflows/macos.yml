@@ -1,0 +1,49 @@
+name: macOS build and test
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+permissions:
+  contents: read
+concurrency:
+  group: macos-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+jobs:
+  native:
+    # Explicit Xcode 27 preview image matches the locally validated toolchain.
+    runs-on: xcode-27
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - name: Toolchain and project generator
+        run: |
+          xcodebuild -version
+          xcrun swift --version
+          brew install xcodegen
+          xcodegen --version
+          xcodegen generate --spec project.yml
+      - name: Debug application build
+        run: |
+          set -o pipefail
+          xcodebuild -project RedstoneDesktop.xcodeproj -scheme RedstoneDesktop -configuration Debug -destination 'platform=macOS' -derivedDataPath build CODE_SIGNING_ALLOWED=NO build 2>&1 | tee build/debug-build.log
+      - name: Isolated XCTest suite
+        run: |
+          set -o pipefail
+          xcodebuild -project RedstoneDesktop.xcodeproj -scheme RedstoneDesktop -configuration Debug -destination 'platform=macOS' -derivedDataPath build CODE_SIGNING_ALLOWED=NO -resultBundlePath build/tests.xcresult test 2>&1 | tee build/tests.log
+      - name: Unsigned universal Release archive
+        run: scripts/release.sh
+      - name: Upload logs, tests and reviewable archive
+        if: always()
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: macOS-validation-and-unsigned-release
+          path: |
+            build/*.log
+            build/tests.xcresult
+            build/releases/*.zip
+            build/releases/*.sha256
+          if-no-files-found: warn
+          retention-days: 14

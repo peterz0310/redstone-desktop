@@ -6,11 +6,16 @@ struct SetupWizardView: View {
     @Environment(\.dismiss) private var dismiss
     @State private var page = 0
 
-    init(appState: AppState) { self.appState = appState; finder = appState.finderDiagnostics }
+    init(appState: AppState, initialPage: Int = 0) {
+        self.appState = appState; finder = appState.finderDiagnostics
+        _page = State(initialValue: min(3, max(0, initialPage)))
+    }
     var body: some View {
         VStack(alignment: .leading, spacing: 18) {
             Text(["Welcome to Redstone Desktop", "Finder stays your desktop", "Scripts are optional", "Ready to build"][page]).font(.largeTitle)
             Text("Step \(page + 1) of 4").font(.caption).foregroundStyle(.secondary)
+            ScrollView {
+                VStack(alignment: .leading, spacing: 16) {
             switch page {
             case 0:
                 Text("Worlds are saved maps with their own seeds and circuits. Areas are named views into a world; they share its components.")
@@ -31,7 +36,8 @@ struct SetupWizardView: View {
                 Text("Start with a button, dust and an Output on clear ground. Use harmless folders first. Stop Desktop before editing its active world; other worlds remain editable.")
                 Text("Settings includes sound, appearance, optional Finder scale, export and Start Over. Start Over saves a recovery backup, then restarts into this setup with Desktop stopped.")
             }
-            Spacer()
+                }.frame(maxWidth: .infinity, alignment: .leading)
+            }
             Text("macOS privacy choices remain in System Settings. Skipping setup or starting over does not reset those choices or force new system prompts.")
                 .font(.caption).foregroundStyle(.secondary)
             HStack {

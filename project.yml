@@ -15,6 +15,10 @@ targets:
     platform: macOS
     sources:
       - RedstoneDesktop
+      - path: LICENSE
+        buildPhase: resources
+      - path: THIRD_PARTY_NOTICES.md
+        buildPhase: resources
     settings:
       base:
         PRODUCT_BUNDLE_IDENTIFIER: org.redstonedesktop.RedstoneDesktop

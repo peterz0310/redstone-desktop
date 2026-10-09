@@ -8,7 +8,7 @@ An experimental native macOS app exploring a block world beneath real Finder des
 
 ## Current build and next steps
 
-**Implemented: Slices 0–33 plus Slices 30A/31A and the requested appearance/navigation follow-ups (27A/28A/28B/28C/29A/29B).** Debug build and all **433 automated tests** pass. Slice 28 adds explicitly entered Desktop Build Mode with a temporary transparent input window, hotbar and mouse-accessible exits; its real Finder/input checks remain pending. Slices 26/27 add optional validated texture/sound packs and local Minecraft Java texture importing. Original world/circuit assets remain complete defaults; imported world art stays in local Application Support, outside Git and app bundles. The single shipped dust-item icon is an owner-requested exception, documented in [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md). Read the [resource-pack format guide](docs/RESOURCE_PACKS.md) and [Java import guide](docs/JAVA_TEXTURE_IMPORT.md) before making/sharing packs.
+**Implemented: Slices 0–34 plus Slices 30A/31A and the requested appearance/navigation follow-ups (27A/28A/28B/28C/29A/29B).** Debug build and all **436 automated tests** pass. Slice 28 adds explicitly entered Desktop Build Mode with a temporary transparent input window, hotbar and mouse-accessible exits; its real Finder/input checks remain pending. Slices 26/27 add optional validated texture/sound packs and local Minecraft Java texture importing. Original world/circuit assets remain complete defaults; imported world art stays in local Application Support, outside Git and app bundles. The single shipped dust-item icon is an owner-requested exception, documented in [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md). Read the [resource-pack format guide](docs/RESOURCE_PACKS.md) and [Java import guide](docs/JAVA_TEXTURE_IMPORT.md) before making/sharing packs.
 
 Slices 20/21 and 23–25 are owner-accepted, along with corrected Slice 22 icon-size/marker behavior and the 19C bookmark/context-menu follow-up. Earlier detailed 19B/19C checks, Slice 22's real Output-after-resize check and the other specific Slices 26/27 checks and new 27A appearance checks remain pending. Local Java importing is owner-accepted.
 
@@ -20,7 +20,7 @@ Configuration still saves to `~/Library/Application Support/RedstoneDesktop/libr
 
 Finder Diagnostics remains useful for permission/alignment problems, and Desktop Details for input rejection/action results. They moved to **Advanced**. The obsolete Developer Placement window and fixed-demo diagnostic rows are removed; automated tests and migration fixtures remain, and no existing saved circuits were cleared. Shelf previews remain bounded schematic terrain/circuit snapshots. Finder markers now appear separately in the main editor canvas when enabled.
 
-**Next: Slice 34 release engineering; use the detailed Mac checklist for the new multi-display/setup/reset work.** Slice 31 diagnostics is owner-approved, with detailed physical checks explicitly unverified because they were difficult to test. The Slice 30A Output-chain walkthrough is owner-accepted. Basic Slice 29/29A/29B behavior and Finder responsiveness are owner-accepted; other detailed checks remain pending.
+**Implementation roadmap complete through Slice 34; next is physical-Mac acceptance using [the detailed checklist](docs/TESTING.md).** Slice 31 diagnostics is owner-approved, with detailed physical checks explicitly unverified because they were difficult to test. The Slice 30A Output-chain walkthrough is owner-accepted. Basic Slice 29/29A/29B behavior and Finder responsiveness are owner-accepted; other detailed checks remain pending.
 
 ## App icon and menu-bar controls — Slice 31A
 
@@ -142,9 +142,15 @@ Slice 18 connects the generator to a bounded chunk renderer in the editor and de
 
 Slice 19 adds a seed browser with Preview/Random/Cancel and **Use This Area**. Seed previews and editor pan/zoom leave the live desktop unchanged. Orange outlines the proposed physical desktop area, blue outlines the current one. The proposed origin is the editor view's lower-left world origin; desktop tile size is preserved. Applying saves seed/camera, updates a running desktop through its normal lifecycle, and recalculates Finder occupancy. A seed that invalidates existing components is refused with a warning, preserving the circuit. Debug build and all **178 tests** pass; the owner confirmed seed/location and restart validation on 2026-10-07.
 
+## Release engineering — Slice 34
+
+[docs/RELEASE.md](docs/RELEASE.md) covers a clean checkout, exact verified toolchain, macOS 14 deployment target, permission timing, non-sandboxed script policy, asset/license notices, GitHub Actions and optional signing/notarization. License and notices are also embedded inside the app.
+
+Run `scripts/release.sh` to create `build/releases/RedstoneDesktop-0.1.0-macOS.zip` and its SHA-256 sidecar. The script builds optimized arm64/x86_64 slices and validates bundle/archive metadata plus absence of local saves/imports/scripts. The ZIP includes the app and public guides; it is an **unsigned local review artifact**, not a published/notarized release. GitHub's Xcode 27 preview runner is configured to build/test/archive; hosted execution remains unverified until pushed/run. Optional Developer ID/notary steps require your credentials and are documented separately.
+
 ## Development
 
-Requirements: macOS 14 or newer, Xcode with Swift 6 support, and XcodeGen 2.44 or newer. This bootstrap was built and tested with Xcode 27.0 on macOS 27.0; the minimum deployment version has not been tested on an older Mac.
+Requirements: full Xcode 27.0 or newer, Swift 6 language mode, XcodeGen 2.44 or newer and Python 3 for release verification. Verified with Xcode 27.0/Swift 6.4/XcodeGen 2.46.0 on Apple Silicon/macOS 27.0. The app deployment target is macOS 14; older macOS/Intel runtime acceptance remains pending. [Clean-checkout and release instructions](docs/RELEASE.md) distinguish the development toolchain from the app target.
 
 Install the development-only project generator:
 
@@ -182,7 +188,7 @@ When new source files are added, regenerate the project before building. A build
 
 ## Historical validation walkthroughs
 
-These walkthroughs retain owner acceptance evidence for their respective builds. Earlier footer labels, temporary-save behavior and manual Finder-read instructions are historical. Today's app uses the Slice 19A footer, library persistence and automatic Finder refresh; its current walkthrough is below. Slice 19B will receive its own walkthrough when implemented. Do not reset saved data or undo later functionality to reproduce an old build.
+These walkthroughs retain owner acceptance evidence for their respective builds. Earlier footer labels, temporary-save behavior and manual Finder-read instructions are historical. Today's app uses the world/area library, explicit assignment/start, Setup/Settings and automatic Finder refresh after tracking is enabled; use the current sections above and TESTING.md. Do not reset saved data or undo later functionality to reproduce an old build.
 
 ## Manual validation — Slice 0
 
