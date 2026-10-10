@@ -97,12 +97,12 @@ struct EditorView: View {
         .onChange(of: appState.requestedEditorArea) { _, request in
             if request != nil, appState.consumeEditorAreaRequest() { editor.showDesktopArea(appState) }
         }
-        .onChange(of: editor.tool) { _, tool in if tool != .select { editor.cancelPlacement() } }
+        .onChange(of: editor.tool) { _, tool in if tool != .select { editor.cancelPlacement() }; editor.cancelTerrainStroke() }
         .onChange(of: appState.selectedWorldID) { _, _ in editor.syncSelectedWorld(appState) }
         .onChange(of: appState.selectedDocument.circuit) { _, _ in editor.invalidateTestIfNeeded(appState) }
-        .onChange(of: appState.isEditorConfigurationLocked) { _, locked in if locked { editor.cancelPlacement() } }
+        .onChange(of: appState.isEditorConfigurationLocked) { _, locked in if locked { editor.cancelPlacement(); editor.cancelTerrainStroke() } }
         .onChange(of: appState.isMaintenanceLocked) { _, _ in editor.invalidateTestIfNeeded(appState) }
-        .onDisappear { editor.stopTesting(); appState.setEditorFinderItemsVisible(false) }
+        .onDisappear { editor.stopTesting(); editor.cancelTerrainStroke(); appState.setEditorFinderItemsVisible(false) }
         .sheet(item: $sheet, onDismiss: { if editor.isPreviewing(appState) { editor.cancelPreview(appState) } }) { request in
             LibrarySheetView(kind: request.kind, appState: appState, editor: editor, targetID: request.targetID)
         }
@@ -145,6 +145,10 @@ struct EditorView: View {
                 if editor.tool == .output {
                     Text("With Show Finder Items enabled, Output snaps within 24 points of an icon center. Red markers mean several items share a tile.")
                         .font(.caption).foregroundStyle(.secondary)
+                }
+                if editor.tool == .terrain {
+                    TerrainBrushControls(brush: $editor.terrainBrush, size: $editor.terrainBrushSize)
+                        .disabled(appState.isEditorConfigurationLocked || editor.isPreviewing(appState) || editor.circuitTest != nil)
                 }
                 if editor.tool == .fileSensor, editor.selectedTile.flatMap({ editor.browsingWorld(appState).circuit.components[$0]?.kind }) != .fileSensor {
                     Text("New sensors").font(.caption.bold())

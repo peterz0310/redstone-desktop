@@ -6,7 +6,7 @@ import Foundation
 final class EditorSession: ObservableObject {
     enum Tool: String, CaseIterable {
         case select = "Move", region = "Select", dust = "Dust", button = "Button"
-        case lever = "Lever", repeater = "Repeater", output = "Output", erase = "Erase", torch = "Torch", pressurePlate = "Plate", fileSensor = "Sensor"
+        case lever = "Lever", repeater = "Repeater", output = "Output", erase = "Erase", torch = "Torch", pressurePlate = "Plate", fileSensor = "Sensor", terrain = "Terrain"
 
         var componentKind: CircuitComponentKind? {
             switch self {
@@ -18,14 +18,36 @@ final class EditorSession: ObservableObject {
             case .torch: return .torch
             case .repeater: return .repeater
             case .output: return .output
-            case .select, .region, .erase: return nil
+            case .select, .region, .erase, .terrain: return nil
             }
         }
-        var editsWorld: Bool { componentKind != nil || self == .erase }
+        var editsWorld: Bool { componentKind != nil || self == .erase || self == .terrain }
     }
 
     @Published private(set) var camera = CameraState(worldOrigin: WorldPoint(x: 0, y: 0), pointsPerTile: 40)
     @Published var tool = Tool.select
+    @Published var terrainBrush = TerrainBrush.grass
+    @Published var terrainBrushSize = 3
+    @Published private(set) var terrainStroke: TerrainStroke?
+    func cancelTerrainStroke() { terrainStroke = nil }
+    func terrainInput(at point: CGPoint, size: CGSize, phase: TerrainStrokePhase, appState: AppState) {
+        guard phase != .cancel else { cancelTerrainStroke(); status = "Terrain stroke cancelled."; return }
+        guard circuitTest == nil, !isPreviewing(appState), !appState.isEditorConfigurationLocked,
+              let mapper = mapper(size: size), mapper.canvasFrame.contains(point),
+              let tile = mapper.tile(atScreen: point) else { cancelTerrainStroke(); return }
+        if phase == .begin { cancelPlacement(); terrainStroke = TerrainStroke(document: appState.selectedDocument, brush: terrainBrush, size: terrainBrushSize) }
+        guard var stroke = terrainStroke else { return }
+        guard stroke.document == appState.selectedDocument else { cancelTerrainStroke(); status = "World changed. Terrain stroke cancelled."; return }
+        do {
+            try stroke.extend(to: tile); terrainStroke = stroke
+            status = "Preview: \(stroke.plan!.changed.count) tiles; \(stroke.plan!.protected.count) circuit tiles protected. Release to save."
+            if phase == .end {
+                cancelTerrainStroke()
+                _ = appState.applyTerrain(brush: stroke.brush, tiles: stroke.tiles)
+                status = appState.developerPlacementStatus
+            }
+        } catch { cancelTerrainStroke(); status = "Nothing changed: \(error.localizedDescription)" }
+    }
     @Published var sensorFilter = FileSensorFilter()
     @Published var direction = Direction.east
     @Published var delay = RepeaterDelay.one
@@ -72,7 +94,7 @@ final class EditorSession: ObservableObject {
     }
     func endRegion() { regionStart = nil; regionEnd = nil; selectionBeforeDrag = [] }
     func cancelPlacement() { pendingPlacement = nil }
-    func clearSelection() { selectedTiles = []; selectedTile = nil; endRegion(); cancelPlacement() }
+    func clearSelection() { selectedTiles = []; selectedTile = nil; endRegion(); cancelPlacement(); cancelTerrainStroke() }
     private func selectedBlueprint(_ appState: AppState, name: String = "Copied Circuit") throws -> CircuitBlueprint {
         let coordinates = selection(appState)
         return try CircuitBlueprint.capture(name: name, components: appState.editorWorld.circuit.components.filter { coordinates.contains($0.key) }, levers: appState.editorLeverPositions)
@@ -174,7 +196,7 @@ final class EditorSession: ObservableObject {
 
     func startTesting(_ appState: AppState) {
         guard !isPreviewing(appState), !appState.isMaintenanceLocked else { return }
-        stopTesting(); cancelPlacement()
+        stopTesting(); cancelPlacement(); cancelTerrainStroke()
         circuitTest = EditorCircuitTest(worldID: appState.selectedWorldID, circuit: appState.editorWorld.circuit, levers: appState.editorLeverPositions)
         tool = .select
         status = "Test mode: click buttons and levers. Outputs only flash here; files never open."
@@ -223,7 +245,7 @@ final class EditorSession: ObservableObject {
 
     func browsingWorld(_ appState: AppState) -> World {
         if let previewGeneration { return World(generation: previewGeneration) }
-        return appState.editorWorld
+        return terrainStroke?.plan?.world ?? appState.editorWorld
     }
 
     func proposedDesktopCamera(_ appState: AppState) -> CameraState {
@@ -360,6 +382,11 @@ final class EditorSession: ObservableObject {
     func click(at point: CGPoint, size: CGSize, appState: AppState, additive: Bool = false) {
         guard let mapper = mapper(size: size), mapper.canvasFrame.contains(point),
               let tile = placementTile(at: point, mapper: mapper, appState: appState) else { return }
+        if tool == .terrain {
+            terrainInput(at: point, size: size, phase: .begin, appState: appState)
+            terrainInput(at: point, size: size, phase: .end, appState: appState)
+            return
+        }
         if pendingPlacement != nil { _ = placePending(at: tile, appState: appState); return }
         if circuitTest != nil {
             invalidateTestIfNeeded(appState)

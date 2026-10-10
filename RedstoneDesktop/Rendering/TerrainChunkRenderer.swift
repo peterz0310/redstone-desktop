@@ -32,13 +32,18 @@ final class TerrainChunkRenderer {
     func render(_ world: World, mapper: CoordinateMapper, screen: ScreenDescriptor, viewport: CGRect, into layer: SKNode) {
         guard let generation = world.generation else { return }
         let requested = mapper.visibleChunks(on: screen, viewport: viewport)
-        if self.generation != generation || overrides != world.tiles || excluded != world.unspecifiedTiles || assetRevision != assets.revision {
+        if self.generation != generation || assetRevision != assets.revision {
             if assetRevision != assets.revision { tileRasters.removeAll() }
-            assetRevision = assets.revision
             for node in nodes.values { node.removeFromParent() }
             nodes.removeAll()
-            self.generation = generation; overrides = world.tiles; excluded = world.unspecifiedTiles
+        } else if overrides != world.tiles || excluded != world.unspecifiedTiles {
+            let changed = Set(overrides.keys).union(world.tiles.keys).filter { overrides[$0] != world.tiles[$0] }
+                .union(excluded.symmetricDifference(world.unspecifiedTiles))
+            let chunks = Set(changed.map(ChunkCoordinate.containing))
+            for coordinate in chunks { nodes.removeValue(forKey: coordinate)?.removeFromParent() }
         }
+        assetRevision = assets.revision
+        self.generation = generation; overrides = world.tiles; excluded = world.unspecifiedTiles
         for (coordinate, node) in nodes where !requested.contains(coordinate) { node.removeFromParent() }
         nodes = nodes.filter { requested.contains($0.key) }
         do {

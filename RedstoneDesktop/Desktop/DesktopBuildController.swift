@@ -44,11 +44,15 @@ final class DesktopBuildController: NSObject, DesktopBuildPresenting, NSWindowDe
             guard let session else { return }
             appState?.buildClick(at: point, erase: erase, sessionID: session.id)
         }
+        surface.terrainInput = { [weak appState, weak session] point, phase in
+            guard let session else { return }
+            appState?.buildTerrain(at: point, phase: phase, sessionID: session.id)
+        }
         surface.rotate = { [weak appState] tile in appState?.editHoveredBuildRepeater(at: tile, rotate: true) }
         surface.changeDelay = { [weak appState] tile in appState?.editHoveredBuildRepeater(at: tile, rotate: false) }
         surface.exit = exit
 
-        palette = NSPanel(contentRect: CGRect(x: screen.frame.midX - min(760, screen.frame.width - 32) / 2, y: screen.frame.maxY - 380, width: min(760, screen.frame.width - 32), height: 320),
+        palette = NSPanel(contentRect: CGRect(x: screen.frame.midX - min(760, screen.frame.width - 32) / 2, y: screen.frame.maxY - 420, width: min(760, screen.frame.width - 32), height: 360),
                           styleMask: [.titled, .closable, .utilityWindow], backing: .buffered, defer: false)
         palette.title = "Desktop Build Mode — Circuit stopped"
         palette.level = .floating
@@ -97,6 +101,7 @@ final class DesktopBuildController: NSObject, DesktopBuildPresenting, NSWindowDe
 final class DesktopBuildSurface: SKView {
     let session: DesktopBuildSession
     let screen: ScreenDescriptor
+    var terrainInput: ((CGPoint, TerrainStrokePhase) -> Void)?
     var click: ((CGPoint, Bool) -> Void)?
     var rotate: ((WorldCoordinate?) -> Void)?
     var changeDelay: ((WorldCoordinate?) -> Void)?
@@ -162,7 +167,7 @@ final class DesktopBuildSurface: SKView {
     func stopFeedback() {
         boundary.removeAllActions()
         motionObserver?.cancel(); motionObserver = nil
-        session.hoveredTile = nil
+        session.hoveredTile = nil; session.terrainStroke = nil
     }
 
     override func updateTrackingAreas() {
@@ -191,19 +196,35 @@ final class DesktopBuildSurface: SKView {
 
     func refreshHighlight() {
         if let tile = session.hoveredTile ?? session.selectedTile {
-            outline.path = CGPath(rect: session.mapper.sceneRect(forTile: tile, on: screen).insetBy(dx: 2, dy: 2), transform: nil)
+            var rect = session.mapper.sceneRect(forTile: tile, on: screen)
+            if session.tool == .terrain, let cells = try? TerrainEditing.footprint(center: tile, size: session.terrainBrushSize) {
+                for cell in cells { rect = rect.union(session.mapper.sceneRect(forTile: cell, on: screen)) }
+            }
+            outline.strokeColor = session.tool == .terrain ? .systemGreen : .cyan
+            outline.path = CGPath(rect: rect.insetBy(dx: 2, dy: 2), transform: nil)
         } else { outline.path = nil }
     }
 
     override func mouseDown(with event: NSEvent) {
         window?.makeFirstResponder(self)
-        click?(point(event), false)
+        if session.tool == .terrain { terrainInput?(point(event), .begin) }
+        else { click?(point(event), false) }
+        refreshHighlight()
+    }
+
+    override func mouseDragged(with event: NSEvent) {
+        if session.terrainStroke != nil { terrainInput?(point(event), .drag) }
+        session.hoveredTile = session.tile(at: point(event)); refreshHighlight()
+    }
+    override func mouseUp(with event: NSEvent) {
+        if session.terrainStroke != nil { terrainInput?(point(event), .end) }
         refreshHighlight()
     }
 
     override func rightMouseDown(with event: NSEvent) {
         window?.makeFirstResponder(self)
-        click?(point(event), true)
+        if session.tool == .terrain { terrainInput?(point(event), .cancel) }
+        else { click?(point(event), true) }
         refreshHighlight()
     }
 
@@ -215,7 +236,9 @@ final class DesktopBuildSurface: SKView {
     override func keyDown(with event: NSEvent) {
         guard event.modifierFlags.intersection([.command, .control, .option]).isEmpty else { super.keyDown(with: event); return }
         switch event.charactersIgnoringModifiers?.lowercased() {
-        case "\u{1b}": exit?()
+        case "\u{1b}":
+            if session.terrainStroke != nil { terrainInput?(point(event), .cancel) } else { exit?() }
+        case "0": session.selectTool(number: 10)
         case "r": rotate?(session.hoveredTile)
         case "t", "d": changeDelay?(session.hoveredTile)
         default:
@@ -242,12 +265,14 @@ private struct DesktopBuildHotbar: View {
                 HStack(spacing: 5) {
                     ForEach(Array(DesktopBuildSession.Tool.allCases.enumerated()).filter { $0.offset / 5 == row }, id: \.element) { index, tool in
                         Button { session.tool = tool } label: {
-                            Label { Text("\(index + 1) \(tool.rawValue)") } icon: { ToolIcon(name: tool.rawValue) }
+                            Label { Text("\(index == 9 ? 0 : index + 1) \(tool.rawValue)") } icon: { ToolIcon(name: tool.rawValue) }
                         }.tint(session.tool == tool ? .accentColor : .secondary)
                     }
                 }
             }
-            if let tile = session.selectedTile, let component = appState.desktopWorld.circuit.components[tile], component.kind == .fileSensor {
+            if session.tool == .terrain {
+                TerrainBrushControls(brush: $session.terrainBrush, size: $session.terrainBrushSize)
+            } else if let tile = session.selectedTile, let component = appState.desktopWorld.circuit.components[tile], component.kind == .fileSensor {
                 FileSensorConfigurationView(filter: component.sensorFilter) { filter in
                     appState.configureBuildFileSensor(at: tile, filter: filter)
                 }.id("sensor:\(tile)")
@@ -263,6 +288,8 @@ private struct DesktopBuildHotbar: View {
                 Text("Hover a component: R rotates · T changes delay").font(.caption).foregroundStyle(.secondary)
             }
             Text(session.status).font(.caption).lineLimit(2)
+        }.onChange(of: session.tool) { _, _ in
+            appState.buildTerrain(at: .zero, phase: .cancel, sessionID: session.id)
         }.padding(.horizontal, 24).padding(.vertical, 16).frame(maxWidth: .infinity)
     }
 }

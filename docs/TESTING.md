@@ -3,6 +3,17 @@
 These are physical-Mac checks, separate from automated tests. Report which numbered groups you actually tried and what failed; untested groups remain unverified. Use harmless folders/text files first. Place new test circuits on clear ground **to the right** of your existing builds. Do not use scripts for display-calibration tests.
 
 
+## Terrain editing — awaiting owner confirmation
+
+1. Quit the old app and open the updated build. Stop Desktop, choose Terrain and Grass, then try 1×1, 3×3 and 5×5 brushes on terrain **to the right** of existing circuits. Drag quickly: the preview should be continuous, save on release and undo in one step. Start another stroke and press Escape while still dragging; releasing afterward must save nothing.
+2. Paint over a tree/flower/cactus or water with Grass. Decorations should disappear and the ground should accept circuit placement. Try Stone, Sand and intentional Dirt. Clear Decorations should remove scenery while keeping the visible surface, including grassy generated dirt; clearing reeds must leave water as water.
+3. Put a component on solid ground and paint water across it and adjacent empty tiles. The occupied tile should remain supported; orange marks it in the editor and the status reports it protected. The component's settings and saved lever state must stay intact. Restore Original should likewise skip a component whose original tile would be water or blocked scenery.
+4. Restore Original on an edited empty patch: its original surface/decorations should return. Undo/Redo the restoration and a paint stroke. Quit/reopen, switch between areas of the same world, and inspect persistence. Another world's terrain should remain separate. Optional export/import should include terrain edits; no Start Over is needed.
+5. Enter Desktop Build Mode, choose **0 Terrain**, and check palette fit, brush settings, preview and drag/release. Cancel with Escape or right-click. Exit and use editor Undo/Redo. If the editor was browsing another world, verify that Build Mode changed only the assigned desktop world. Start Desktop afterward to check ordinary circuits still run.
+6. While Desktop is running or Test Circuit is active, terrain editing should be disabled for that world. Pan/zoom across edited chunk edges using built-in and imported textures; edits should appear without stale chunks or widespread redraw pauses. Report Mac/display/pack details for visible stalls.
+
+These physical UI checks remain pending; automated tests do not mark them complete. Backup/reset testing remains deferred.
+
 ## Desktop pressure plates and file sensors — awaiting owner confirmation
 
 1. Quit the old app and open the updated build. Stop Desktop and build `Plate → Dust → Output` on clear ground **to the right** of existing builds. Set the Output to Do nothing. Assign an area that includes it, Start Desktop, and drag a harmless file/folder so its icon center is over the Plate. After Finder refresh, the plate should say DOWN and the wire/Output power. Move it off: power should clear. Ordinary icon clicks must still work.

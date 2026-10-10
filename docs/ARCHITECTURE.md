@@ -24,6 +24,8 @@ Desktop pressure plates and file sensors consume mapped occupancy snapshots thro
 
 Live pointer, rendering and power updates should not rebuild menu trees. `MenuPresentation` publishes only changes to its equatable menu snapshot. The root app owns the AppState reference without subscribing all scenes to every runtime update; each screen observes the state it needs. Selection loading does not write component settings; user picker changes save immediately.
 
+Terrain editing uses pure bounded plans and transient stroke previews, publishing one sparse override/history operation on release. World format 4 stores terrain overrides; format 3 decodes with no edits. Circuit support validation protects occupied cells, and terrain changes invalidate only affected render chunks. Edits are included in library export/import but not component blueprints. See [TERRAIN_EDITING.md](TERRAIN_EDITING.md) for limits and integration contracts.
+
 ## Assets and verification
 
 Original assets provide a complete fallback. Local Java/custom packs are bounded image/audio data, not executable content. Imported world assets remain outside the repository and app bundles. Only explicitly owner-authorized icon artwork is shipped; provenance and MIT exclusions are in [third-party notices](../THIRD_PARTY_NOTICES.md). Do not extend that exception to general world textures or game audio.

@@ -8,6 +8,7 @@ Build little redstone circuits underneath your real Mac desktop files. A button 
 
 - **Worlds** are separate maps with their own landscapes and builds. **Areas** are saved views within a world.
 - Build in the editor, save or update an area, and choose **Activate on Desktop**. **Start Desktop** runs that area. Browsing another world doesn’t change the desktop assignment.
+- **Terrain** paints grass, stone, sand, dirt or water, clears decorations, and restores original terrain. Dragging is one undo step; existing circuits are protected. [Terrain editing](docs/TERRAIN_EDITING.md) explains both build modes.
 - **Plate** powers a circuit while a Finder item occupies its tile. **Sensor** can filter by filename or extension. [Desktop detectors](docs/DESKTOP_SENSORS.md) explains timing, configuration and testing.
 - **Test Circuit** runs a safe editor copy with Pause, Step and Reset. Outputs flash without opening files. Select groups to copy, move, rotate, undo or save reusable blueprints; [the editor guide](docs/EDITOR_TOOLS.md) walks through these tools.
 - **Build on Desktop** temporarily stops the circuit and lets you place components on the desktop. Exit to use your files normally again. R rotates the hovered repeater/torch; T changes a repeater’s delay.
@@ -52,7 +53,7 @@ Create a universal local release with `scripts/release.sh`. The Xcode project an
 ## Contributor guides
 
 - [Architecture](docs/ARCHITECTURE.md): SwiftUI/AppKit/SpriteKit boundaries, coordinates, Finder and action contracts.
-- [Desktop detectors](docs/DESKTOP_SENSORS.md), [editor tools](docs/EDITOR_TOOLS.md), [Circuit rules](docs/REDSTONE_RULES.md) and [script Outputs](docs/SCRIPT_OUTPUTS.md).
+- [Terrain editing](docs/TERRAIN_EDITING.md), [Desktop detectors](docs/DESKTOP_SENSORS.md), [editor tools](docs/EDITOR_TOOLS.md), [Circuit rules](docs/REDSTONE_RULES.md) and [script Outputs](docs/SCRIPT_OUTPUTS.md).
 - [Resource-pack format](docs/RESOURCE_PACKS.md) and [Minecraft Java import](docs/JAVA_TEXTURE_IMPORT.md).
 - [Mac testing checklist](docs/TESTING.md), [known limitations](docs/KNOWN_LIMITATIONS.md), [diagnostics](docs/DIAGNOSTICS.md) and [profiling](docs/PROFILING.md).
 - [Recovery](docs/RECOVERY.md) and [release engineering](docs/RELEASE.md).

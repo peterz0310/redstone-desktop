@@ -40,11 +40,11 @@ final class WorldLibraryTests: XCTestCase {
         })
     }
 
-    func testFormatThreeRoundTripHasNoCameraOrGeneratedTilesAndFreshWorldIsEmpty() throws {
+    func testCurrentFormatRoundTripHasNoCameraOrGeneratedTilesAndFreshWorldIsEmpty() throws {
         let document = WorldDocument(name: "  Seed 42  ", generation: WorldGenerationSettings(seed: 42))
         let world = try document.restoredWorld()
         XCTAssertEqual(document.name, "Seed 42")
-        XCTAssertEqual(document.formatVersion, 3)
+        XCTAssertEqual(document.formatVersion, WorldDocument.currentFormatVersion)
         XCTAssertTrue(world.tiles.isEmpty)
         XCTAssertTrue(world.unspecifiedTiles.isEmpty)
         XCTAssertTrue(world.circuit.components.isEmpty)

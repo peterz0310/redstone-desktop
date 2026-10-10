@@ -126,7 +126,14 @@ final class EditorCanvasRenderer {
         let preview = overlay("editor-preview", in: scene)
         preview.removeAllChildren()
         if let tile = editor.hoveredTile {
-            if let (circuit, allowed) = editor.placementPreview(at: tile, appState: appState) {
+            if editor.tool == .terrain, editor.circuitTest == nil,
+               let cells = try? TerrainEditing.footprint(center: tile, size: editor.terrainBrushSize) {
+                let plan = try? TerrainEditing.plan(document: appState.selectedDocument, brush: editor.terrainBrush, tiles: cells)
+                for point in cells {
+                    let color: NSColor = editor.isPreviewing(appState) || appState.isEditorConfigurationLocked ? .systemRed : (plan?.protected.contains(point) == true ? .systemOrange : .systemGreen)
+                    preview.addChild(outline(point, color: color, mapper: mapper, scene: scene))
+                }
+            } else if let (circuit, allowed) = editor.placementPreview(at: tile, appState: appState) {
                 let ghost = SKNode(); ghost.alpha = 0.5
                 ghostRenderer.render(circuit, poweredTiles: [], occupancy: .unavailable("Blueprint preview"), mapper: mapper,
                     screen: scene.screen, viewport: CGRect(origin: .zero, size: size), into: ghost)

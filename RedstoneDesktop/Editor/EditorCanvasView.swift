@@ -78,10 +78,20 @@ final class EditorCanvasSurface: SKView {
         selectingRegion = editor?.pendingPlacement == nil && (editor?.tool == .region || event.modifierFlags.contains(.shift)) && editor?.circuitTest == nil
         if selectingRegion, let downPoint { editor?.beginRegion(at: downPoint, size: bounds.size, additive: event.modifierFlags.contains(.shift)) }
         draggingPan = false
+        if editor?.tool == .terrain, let appState, let downPoint {
+            selectingRegion = false
+            editor?.terrainInput(at: downPoint, size: bounds.size, phase: .begin, appState: appState)
+            refresh()
+        }
     }
 
     override func mouseDragged(with event: NSEvent) {
         let point = convert(event.locationInWindow, from: nil)
+        if editor?.tool == .terrain {
+            if let appState { editor?.terrainInput(at: point, size: bounds.size, phase: .drag, appState: appState) }
+            editor?.hover(at: point, size: bounds.size, appState: appState)
+            refresh(); return
+        }
         if selectingRegion, let downPoint, draggingPan || hypot(point.x - downPoint.x, point.y - downPoint.y) >= 4 {
             if let appState { editor?.dragRegion(to: point, size: bounds.size, appState: appState) }
             draggingPan = true
@@ -98,6 +108,10 @@ final class EditorCanvasSurface: SKView {
     override func mouseUp(with event: NSEvent) {
         defer { editor?.endRegion(); downPoint = nil; lastDragPoint = nil; draggingPan = false; navigating = false; selectingRegion = false }
         let point = convert(event.locationInWindow, from: nil)
+        if editor?.tool == .terrain {
+            if let appState { editor?.terrainInput(at: point, size: bounds.size, phase: .end, appState: appState) }
+            refresh(); return
+        }
         if !draggingPan, let downPoint, hypot(point.x - downPoint.x, point.y - downPoint.y) < 4,
            let editor, let appState { editor.click(at: point, size: bounds.size, appState: appState, additive: event.modifierFlags.contains(.shift)) }
         editor?.hover(at: point, size: bounds.size, appState: appState)

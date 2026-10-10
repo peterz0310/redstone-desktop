@@ -31,7 +31,7 @@ Circuit copies use a private macOS clipboard type. They contain configuration, n
 
 ## Undo and redo
 
-The right panel's **Undo** and **Redo** buttons reverse component placement, erasure, inspector configuration and group operations. A group move, paste, rotation or deletion is one undo step. History belongs to each world and lasts for the current app session. It holds up to 100 operations, additionally bounded by 50,000 changed cells across multiple operations. A new edit clears redo.
+The right panel's **Undo** and **Redo** buttons reverse terrain strokes, component placement, erasure, inspector configuration and group operations. A terrain stroke, group move, paste, rotation or deletion is one undo step. History belongs to each world and lasts for the current app session. It holds up to 100 operations, additionally bounded by 50,000 changed cells across multiple operations. A new edit clears redo.
 
 Undo doesn't reverse camera movement, world/area creation or deletion, blueprint shelf deletion, permissions, or desktop runtime inputs. It is disabled for a running world's circuit, seed previews and test mode. Successful edits and undo/redo use normal autosaving; quitting clears history but preserves the resulting circuit.
 

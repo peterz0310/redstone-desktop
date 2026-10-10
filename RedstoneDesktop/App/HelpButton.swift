@@ -22,6 +22,7 @@ struct ToolIcon: View {
         Group {
             if name == "Select" { Image(systemName: "rectangle.dashed") }
             else if name == "Move" { Image(systemName: "cursorarrow") }
+            else if name == "Terrain" { Image(systemName: "paintbrush.pointed.fill") }
             else if name == "Plate" { Image(systemName: "square.stack.3d.down.right.fill") }
             else if name == "Sensor" { Image(systemName: "doc.text.magnifyingglass") }
             else if name == "Erase" { Image(systemName: "eraser.fill") }

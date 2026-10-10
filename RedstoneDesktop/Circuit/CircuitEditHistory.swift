@@ -2,25 +2,41 @@ import Foundation
 
 /// Sparse configuration deltas, not full world snapshots or runtime power.
 struct CircuitChange {
+    let componentCoordinates: Set<WorldCoordinate>
+    let terrainCoordinates: Set<WorldCoordinate>
+    let terrainBefore: [WorldCoordinate: Tile], terrainAfter: [WorldCoordinate: Tile]
     let coordinates: Set<WorldCoordinate>
     let before: CircuitWorld, after: CircuitWorld
     let leversBefore: Set<WorldCoordinate>, leversAfter: Set<WorldCoordinate>
-    init(before: CircuitWorld, after: CircuitWorld, leversBefore: Set<WorldCoordinate>, leversAfter: Set<WorldCoordinate>) {
+    init(before: CircuitWorld, after: CircuitWorld, leversBefore: Set<WorldCoordinate>, leversAfter: Set<WorldCoordinate>, terrainBefore: [WorldCoordinate: Tile] = [:], terrainAfter: [WorldCoordinate: Tile] = [:]) {
         let changed: Set<WorldCoordinate> = Set(before.components.keys).union(after.components.keys).filter { before.components[$0] != after.components[$0] }
-        coordinates = changed
+        componentCoordinates = changed
+        let terrainChanged = Set(terrainBefore.keys).union(terrainAfter.keys).filter { terrainBefore[$0] != terrainAfter[$0] }
+        terrainCoordinates = terrainChanged
+        self.terrainBefore = terrainBefore.filter { terrainChanged.contains($0.key) }
+        self.terrainAfter = terrainAfter.filter { terrainChanged.contains($0.key) }
+        coordinates = changed.union(terrainChanged)
         self.before = CircuitWorld(components: before.components.filter { changed.contains($0.key) })
         self.after = CircuitWorld(components: after.components.filter { changed.contains($0.key) })
-        self.leversBefore = leversBefore.intersection(coordinates); self.leversAfter = leversAfter.intersection(coordinates)
+        self.leversBefore = leversBefore.intersection(changed); self.leversAfter = leversAfter.intersection(changed)
     }
     func applying(to circuit: CircuitWorld, levers: Set<WorldCoordinate>, undo: Bool) throws -> (CircuitWorld, Set<WorldCoordinate>) {
         let expected = undo ? after : before, replacement = undo ? before : after
-        guard coordinates.allSatisfy({ circuit.components[$0] == expected.components[$0] }) else {
+        guard componentCoordinates.allSatisfy({ circuit.components[$0] == expected.components[$0] }) else {
             throw BlueprintError("This circuit changed elsewhere. Nothing was undone.")
         }
         var result = circuit
-        for point in coordinates { result.components[point] = replacement.components[point] }
-        return (result, levers.subtracting(coordinates).union(undo ? leversBefore : leversAfter))
+        for point in componentCoordinates { result.components[point] = replacement.components[point] }
+        return (result, levers.subtracting(componentCoordinates).union(undo ? leversBefore : leversAfter))
     }
+    func applyingTerrain(to current: [WorldCoordinate: Tile], undo: Bool) throws -> [WorldCoordinate: Tile] {
+        let expected = undo ? terrainAfter : terrainBefore, replacement = undo ? terrainBefore : terrainAfter
+        guard terrainCoordinates.allSatisfy({ current[$0] == expected[$0] }) else { throw BlueprintError("Terrain changed elsewhere. Nothing was undone.") }
+        var result = current
+        for point in terrainCoordinates { result[point] = replacement[point] }
+        return result
+    }
+
 }
 struct CircuitEditHistory {
     private(set) var undo: [CircuitChange] = [], redo: [CircuitChange] = []

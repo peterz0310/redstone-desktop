@@ -65,24 +65,61 @@ final class AppState: ObservableObject {
     var canRedoCircuit: Bool { !isEditorConfigurationLocked && !persistenceBlocked && !(editHistories[selectedWorldID]?.redo.isEmpty ?? true) }
 
     @discardableResult
-    func replaceEditorCircuit(_ circuit: CircuitWorld, levers: Set<WorldCoordinate>? = nil, recordUndo: Bool = true) -> Bool {
+    func replaceEditorCircuit(_ circuit: CircuitWorld, levers: Set<WorldCoordinate>? = nil, recordUndo: Bool = true, terrainOverrides: [WorldCoordinate: Tile]? = nil) -> Bool {
         guard !isEditorConfigurationLocked, !persistenceBlocked else { developerPlacementStatus = editorConfigurationLockMessage; return false }
         var document = selectedDocument
+        if let terrainOverrides { document.terrainOverrides = terrainOverrides }
         document.circuit = circuit
         document.activeLevers = (levers ?? document.activeLevers).filter { circuit.components[$0]?.kind == .lever }
         do {
             let world = try document.restoredWorld()
-            commitCircuit(world, worldID: document.id, recordUndo: recordUndo, leverPositions: document.activeLevers)
+            if terrainOverrides != nil { try validateTerrainLibrarySize(document) }
+            commitCircuit(world, worldID: document.id, recordUndo: recordUndo, leverPositions: document.activeLevers, terrainOverrides: document.terrainOverrides)
             return true
         } catch { developerPlacementStatus = "Nothing changed: \(error.localizedDescription)"; return false }
     }
+    private func validateTerrainLibrarySize(_ document: WorldDocument) throws {
+        var candidate = library
+        guard let index = candidate.worlds.firstIndex(where: { $0.id == document.id }) else { throw BlueprintError("World no longer exists.") }
+        candidate.worlds[index] = document
+        let encoder = JSONEncoder(); encoder.outputFormatting = [.prettyPrinted, .sortedKeys]
+        guard try encoder.encode(candidate).count <= WorldLibraryStore.maximumBytes else {
+            throw BlueprintError("Nothing changed: this edit would exceed the 2 MB library limit. Restore terrain or remove unused worlds first.")
+        }
+    }
+
+    @discardableResult
+    func applyTerrain(brush: TerrainBrush, tiles: Set<WorldCoordinate>, buildSessionID: UUID? = nil) -> Bool {
+        if let buildSessionID {
+            guard let session = buildSession, session.id == buildSessionID, session.worldID == activeWorldID,
+                  session.areaID == library.activeAreaID, !isMaintenanceLocked, !persistenceBlocked,
+                  let document = library.world(id: session.worldID) else { return false }
+            do {
+                let plan = try TerrainEditing.plan(document: document, brush: brush, tiles: tiles)
+                var nextDocument = document; nextDocument.terrainOverrides = plan.overrides
+                try validateTerrainLibrarySize(nextDocument)
+                commitCircuit(plan.world, worldID: session.worldID, terrainOverrides: plan.overrides)
+                session.status = "Changed \(plan.changed.count) tiles; protected \(plan.protected.count) circuit tiles."
+                refreshBuildRenderer(); return true
+            } catch { session.status = error.localizedDescription; return false }
+        }
+        guard !isEditorConfigurationLocked else { return false }
+        do {
+            let plan = try TerrainEditing.plan(document: selectedDocument, brush: brush, tiles: tiles)
+            guard replaceEditorCircuit(selectedDocument.circuit, terrainOverrides: plan.overrides) else { return false }
+            developerPlacementStatus = "Changed \(plan.changed.count) tiles; protected \(plan.protected.count) circuit tiles."
+            return true
+        } catch { developerPlacementStatus = error.localizedDescription; return false }
+    }
+
     @discardableResult
     func undoCircuit(redo: Bool = false) -> Bool {
         guard redo ? canRedoCircuit : canUndoCircuit,
               let change = redo ? editHistories[selectedWorldID]?.redo.last : editHistories[selectedWorldID]?.undo.last else { return false }
         do {
             let (circuit, levers) = try change.applying(to: selectedDocument.circuit, levers: selectedDocument.activeLevers, undo: !redo)
-            guard replaceEditorCircuit(circuit, levers: levers, recordUndo: false) else { return false }
+            let terrain = try change.applyingTerrain(to: selectedDocument.terrainOverrides, undo: !redo)
+            guard replaceEditorCircuit(circuit, levers: levers, recordUndo: false, terrainOverrides: terrain) else { return false }
             if redo { editHistories[selectedWorldID]?.didRedo() } else { editHistories[selectedWorldID]?.didUndo() }
             editHistoryRevision += 1
             developerPlacementStatus = redo ? "Edit redone." : "Edit undone."
@@ -781,15 +818,16 @@ final class AppState: ObservableObject {
         commitCircuit(editorWorld, worldID: selectedWorldID)
     }
 
-    private func commitCircuit(_ world: World, worldID: UUID, recordUndo: Bool = true, leverPositions: Set<WorldCoordinate>? = nil) {
+    private func commitCircuit(_ world: World, worldID: UUID, recordUndo: Bool = true, leverPositions: Set<WorldCoordinate>? = nil, terrainOverrides: [WorldCoordinate: Tile]? = nil) {
         guard let index = library.worlds.firstIndex(where: { $0.id == worldID }) else { return }
         let before = library.worlds[index]
         let nextLevers = (leverPositions ?? before.activeLevers).filter { world.circuit.components[$0]?.kind == .lever }
         if recordUndo {
-            let change = CircuitChange(before: before.circuit, after: world.circuit, leversBefore: before.activeLevers, leversAfter: nextLevers)
+            let change = CircuitChange(before: before.circuit, after: world.circuit, leversBefore: before.activeLevers, leversAfter: nextLevers, terrainBefore: before.terrainOverrides, terrainAfter: terrainOverrides ?? before.terrainOverrides)
             editHistories[worldID, default: CircuitEditHistory()].record(change)
             editHistoryRevision += 1
         }
+        if let terrainOverrides { library.worlds[index].terrainOverrides = terrainOverrides }
         library.worlds[index].circuit = world.circuit
         library.worlds[index].activeLevers = nextLevers
         if selectedWorldID == worldID { editorWorld = world }
@@ -841,7 +879,27 @@ final class AppState: ObservableObject {
 
     private func refreshBuildRenderer() {
         guard buildSession != nil else { return }
-        buildController?.update(world: desktopWorld, levers: savedLevers, assets: assets)
+        buildController?.update(world: buildSession?.terrainStroke?.plan?.world ?? desktopWorld, levers: savedLevers, assets: assets)
+    }
+
+    func buildTerrain(at point: CGPoint, phase: TerrainStrokePhase, sessionID: UUID) {
+        guard let session = buildSession, session.id == sessionID else { return }
+        if phase == .cancel { session.terrainStroke = nil; session.status = "Terrain stroke cancelled."; refreshBuildRenderer(); return }
+        guard session.worldID == activeWorldID, session.areaID == library.activeAreaID,
+              !isMaintenanceLocked, !persistenceBlocked, let tile = session.tile(at: point),
+              let document = library.world(id: session.worldID) else { session.terrainStroke = nil; refreshBuildRenderer(); return }
+        if phase == .begin { session.terrainStroke = TerrainStroke(document: document, brush: session.terrainBrush, size: session.terrainBrushSize) }
+        guard var stroke = session.terrainStroke else { return }
+        guard stroke.document == document else { session.terrainStroke = nil; session.status = "World changed; stroke cancelled."; refreshBuildRenderer(); return }
+        do {
+            try stroke.extend(to: tile); session.terrainStroke = stroke
+            session.status = "Preview: \(stroke.plan!.changed.count) tiles; \(stroke.plan!.protected.count) circuit tiles protected. Release to save."
+            if phase == .end {
+                session.terrainStroke = nil
+                _ = applyTerrain(brush: stroke.brush, tiles: stroke.tiles, buildSessionID: session.id)
+            }
+        } catch { session.terrainStroke = nil; session.status = "Nothing changed: \(error.localizedDescription)" }
+        refreshBuildRenderer()
     }
 
     func buildClick(at point: CGPoint, erase: Bool = false, sessionID: UUID) {

@@ -4,7 +4,7 @@ This is a deterministic 2D simulation, separate from SpriteKit, Finder and file/
 
 ## Placement
 
-Components can be built on dry grass, dirt, stone and sand. Coal/iron deposits on stone are part of the buildable surface; placing or erasing a component preserves the ore decoration. Water, trees, cactuses and other decorations remain blocked. Placement never overwrites an existing component silently.
+Components can be built on dry grass, dirt, stone and sand. Coal/iron deposits on stone are part of the buildable surface; placing or erasing a component preserves the ore decoration. Water, trees, cactuses and other decorations remain blocked. Placement never overwrites an existing component silently. [Terrain editing](TERRAIN_EDITING.md) can clear decorations or paint solid ground to create construction space; painting protects existing components and skips unsupported terrain changes.
 
 ## Ports and timing
 

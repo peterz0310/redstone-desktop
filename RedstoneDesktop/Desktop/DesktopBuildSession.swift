@@ -6,7 +6,7 @@ import Foundation
 final class DesktopBuildSession: ObservableObject {
     enum Tool: String, CaseIterable {
         case dust = "Dust", button = "Button", lever = "Lever"
-        case repeater = "Repeater", output = "Output", erase = "Erase", torch = "Torch", pressurePlate = "Plate", fileSensor = "Sensor"
+        case repeater = "Repeater", output = "Output", erase = "Erase", torch = "Torch", pressurePlate = "Plate", fileSensor = "Sensor", terrain = "Terrain"
 
         var kind: CircuitComponentKind? {
             switch self {
@@ -18,7 +18,7 @@ final class DesktopBuildSession: ObservableObject {
             case .torch: .torch
             case .repeater: .repeater
             case .output: .output
-            case .erase: nil
+            case .erase, .terrain: nil
             }
         }
     }
@@ -29,6 +29,9 @@ final class DesktopBuildSession: ObservableObject {
     let mapper: CoordinateMapper
     let title: String
     @Published var tool = Tool.dust
+    @Published var terrainBrush = TerrainBrush.grass
+    @Published var terrainBrushSize = 3
+    @Published var terrainStroke: TerrainStroke?
     @Published var sensorFilter = FileSensorFilter()
     @Published var direction = Direction.east
     @Published var delay = RepeaterDelay.one
