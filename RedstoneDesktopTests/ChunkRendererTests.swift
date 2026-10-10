@@ -123,7 +123,7 @@ final class ChunkRendererTests: XCTestCase {
 
     func testOriginalPlaceholderPixelsDistinguishTerrainAndDecorations() {
         let terrainColors = TerrainID.allCases.map { OriginalTerrainPixels.pixel(Tile(terrain: $0), x: 0, y: 0) }
-        XCTAssertEqual(Set(terrainColors.map { "\($0.0),\($0.1),\($0.2)" }).count, 6)
+        XCTAssertEqual(Set(terrainColors.map { "\($0.0),\($0.1),\($0.2)" }).count, TerrainID.allCases.count)
         for decoration in DecorationID.allCases {
             var differs = false
             for y in 0..<8 {

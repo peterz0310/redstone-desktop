@@ -29,6 +29,9 @@ final class BuiltInAssetProvider: AssetProvider {
             let appearance = id.decorationAppearance
             let decoration: DecorationID? = appearance.map { value in
                 switch value {
+                case .pine: .pine
+                case .shrub: .shrub
+                case .mushroom: .mushroom
                 case .tree: .tree
                 case .reed: .reed
                 case .coal, .iron, .cactus: .rock

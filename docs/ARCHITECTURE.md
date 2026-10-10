@@ -10,6 +10,8 @@ All world/screen/scene conversion goes through `CoordinateMapper`. Tile sizes us
 
 Editor test mode owns an independent simulator copy and scheduler; its Output events become local visual feedback and counters only. It never dispatches actions or saves test lever/power state. Group edits validate a complete working copy before publication; per-world, session-only undo uses bounded sparse component deltas. Reusable blueprints are a separately validated, atomic `blueprints.json` file; they are included in full Support reset backups, but excluded from world-library exports. See [EDITOR_TOOLS.md](EDITOR_TOOLS.md) for limits and UI contracts.
 
+Default generation uses global integer climate/elevation/river fields with clustered scenery. Version-1 terrain locations are intentionally replaced by the current landscape; settings default to version 2. New surfaces keep domain capabilities separate from art. See [WORLD_GENERATION.md](WORLD_GENERATION.md).
+
 ## Finder and actions
 
 Finder access goes through `DesktopItemProviding`. Cached occupancy is presentation state; actions verify fresh occupancy before opening the current item. Mouse recipient metadata gates desktop circuit clicks so covered app windows do not activate hidden inputs. Stop, pause, area reassignment, target changes and Quit cancel stale action work.

@@ -42,6 +42,18 @@ final class TerrainEditingTests: XCTestCase {
         XCTAssertEqual(PlacementRules().canPlace(component: CircuitComponent(kind: .dust), at: target, in: plan.world), .allowed)
         XCTAssertTrue(original.terrainOverrides.isEmpty)
     }
+    func testNewSurfaceBrushesPersistAndSupportAllComponents() throws {
+        for brush in [TerrainBrush.dryGrass, .snow, .gravel] {
+            let plan = try TerrainEditing.plan(document: document(), brush: brush, tiles: [p(40)])
+            var document = document(); document.terrainOverrides = plan.overrides
+            let decoded = try JSONDecoder().decode(WorldDocument.self, from: JSONEncoder().encode(document))
+            XCTAssertEqual(try decoded.restoredWorld().tile(at: p(40))?.terrain, brush.terrain)
+            for kind in CircuitComponentKind.allCases where kind != .empty {
+                XCTAssertEqual(PlacementRules().canPlace(component: CircuitComponent(kind: kind), at: p(40), in: plan.world), .allowed)
+            }
+        }
+    }
+
     func testWaterAndRestoreProtectCircuitsWithoutRejectingOtherBrushTiles() throws {
         var document = document()
         document.circuit.components[p(16)] = CircuitComponent(kind: .lever)
@@ -111,8 +123,8 @@ final class TerrainEditingTests: XCTestCase {
     func testClearingGeneratedDecorationPreservesVisibleGrassAndUndoPreservesCurrentLeverState() throws {
         let document = WorldDocument(generation: WorldGenerationSettings(seed: 42))
         let generator = try WorldGenerator(settings: document.generation)
-        let target = try XCTUnwrap((-64...64).flatMap { y in (-64...64).map { p($0,y) } }.first {
-            let tile = generator.tile(at: $0); return tile.terrain == .dirt && tile.decoration != nil
+        let target = try XCTUnwrap(stride(from: -256, through: 256, by: 4).flatMap { y in stride(from: -256, through: 256, by: 4).map { p($0,y) } }.first {
+            let tile = generator.tile(at: $0); return tile.terrain == .grass && tile.decoration != nil
         })
         let plan = try TerrainEditing.plan(document: document, brush: .clearDecorations, tiles: [target])
         XCTAssertEqual(plan.world.tile(at: target), Tile(terrain: .grass))

@@ -10,7 +10,7 @@ struct TerrainDefinition: Equatable, Sendable {
 extension TerrainID {
     var definition: TerrainDefinition {
         switch self {
-        case .grass, .dirt, .stone, .sand:
+        case .grass, .dirt, .stone, .sand, .dryGrass, .snow, .gravel:
             return TerrainDefinition(id: self, isLiquid: false, isSolidSurface: true,
                                      supportsCircuit: true, supportsHeavyComponent: true)
         case .shallowWater, .deepWater:

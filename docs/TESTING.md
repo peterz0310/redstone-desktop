@@ -3,6 +3,14 @@
 These are physical-Mac checks, separate from automated tests. Report which numbered groups you actually tried and what failed; untested groups remain unverified. Use harmless folders/text files first. Place new test circuits on clear ground **to the right** of your existing builds. Do not use scripts for display-calibration tests.
 
 
+## Improved default landscapes — awaiting owner confirmation
+
+1. Quit the old copy and open the updated app. Create fresh worlds with seeds **2026**, **42** and optionally **7**. No new generation options should be required. Untouched terrain in older worlds can change; do not use those builds to judge the new generator. The app should not automatically delete worlds. Backup/reset testing remains deferred.
+2. Pan and zoom out across a broad region. Look for larger distinct regions, winding inland rivers with banks, lakes, golden dry grass, snowy pine ground, meadows and clustered woodland. Seed 42's origin is near a lake; 2026's is desert; 7's is snowy. Explore beyond the starting view to find other regions. Check water and terrain join without visible chunk seams.
+3. Select Terrain and try **Dry grass**, **Snow** and **Gravel**. Place a button/dust/repeater circuit on each clear surface, then Test Circuit. Clear a pine/shrub/mushroom or paint Grass over water to make room. Ore on stone should still allow building; untouched water/scenery should reject placement. Undo/Redo and Restore Original should work.
+4. Save an area, quit/reopen, and check the same seed, new painted surfaces and circuit persist. Compare editor and desktop views of that area. Pan/zoom for a minute and report recurring pauses.
+5. Check original artwork without a pack. If using installed Java textures, import that version again in Appearance to pick up snow, gravel, dry grass and new scenery. Existing cached packs should remain usable with original fallback where images are missing. No additional game assets should be shipped in the app.
+
 ## Sidebar and right-click follow-up — awaiting owner confirmation
 
 1. Quit the old app and open the updated build. Check the wider panel has Build, Blueprints and Inspector tabs, with no Sidebar label or Technical Details. Build's first rows should be Move / Select, then Erase / Terrain, with components below.

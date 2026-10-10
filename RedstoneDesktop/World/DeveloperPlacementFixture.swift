@@ -10,7 +10,7 @@ enum DeveloperPlacementFixture {
     static let targets: [Target] = TerrainID.allCases.enumerated().map { index, terrain in
         Target(name: terrain.rawValue, coordinate: WorldCoordinate(x: 10 + index, y: 3), tile: Tile(terrain: terrain))
     } + DecorationID.allCases.enumerated().map { index, decoration in
-        Target(name: decoration.rawValue, coordinate: WorldCoordinate(x: 10 + index, y: 5),
+        Target(name: decoration.rawValue, coordinate: WorldCoordinate(x: 10 + index + (index >= 4 ? 1 : 0), y: 5),
                tile: Tile(terrain: .grass, decoration: decoration))
     } + [Target(name: "unspecified", coordinate: WorldCoordinate(x: 14, y: 5), tile: nil)]
 

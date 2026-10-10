@@ -185,6 +185,9 @@ final class DesktopScene: SKScene {
 
     private func terrainColor(_ terrain: TerrainID) -> NSColor {
         switch terrain {
+        case .dryGrass: return NSColor(red: 0.68, green: 0.63, blue: 0.29, alpha: 1)
+        case .snow: return NSColor(red: 0.89, green: 0.93, blue: 0.95, alpha: 1)
+        case .gravel: return NSColor(red: 0.47, green: 0.48, blue: 0.47, alpha: 1)
         case .grass: return NSColor(calibratedRed: 0.28, green: 0.5, blue: 0.35, alpha: 1)
         case .dirt: return .brown
         case .stone: return .gray

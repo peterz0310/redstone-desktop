@@ -2,6 +2,8 @@ import Foundation
 
 enum TextureAssetID: String, Codable, CaseIterable, Sendable {
     case terrainGrass, terrainDirt, terrainStone, terrainSand, waterShallow, waterDeep
+    case terrainDryGrass, terrainSnow, terrainGravel
+    case decorationPine, decorationShrub, decorationMushroom
     case decorationTree, decorationFlower, decorationRock, decorationReed
     case decorationDandelion, decorationBlueOrchid, decorationAllium, decorationOxeyeDaisy
     case decorationCoal, decorationIron, decorationCactus
@@ -13,6 +15,9 @@ enum TextureAssetID: String, Codable, CaseIterable, Sendable {
 
     static func terrain(_ id: TerrainID) -> Self {
         switch id {
+        case .dryGrass: .terrainDryGrass
+        case .snow: .terrainSnow
+        case .gravel: .terrainGravel
         case .grass: .terrainGrass
         case .dirt: .terrainDirt
         case .stone: .terrainStone
@@ -23,6 +28,9 @@ enum TextureAssetID: String, Codable, CaseIterable, Sendable {
     }
     static func decoration(_ id: DecorationID) -> Self {
         switch id {
+        case .pine: .decorationPine
+        case .shrub: .decorationShrub
+        case .mushroom: .decorationMushroom
         case .tree: .decorationTree
         case .flower: .decorationFlower
         case .rock: .decorationRock
@@ -35,6 +43,9 @@ enum TextureAssetID: String, Codable, CaseIterable, Sendable {
 
     static func decoration(_ appearance: DecorationAppearance) -> Self {
         switch appearance {
+        case .pine: .decorationPine
+        case .shrub: .decorationShrub
+        case .mushroom: .decorationMushroom
         case .tree: .decorationTree
         case .poppy: .decorationFlower
         case .dandelion: .decorationDandelion

@@ -32,6 +32,9 @@ enum AreaPreviewRenderer {
                 let terrain = world.tile(at: tile).map { TerrainAppearance.tile($0, generated: world.generation != nil && world.tiles[tile] == nil) }
                 let color: NSColor
                 switch terrain?.terrain {
+                case .dryGrass: color = NSColor(red: 0.68, green: 0.63, blue: 0.29, alpha: 1)
+                case .snow: color = NSColor(red: 0.89, green: 0.93, blue: 0.95, alpha: 1)
+                case .gravel: color = NSColor(red: 0.47, green: 0.48, blue: 0.47, alpha: 1)
                 case .grass: color = NSColor(red: 0.28, green: 0.5, blue: 0.35, alpha: 1)
                 case .dirt: color = .brown
                 case .stone: color = .gray

@@ -19,7 +19,7 @@ final class PlacementRulesTests: XCTestCase {
     }
 
     func testEveryComponentAllowedOnEachDryTerrain() {
-        for terrain in [TerrainID.grass, .dirt, .stone, .sand] {
+        for terrain in TerrainID.allCases.filter({ !$0.definition.isLiquid }) {
             let world = World(tiles: [coordinate: Tile(terrain: terrain)])
             for kind in kinds {
                 XCTAssertEqual(rules.canPlace(component: CircuitComponent(kind: kind), at: coordinate, in: world), .allowed)
@@ -118,7 +118,7 @@ final class PlacementRulesTests: XCTestCase {
         XCTAssertEqual(fixture.circuit, original.circuit)
         for (coordinate, tile) in original.tiles { XCTAssertEqual(fixture.tiles[coordinate], tile) }
         XCTAssertTrue(DeveloperPlacementFixture.targets.allSatisfy { $0.coordinate.x > 7 })
-        XCTAssertEqual(fixture.tiles.count, original.tiles.count + 10)
+        XCTAssertEqual(fixture.tiles.count, original.tiles.count + TerrainID.allCases.count + DecorationID.allCases.count)
         XCTAssertNil(fixture.tiles[WorldCoordinate(x: 14, y: 5)])
     }
 }

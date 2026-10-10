@@ -1,6 +1,7 @@
-/// Version fixes all terrain scales/thresholds. Seed UI/settings expansion is later.
+/// Generation 2 is the default landscape. Version 1 saves use the improved
+/// landscape too; historical terrain positions are intentionally not preserved.
 struct WorldGenerationSettings: Equatable, Codable, Sendable {
-    var generationVersion = 1
+    var generationVersion = 2
     var seed: UInt64
 }
 
@@ -10,7 +11,7 @@ enum WorldGenerationError: Error, Equatable {
 }
 
 enum BiomeID: String, CaseIterable, Sendable {
-    case plains, woodland, desert, rocky, wetland
+    case plains, woodland, desert, rocky, wetland, meadow, savanna, alpine
 }
 
 struct TerrainSample: Equatable, Sendable {
@@ -19,6 +20,8 @@ struct TerrainSample: Equatable, Sendable {
     let moisture: Int
     let temperature: Int
     let biome: BiomeID
+    /// Distance to the winding river contour, in noise units. Not water flow.
+    let riverDistance: Int
     let tile: Tile
 }
 
@@ -27,7 +30,7 @@ struct WorldGenerator: Sendable {
     let settings: WorldGenerationSettings
 
     init(settings: WorldGenerationSettings) throws {
-        guard settings.generationVersion == 1 else { throw WorldGenerationError.unsupportedVersion(settings.generationVersion) }
+        guard (1...2).contains(settings.generationVersion) else { throw WorldGenerationError.unsupportedVersion(settings.generationVersion) }
         self.settings = settings
     }
 
@@ -35,40 +38,60 @@ struct WorldGenerator: Sendable {
 
     func sample(at coordinate: WorldCoordinate) -> TerrainSample {
         let seed = settings.seed
-        let elevation = (SeededNoise.value(seed: seed, at: coordinate, scale: 64, channel: 1) * 3
-                         + SeededNoise.value(seed: seed, at: coordinate, scale: 32, channel: 2)) / 4
-        let moisture = SeededNoise.value(seed: seed, at: coordinate, scale: 128, channel: 3)
-        let temperature = SeededNoise.value(seed: seed, at: coordinate, scale: 128, channel: 4)
-        let variant = SeededNoise.hash(seed: seed, x: coordinate.x, y: coordinate.y, channel: 5) & 0xFFFF
-        let decorationRoll = SeededNoise.hash(seed: seed, x: coordinate.x, y: coordinate.y, channel: 6) & 0xFFFF
+        func noise(_ scale: Int, _ channel: UInt64) -> Int {
+            SeededNoise.value(seed: seed, at: coordinate, scale: scale, channel: channel)
+        }
+        let elevation = (noise(128, 1) * 3 + noise(48, 2)) / 4
+        let moisture = noise(224, 3)
+        let temperature = noise(256, 4)
+        let detail = noise(24, 9)
+        let groves = noise(40, 10)
+        // A continuous contour with finer bends gives rivers independent of low
+        // elevation lakes. Sampling global coordinates prevents chunk seams.
+        let riverDistance = abs(noise(160, 7) - 32768 + (noise(48, 8) - 32768) / 5)
+        let roll = Int(SeededNoise.hash(seed: seed, x: coordinate.x, y: coordinate.y, channel: 6) & 0xFFFF)
         let biome: BiomeID
         let terrain: TerrainID
-        if elevation < 28000 {
-            biome = .wetland
-            terrain = elevation < 24000 ? .deepWater : .shallowWater
-        } else if elevation < 31000 {
-            biome = .wetland; terrain = .sand
-        } else if elevation > 45000 || (temperature < 22000 && elevation > 38000) {
-            biome = .rocky; terrain = .stone
-        } else if moisture < 22000 && temperature > 30000 {
+        if elevation < 20500 {
+            biome = .wetland; terrain = elevation < 16500 ? .deepWater : .shallowWater
+        } else if riverDistance < 1500 {
+            biome = .wetland; terrain = riverDistance < 500 ? .deepWater : .shallowWater
+        } else if elevation < 22300 || riverDistance < 2300 {
+            biome = .wetland; terrain = temperature > 39000 && moisture < 27000 ? .sand : .gravel
+        } else if temperature < 20000 || (elevation > 47500 && temperature < 36000) {
+            biome = .alpine; terrain = detail > 49000 ? .stone : .snow
+        } else if elevation > 47000 {
+            biome = .rocky; terrain = detail < 17000 ? .gravel : .stone
+        } else if moisture < 23500 && temperature > 36500 {
             biome = .desert; terrain = .sand
+        } else if moisture < 29000 && temperature > 31000 {
+            biome = .savanna; terrain = .dryGrass
+        } else if moisture > 39500 {
+            biome = .woodland; terrain = .grass
+        } else if moisture > 30000 && temperature < 39000 {
+            biome = .meadow; terrain = .grass
         } else {
-            biome = moisture > 38000 ? .woodland : .plains
-            terrain = variant < 5000 ? .dirt : .grass
+            biome = .plains; terrain = .grass
         }
         let decoration: DecorationID?
-        switch terrain {
-        case .grass, .dirt:
-            if biome == .woodland && decorationRoll < 6000 { decoration = .tree }
-            else if decorationRoll < 1500 { decoration = .flower }
+        switch biome {
+        case .woodland:
+            if roll < (groves > 32000 ? 8500 : 900) { decoration = .tree }
+            else if roll > 62000 && groves > 35000 { decoration = .mushroom }
+            else if roll < 11000 && groves < 32000 { decoration = .flower }
             else { decoration = nil }
-        case .stone: decoration = decorationRoll < 5500 ? .rock : nil
-        case .sand: decoration = decorationRoll < 1500 ? .rock : nil
-        case .shallowWater: decoration = elevation > 26000 && decorationRoll < 10000 ? .reed : nil
-        case .deepWater: decoration = nil
+        case .meadow: decoration = roll < (detail > 28000 ? 9000 : 2000) ? .flower : nil
+        case .plains:
+            if groves > 48000 && roll < 2800 { decoration = .tree }
+            else { decoration = roll < 1600 ? .flower : nil }
+        case .savanna: decoration = roll < 2200 ? .shrub : nil
+        case .alpine: decoration = terrain == .snow && groves > 27000 && roll < 4000 ? .pine : nil
+        case .rocky: decoration = terrain == .stone && roll < 4800 ? .rock : nil
+        case .desert: decoration = roll < 2000 ? .rock : nil // cactus appearance on sand
+        case .wetland: decoration = terrain == .shallowWater && roll < 6000 ? .reed : nil
         }
         return TerrainSample(elevation: elevation, moisture: moisture, temperature: temperature,
-                             biome: biome, tile: Tile(terrain: terrain, decoration: decoration))
+                             biome: biome, riverDistance: riverDistance, tile: Tile(terrain: terrain, decoration: decoration))
     }
 
     func chunk(at coordinate: ChunkCoordinate) throws -> TerrainChunk {

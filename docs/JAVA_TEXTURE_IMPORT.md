@@ -28,13 +28,19 @@ A folder must contain `assets/minecraft/textures/` directly. An archive may have
 
 ## Supported mappings
 
-Slice 30 adds two optional torch mappings (28 total). Earlier local 26-mapping validation remains historical; current automated imports use original synthetic assets. Torch direction/NOT labels stay app UI; pack pixels never affect the documented [circuit rules](REDSTONE_RULES.md).
+There are 34 optional mappings, including six new landscape surface/scenery mappings. Current automated imports use original synthetic assets. Reimport an installed version to add the new textures to an existing cache. Torch direction/NOT labels stay app UI; pack pixels never affect the documented [circuit rules](REDSTONE_RULES.md).
 
 Modern paths below are relative to `assets/minecraft/textures/block/`. Legacy paths are relative to `assets/minecraft/textures/blocks/`. Modern paths are tried first, then the legacy alternative. Each semantic ID can independently fall back.
 
 | Redstone Desktop ID | Modern PNG | Legacy PNG | Tint or 2D recipe |
 | --- | --- | --- | --- |
 | `terrainGrass` | `grass_block_top.png` | `grass_top.png` | 108, 160, 62 |
+| `terrainDryGrass` | `grass_block_top.png` | `grass_top.png` | 181, 168, 69 |
+| `terrainSnow` | `snow.png` | `snow.png` | None |
+| `terrainGravel` | `gravel.png` | `gravel.png` | None |
+| `decorationPine` | `spruce_leaves.png` | `leaves_spruce.png` | 55, 100, 75 |
+| `decorationShrub` | `acacia_leaves.png` | `leaves_acacia.png` | 140, 145, 55 |
+| `decorationMushroom` | `red_mushroom.png` | `mushroom_red.png` | None |
 | `terrainDirt` | `dirt.png` | `dirt.png` | None |
 | `terrainStone` | `stone.png` | `stone.png` | None |
 | `terrainSand` | `sand.png` | `sand.png` | None |

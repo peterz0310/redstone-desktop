@@ -4,7 +4,7 @@ Choose **Terrain** in the editor's Build tools. Pick a surface and brush size, t
 
 ## Brushes
 
-- **Grass, Dirt, Stone, Sand:** replace the surface and remove decorations. Use Grass to make a clear construction patch over trees or water. Dirt is an intentional exposed dirt surface; generated dirt retains the existing grassy appearance.
+- **Grass, Dirt, Stone, Sand, Dry grass, Snow, Gravel:** replace the surface and remove decorations. Use Grass to make a clear construction patch over trees or water. Dirt is an intentional exposed dirt surface; generated dirt retains the existing grassy appearance.
 - **Shallow water / Deep water:** paint water onto clear tiles.
 - **Clear decorations:** removes trees, flowers, ores, cactuses or reeds while keeping the visible ground surface. It doesn't turn water into buildable land.
 - **Restore original:** removes your terrain edits and restores the world's original generated terrain, including decorations. Older fixture-based worlds restore their original construction patch too.

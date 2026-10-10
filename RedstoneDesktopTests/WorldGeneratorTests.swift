@@ -85,31 +85,36 @@ final class WorldGeneratorTests: XCTestCase {
                 XCTAssertLessThan(abs(left.elevation - right.elevation), 3100)
                 XCTAssertLessThan(abs(below.elevation - above.elevation), 3100)
                 XCTAssertLessThan(abs(left.moisture - right.moisture), 800)
+                XCTAssertLessThan(abs(left.riverDistance - right.riverDistance), 1600)
+                XCTAssertLessThan(abs(below.riverDistance - above.riverDistance), 1600)
             }
         }
     }
 
-    func testVersionOneGoldenFingerprintsFreezeFieldsTerrainAndDecorations() throws {
-        XCTAssertEqual(fingerprint(try generator(42)), 17498966041026583072)
-        XCTAssertEqual(fingerprint(try generator(2026)), 5051880354807136252)
+    func testDefaultGenerationGoldenFingerprintsFreezeFieldsTerrainAndDecorations() throws {
+        XCTAssertEqual(fingerprint(try generator(42)), 3320354182894613434)
+        XCTAssertEqual(fingerprint(try generator(2026)), 3694949341545218925)
     }
 
     func testDifferentSeedsChangeTerrainAndCoverAllSemanticTypes() throws {
         let a = try generator(42), b = try generator(2026)
         var terrain: Set<TerrainID> = [], decorations: Set<DecorationID> = [], biomes: Set<BiomeID> = []
         var differences = 0
-        for y in -128..<128 {
-            for x in -128..<128 {
+        for y in stride(from: -768, to: 768, by: 6) {
+            for x in stride(from: -768, to: 768, by: 6) {
                 let coordinate = coordinate(x, y), sample = a.sample(at: coordinate)
                 terrain.insert(sample.tile.terrain); biomes.insert(sample.biome)
                 if let decoration = sample.tile.decoration { decorations.insert(decoration) }
                 if sample.tile.terrain != b.tile(at: coordinate).terrain { differences += 1 }
                 if sample.tile.terrain == .deepWater { XCTAssertNil(sample.tile.decoration) }
                 if sample.tile.decoration == .reed { XCTAssertEqual(sample.tile.terrain, .shallowWater) }
-                if sample.tile.decoration == .tree { XCTAssertEqual(sample.biome, .woodland) }
+                if sample.tile.decoration == .tree { XCTAssertTrue([.woodland, .plains].contains(sample.biome)) }
+                if sample.tile.decoration == .pine { XCTAssertEqual(sample.tile.terrain, .snow) }
+                if sample.tile.decoration == .mushroom { XCTAssertEqual(sample.biome, .woodland) }
+                if sample.tile.decoration == .shrub { XCTAssertEqual(sample.biome, .savanna) }
             }
         }
-        XCTAssertEqual(terrain, Set(TerrainID.allCases))
+        XCTAssertEqual(terrain, Set(TerrainID.allCases.filter { $0 != .dirt }))
         XCTAssertEqual(decorations, Set(DecorationID.allCases))
         XCTAssertEqual(biomes, Set(BiomeID.allCases))
         XCTAssertGreaterThan(differences, 65536 / 3)
@@ -119,7 +124,40 @@ final class WorldGeneratorTests: XCTestCase {
         let settings = WorldGenerationSettings(seed: .max)
         XCTAssertEqual(try JSONDecoder().decode(WorldGenerationSettings.self, from: JSONEncoder().encode(settings)), settings)
         XCTAssertThrowsError(try WorldGenerator(settings: WorldGenerationSettings(generationVersion: 0, seed: 1)))
-        XCTAssertThrowsError(try WorldGenerator(settings: WorldGenerationSettings(generationVersion: 2, seed: 1)))
+        XCTAssertThrowsError(try WorldGenerator(settings: WorldGenerationSettings(generationVersion: 3, seed: 1)))
+    }
+
+    func testRiversCrossHighGroundWithBanksAndLeaveMostLandBuildable() throws {
+        let generator = try generator()
+        var rivers = 0, banks = 0, dry = 0, total = 0, biomeChanges = 0
+        for y in stride(from: -768, to: 768, by: 6) {
+            for x in stride(from: -768, to: 768, by: 6) {
+                let sample = generator.sample(at: coordinate(x, y))
+                total += 1
+                if !sample.tile.terrain.definition.isLiquid { dry += 1 }
+                if sample.elevation >= 22300 && sample.riverDistance < 1500 {
+                    rivers += 1
+                    XCTAssertEqual(sample.biome, .wetland)
+                    XCTAssertTrue(sample.tile.terrain.definition.isLiquid)
+                }
+                if sample.elevation >= 22300 && (1500..<2300).contains(sample.riverDistance) {
+                    banks += 1
+                    XCTAssertTrue([.gravel, .sand].contains(sample.tile.terrain))
+                    XCTAssertNil(sample.tile.decoration)
+                }
+                if sample.biome != generator.sample(at: coordinate(x + 1, y)).biome { biomeChanges += 1 }
+            }
+        }
+        XCTAssertGreaterThan(rivers, total / 30, "Rivers must exist independently of low-elevation lakes")
+        XCTAssertGreaterThan(banks, total / 60)
+        XCTAssertGreaterThan(dry, total * 2 / 3)
+        XCTAssertLessThan(biomeChanges, total / 25, "Regions should not flicker between biomes every few tiles")
+    }
+
+    func testPreviousGenerationSettingsUseCurrentLandscapeWithoutHistoricalPromise() throws {
+        let previous = try WorldGenerator(settings: WorldGenerationSettings(generationVersion: 1, seed: 42))
+        XCTAssertEqual(WorldGenerationSettings(seed: 42).generationVersion, 2)
+        XCTAssertEqual(try previous.chunk(at: ChunkCoordinate(x: -2, y: 3)), try generator().chunk(at: ChunkCoordinate(x: -2, y: 3)))
     }
 
     func testGeneratedWorldUsesExistingPlacementCapabilitiesWithoutChangingCircuit() throws {

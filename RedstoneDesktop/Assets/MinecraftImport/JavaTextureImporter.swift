@@ -55,6 +55,11 @@ enum JavaTextureImporter {
     }
     static let mappings: [JavaTextureMapping] = [
         mapping(.terrainGrass, "grass_block_top", old: "grass_top", tint: [108,160,62]),
+        mapping(.terrainDryGrass, "grass_block_top", old: "grass_top", tint: [181,168,69]),
+        mapping(.terrainSnow, "snow"), mapping(.terrainGravel, "gravel"),
+        mapping(.decorationPine, "spruce_leaves", old: "leaves_spruce", tint: [55,100,75]),
+        mapping(.decorationShrub, "acacia_leaves", old: "leaves_acacia", tint: [140,145,55]),
+        mapping(.decorationMushroom, "red_mushroom", old: "mushroom_red"),
         mapping(.terrainDirt, "dirt"), mapping(.terrainStone, "stone"), mapping(.terrainSand, "sand"),
         mapping(.waterShallow, "water_still", tint: [80,180,220]), mapping(.waterDeep, "water_still", tint: [45,95,180]),
         mapping(.decorationTree, "oak_leaves", old: "leaves_oak", tint: [70,145,50]),
