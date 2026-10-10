@@ -74,6 +74,8 @@ All IDs below accept **PNG only**. These are the actual format-1 names; examples
 | `redstoneLeverOn` | On lever icon |
 | `redstoneRepeaterOff` | Unpowered repeater icon, pointing right/east |
 | `redstoneRepeaterOn` | Powered repeater icon, pointing right/east |
+| `redstonePlateOff` / `redstonePlateOn` | Desktop pressure plate; original-art fallback in older packs/Java imports |
+| `redstoneSensorOff` / `redstoneSensorOn` | File sensor; original-art fallback in older packs/Java imports |
 | `redstoneTorchOff` | Off torch icon |
 | `redstoneTorchOn` | On torch icon |
 | `redstoneOutputOff` | Unpowered output icon |

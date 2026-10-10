@@ -1,4 +1,5 @@
 enum PlacementFailureReason: Equatable, Sendable {
+    case invalidSensorFilter
     case emptyComponent
     case reserved
     case noSolidSurface
@@ -9,6 +10,7 @@ enum PlacementFailureReason: Equatable, Sendable {
 
     var message: String {
         switch self {
+        case .invalidSensorFilter: return "Enter a sensor name or extension (up to 255 bytes)."
         case .emptyComponent: return "Choose a component to place. Empty is not an erase tool."
         case .reserved: return "This tile is reserved for another use."
         case .noSolidSurface: return "This tile has no specified solid terrain."
@@ -42,6 +44,7 @@ struct PlacementRules: PlacementRuleEvaluating {
     var reservedCoordinates: Set<WorldCoordinate> = []
 
     func canPlace(component: CircuitComponent, at coordinate: WorldCoordinate, in world: World) -> PlacementResult {
+        guard component.sensorFilter.isValid else { return .rejected(.invalidSensorFilter) }
         guard component.kind != .empty else { return .rejected(.emptyComponent) }
         guard !reservedCoordinates.contains(coordinate) else { return .rejected(.reserved) }
         guard let tile = world.tile(at: coordinate) else { return .rejected(.noSolidSurface) }

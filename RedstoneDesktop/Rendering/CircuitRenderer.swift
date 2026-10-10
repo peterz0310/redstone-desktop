@@ -90,7 +90,7 @@ final class CircuitRenderer {
                             : other.emitsPower(from: neighbor, to: coordinate)
                     case .output:
                         connects = outgoing || other.emitsPower(from: neighbor, to: coordinate, receiver: component)
-                    case .button, .lever: connects = !outgoing
+                    case .button, .lever, .pressurePlate, .fileSensor: connects = !outgoing
                     case .empty: connects = false
                     }
                     guard connects else { continue }
@@ -137,6 +137,8 @@ final class CircuitRenderer {
             node.addChild(icon)
             let labelText: String
             switch component.kind {
+            case .pressurePlate: labelText = powered ? "DOWN" : "PLATE"
+            case .fileSensor: labelText = powered ? "FOUND" : "SENSOR"
             case .button: labelText = powered ? "DOWN" : "PRESS"
             case .lever: labelText = (leverPositions?.contains(coordinate) ?? powered) ? "ON" : "OFF"
             case .repeater, .torch:

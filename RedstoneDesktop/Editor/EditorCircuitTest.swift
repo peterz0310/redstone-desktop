@@ -21,6 +21,11 @@ struct EditorCircuitTest: Equatable, Sendable {
         switch source.components[tile]?.kind {
         case .button: return simulator.pressButton(at: tile)
         case .lever: return simulator.toggleLever(at: tile)
+        case .pressurePlate, .fileSensor:
+            var active = simulator.activeDesktopSensors
+            if !active.insert(tile).inserted { active.remove(tile) }
+            simulator.setDesktopSensors(active)
+            return true
         default: return false
         }
     }

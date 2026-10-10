@@ -5,8 +5,14 @@ enum CircuitTextureID: String, CaseIterable {
     case dustOff, dustOn, buttonUp, buttonDown, leverOff, leverOn
     case repeaterOff, repeaterOn, outputOff, outputOn, torchOff, torchOn
 
+    case plateOff, plateOn, sensorOff, sensorOn
+
     var assetID: TextureAssetID {
         switch self {
+        case .plateOff: .redstonePlateOff
+        case .plateOn: .redstonePlateOn
+        case .sensorOff: .redstoneSensorOff
+        case .sensorOn: .redstoneSensorOn
         case .dustOff: .redstoneDustOff
         case .dustOn: .redstoneDustOn
         case .buttonUp: .redstoneButtonUp
@@ -24,6 +30,8 @@ enum CircuitTextureID: String, CaseIterable {
 
     static func id(for kind: CircuitComponentKind, powered: Bool) -> CircuitTextureID? {
         switch kind {
+        case .pressurePlate: return powered ? .plateOn : .plateOff
+        case .fileSensor: return powered ? .sensorOn : .sensorOff
         case .dust: return powered ? .dustOn : .dustOff
         case .button: return powered ? .buttonDown : .buttonUp
         case .lever: return powered ? .leverOn : .leverOff
@@ -64,6 +72,15 @@ final class CircuitTextures {
             let hot = NSColor(calibratedRed: 1, green: 0.09, blue: 0.12, alpha: 1)
             let red = NSColor(calibratedRed: 0.42, green: 0.05, blue: 0.07, alpha: 1)
             switch id {
+            case .plateOff, .plateOn:
+                fill(CGRect(x: 2, y: 5, width: 28, height: 22), dark)
+                fill(CGRect(x: 4, y: 7, width: 24, height: 18), id == .plateOn ? hot : rim)
+                fill(CGRect(x: 7, y: 10, width: 18, height: 12), .gray)
+            case .sensorOff, .sensorOn:
+                fill(CGRect(x: 3, y: 3, width: 26, height: 26), dark)
+                fill(CGRect(x: 9, y: 7, width: 14, height: 20), rim)
+                for y in [12, 17, 22] { fill(CGRect(x: 12, y: y, width: 8, height: 2), dark) }
+                fill(CGRect(x: 3, y: 3, width: 5, height: 5), id == .sensorOn ? hot : red)
             case .dustOff, .dustOn:
                 let color = id == .dustOn ? hot : red
                 fill(CGRect(x: 0, y: 0, width: 32, height: 32), color)

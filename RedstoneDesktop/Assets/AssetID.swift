@@ -9,6 +9,8 @@ enum TextureAssetID: String, Codable, CaseIterable, Sendable {
     case redstoneLeverOff, redstoneLeverOn, redstoneRepeaterOff, redstoneRepeaterOn
     case redstoneOutputOff, redstoneOutputOn, redstoneTorchOff, redstoneTorchOn
 
+    case redstonePlateOff, redstonePlateOn, redstoneSensorOff, redstoneSensorOn
+
     static func terrain(_ id: TerrainID) -> Self {
         switch id {
         case .grass: .terrainGrass

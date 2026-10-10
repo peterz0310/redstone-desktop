@@ -6,13 +6,15 @@ import Foundation
 final class EditorSession: ObservableObject {
     enum Tool: String, CaseIterable {
         case select = "Move", region = "Select", dust = "Dust", button = "Button"
-        case lever = "Lever", repeater = "Repeater", output = "Output", erase = "Erase", torch = "Torch"
+        case lever = "Lever", repeater = "Repeater", output = "Output", erase = "Erase", torch = "Torch", pressurePlate = "Plate", fileSensor = "Sensor"
 
         var componentKind: CircuitComponentKind? {
             switch self {
             case .dust: return .dust
             case .button: return .button
             case .lever: return .lever
+            case .pressurePlate: return .pressurePlate
+            case .fileSensor: return .fileSensor
             case .torch: return .torch
             case .repeater: return .repeater
             case .output: return .output
@@ -24,6 +26,7 @@ final class EditorSession: ObservableObject {
 
     @Published private(set) var camera = CameraState(worldOrigin: WorldPoint(x: 0, y: 0), pointsPerTile: 40)
     @Published var tool = Tool.select
+    @Published var sensorFilter = FileSensorFilter()
     @Published var direction = Direction.east
     @Published var delay = RepeaterDelay.one
     @Published var selectedTile: WorldCoordinate?
@@ -342,7 +345,7 @@ final class EditorSession: ObservableObject {
     }
 
     var proposedComponent: CircuitComponent? {
-        tool.componentKind.map { CircuitComponent(kind: $0, direction: direction, repeaterDelay: delay) }
+        tool.componentKind.map { CircuitComponent(kind: $0, direction: direction, repeaterDelay: delay, sensorFilter: $0 == .fileSensor ? sensorFilter : FileSensorFilter()) }
     }
 
     func mapper(size: CGSize) -> CoordinateMapper? {
@@ -362,7 +365,7 @@ final class EditorSession: ObservableObject {
             invalidateTestIfNeeded(appState)
             selectedTile = tile
             let activated = circuitTest?.click(tile) ?? false
-            status = activated ? "Test input received. Outputs flash without opening files." : "Test mode: click a button or lever. Pause to inspect one tick at a time."
+            status = activated ? "Test input received. Outputs flash without opening files." : "Test mode: click a button, lever, plate or sensor. Pause to inspect one tick at a time."
             return
         }
         if tool.editsWorld && isPreviewing(appState) {
@@ -379,6 +382,7 @@ final class EditorSession: ObservableObject {
                 direction = component.direction
                 delay = component.repeaterDelay
             }
+            if let component = browsingWorld(appState).circuit.components[tile], component.kind == .fileSensor { sensorFilter = component.sensorFilter }
             status = "Selected (\(tile.x), \(tile.y))."
         } else if tool == .erase {
             selectedTiles = []

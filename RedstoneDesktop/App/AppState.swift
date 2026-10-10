@@ -708,6 +708,24 @@ final class AppState: ObservableObject {
         return true
     }
 
+    @discardableResult
+    func configureFileSensor(at coordinate: WorldCoordinate, filter: FileSensorFilter) -> Bool {
+        guard filter.isValid, var component = editorWorld.circuit.components[coordinate], component.kind == .fileSensor else { return false }
+        component.sensorFilter = filter
+        var circuit = editorWorld.circuit; circuit.components[coordinate] = component
+        return replaceEditorCircuit(circuit)
+    }
+
+    /// Fail off when Finder positions are stale, frozen, unavailable or being recalibrated.
+    var desktopSensorOccupancy: DesktopOccupancySnapshot {
+        guard !isDisplaySettling, !isFinderLayoutSettling, !isFinderPollingFrozen,
+              finderDiagnostics.hasRead, finderDiagnostics.error == nil,
+              DesktopSensorInputs.isFresh(lastRead: finderDiagnostics.lastSuccessfulRead) else {
+            return .unavailable("Sensors need a recent, stable Finder read.")
+        }
+        return desktopOccupancy
+    }
+
     func setRunScriptsOpenOtherItems(_ enabled: Bool) {
         guard !isMaintenanceLocked else { return }
         guard enabled != scriptOutputSettings.runScriptsOpenOtherItems else { return }
@@ -854,6 +872,14 @@ final class AppState: ObservableObject {
         } else { return }
         commitCircuit(next, worldID: session.worldID)
         refreshBuildRenderer()
+    }
+
+    func configureBuildFileSensor(at tile: WorldCoordinate, filter: FileSensorFilter) {
+        guard let session = buildSession, session.worldID == activeWorldID, session.areaID == library.activeAreaID,
+              filter.isValid, desktopWorld.circuit.components[tile]?.kind == .fileSensor else { return }
+        var next = desktopWorld; next.circuit.components[tile]?.sensorFilter = filter
+        commitCircuit(next, worldID: session.worldID); refreshBuildRenderer()
+        session.status = "Sensor filter saved. Circuit stopped."
     }
 
     func rotateBuildRepeater() {
@@ -1241,6 +1267,7 @@ final class AppState: ObservableObject {
         simulationTick += 1
         simulationRate.record(at: ProcessInfo.processInfo.systemUptime)
         var next = simulator
+        next.setDesktopSensors(DesktopSensorInputs.active(in: next.world, occupancy: desktopSensorOccupancy))
         let events = next.advanceTick()
         if !isDisplaySettling && !isFinderLayoutSettling {
             for (id, tile) in CircuitSounds.transitions(before: simulator, after: next) where outputIsVisible(tile) {

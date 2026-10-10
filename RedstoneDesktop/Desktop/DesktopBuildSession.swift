@@ -6,13 +6,15 @@ import Foundation
 final class DesktopBuildSession: ObservableObject {
     enum Tool: String, CaseIterable {
         case dust = "Dust", button = "Button", lever = "Lever"
-        case repeater = "Repeater", output = "Output", erase = "Erase", torch = "Torch"
+        case repeater = "Repeater", output = "Output", erase = "Erase", torch = "Torch", pressurePlate = "Plate", fileSensor = "Sensor"
 
         var kind: CircuitComponentKind? {
             switch self {
             case .dust: .dust
             case .button: .button
             case .lever: .lever
+            case .pressurePlate: .pressurePlate
+            case .fileSensor: .fileSensor
             case .torch: .torch
             case .repeater: .repeater
             case .output: .output
@@ -27,6 +29,7 @@ final class DesktopBuildSession: ObservableObject {
     let mapper: CoordinateMapper
     let title: String
     @Published var tool = Tool.dust
+    @Published var sensorFilter = FileSensorFilter()
     @Published var direction = Direction.east
     @Published var delay = RepeaterDelay.one
     @Published var selectedTile: WorldCoordinate?
@@ -41,7 +44,7 @@ final class DesktopBuildSession: ObservableObject {
     }
 
     var component: CircuitComponent? {
-        tool.kind.map { CircuitComponent(kind: $0, direction: direction, repeaterDelay: delay) }
+        tool.kind.map { CircuitComponent(kind: $0, direction: direction, repeaterDelay: delay, sensorFilter: $0 == .fileSensor ? sensorFilter : FileSensorFilter()) }
     }
 
     func tile(at point: CGPoint) -> WorldCoordinate? {

@@ -3,6 +3,17 @@
 These are physical-Mac checks, separate from automated tests. Report which numbered groups you actually tried and what failed; untested groups remain unverified. Use harmless folders/text files first. Place new test circuits on clear ground **to the right** of your existing builds. Do not use scripts for display-calibration tests.
 
 
+## Desktop pressure plates and file sensors — awaiting owner confirmation
+
+1. Quit the old app and open the updated build. Stop Desktop and build `Plate → Dust → Output` on clear ground **to the right** of existing builds. Set the Output to Do nothing. Assign an area that includes it, Start Desktop, and drag a harmless file/folder so its icon center is over the Plate. After Finder refresh, the plate should say DOWN and the wire/Output power. Move it off: power should clear. Ordinary icon clicks must still work.
+2. With no item on the Plate, Stop and change the Output to Open item. Place a different harmless folder on the Output. Start, then put an item on the Plate: the Output folder should open once. Leaving it there or replacing it without an observed empty interval must not reopen the folder. Move off, wait for power to clear, then move back: it should open again. Starting with an occupied Plate can activate immediately.
+3. Stop and build `Sensor → Dust → Output` separately with Output Do nothing. Inspect Sensor, choose File extension, enter `pdf`, Start. A `.pdf` file should power it; `.txt` and folders should not. Stop, change to Item name and enter an actual full filename or folder name. Only that name should match; case differences should be accepted even if Finder hides extensions. Try Any item too. Do not rename real files just to test; use disposable copies.
+4. Stop, edit the filter and Undo/Redo. Copy/save the sensor in a blueprint, place in another world, quit/reopen and inspect the stored filter. Enter Desktop Build Mode and try tools **8 Plate** and **9 Sensor**. Click a placed sensor and edit its palette filter. Check palette fit and existing tool shortcuts 1–7. Exit Build Mode; Desktop must remain stopped until Start.
+5. Test Circuit: click both detector types to toggle simulated detection. Pause/Step, Reset and Done Testing should work without moving/opening files or querying Finder. Reset should clear detection and leaving the test must preserve saved configuration.
+6. While Desktop runs, Pause, move the detected item away, wait for Finder to read, Resume: power should clear. With Outputs Do nothing, optionally freeze Finder polling in Diagnostics; detectors should turn off and recover after unfreezing/fresh reads. Stop should clear runtime power. If you have multiple displays, repeat with an area correctly mapped to a secondary display; report any mapping mismatch instead of compensating with offsets.
+
+Backup/reset testing remains deferred. These physical checks are not marked accepted by automated test results.
+
 ## Editor test mode and reusable circuits — awaiting owner confirmation
 
 Use the updated app after quitting the older copy. Existing saves should remain. None of these checks require Start Over. See [the editor guide](EDITOR_TOOLS.md) for shortcuts and storage scope.

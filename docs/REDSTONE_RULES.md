@@ -13,6 +13,8 @@ North is positive world Y. A component's direction points forward; rear is its o
 | Component | Input | Output | Timing |
 | --- | --- | --- | --- |
 | Button | Accepted desktop click | 15 on every side | Next simulation tick; 20 powered snapshots; repeat presses extend the pulse |
+| Pressure plate | Mapped Finder item presence on its tile | 15 on every side while occupied | Next simulation tick after a fresh Finder snapshot |
+| File sensor | Matching Finder item presence on its tile | 15 on every side while matched | Same as plate; any-item, extension or exact-name filter |
 | Lever | Accepted desktop click toggles state | 15 on every side while on | Next simulation tick; saved lever position |
 | Dust | Adjacent emitting sources/dust | Current strength minus one to neighboring dust; current strength to a repeater rear or Output | Settles within the same tick |
 | Repeater | Rear only, positive signal | 15 to front only | Both edges delayed 2/4/6/8 simulation ticks (1–4 redstone ticks) |
@@ -22,6 +24,8 @@ North is positive world Y. A component's direction points forward; rear is its o
 Simulation runs at 20 Hz (50 ms per tick); one redstone tick is 100 ms. Every delayed component matures its old history first, then the bounded dust solver runs. Outputs read the completed network and emit rising edges. All torch/repeater rear inputs sample that same completed snapshot to append history for future ticks. Dictionary insertion order cannot change the result. There is no recursive propagation.
 
 A newly started torch's two history entries are ON. It emits at tick 1. If rear power is first sampled at tick 1, it switches off at tick 3. Rear power disappearing at tick T switches it on at T+2. Feedback can oscillate deterministically; histories and propagation remain bounded. Stop clears runtime power/history. Direction is saved in the existing component configuration; old worlds without torches retain their decoding defaults. Older app versions cannot understand the new torch kind; keep a backup before opening a torch world with older builds.
+
+Pressure plates/file sensors are runtime inputs supplied by a separate mapped Finder adapter; unavailable/stale reads fail OFF. In editor test mode, clicking one toggles simulated detection. Startup or recovered occupancy can activate Outputs without a click. See [DESKTOP_SENSORS.md](DESKTOP_SENSORS.md) for matching, freshness and safe testing.
 
 ## Building a NOT circuit
 

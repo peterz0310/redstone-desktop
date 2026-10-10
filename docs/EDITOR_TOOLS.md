@@ -2,7 +2,7 @@
 
 ## Test a circuit without opening files
 
-Click **Test Circuit** above the editor viewport. The editor runs a temporary copy of the selected world's circuit. Click its buttons and levers to watch power travel. Outputs flash and the toolbar counts Output pulses, but test mode never opens a Finder item, requests script approval or executes a script. Your running desktop remains independent.
+Click **Test Circuit** above the editor viewport. The editor runs a temporary copy of the selected world's circuit. Click its buttons and levers to watch power travel. Click plates and file sensors to toggle simulated detection; their filters are bypassed in test mode and no Finder read occurs. Outputs flash and the toolbar counts Output pulses, but test mode never opens a Finder item, requests script approval or executes a script. Your running desktop remains independent.
 
 **Pause** freezes the test. **Step** advances one simulation tick (50 milliseconds of circuit time); a repeater's redstone tick is two simulation ticks. Inputs clicked while paused take effect as you step. **Play** resumes at 20 simulation ticks per second. **Reset** returns to the saved component configuration and saved lever positions, clears pulse counts and keeps your play/pause choice. **Done Testing** returns to building without saving test power or lever changes.
 

@@ -146,6 +146,14 @@ struct EditorView: View {
                     Text("With Show Finder Items enabled, Output snaps within 24 points of an icon center. Red markers mean several items share a tile.")
                         .font(.caption).foregroundStyle(.secondary)
                 }
+                if editor.tool == .fileSensor, editor.selectedTile.flatMap({ editor.browsingWorld(appState).circuit.components[$0]?.kind }) != .fileSensor {
+                    Text("New sensors").font(.caption.bold())
+                    FileSensorConfigurationView(filter: editor.sensorFilter) { editor.sensorFilter = $0 }
+                        .disabled(editor.isPreviewing(appState) || editor.circuitTest != nil || appState.isEditorConfigurationLocked)
+                }
+                if editor.tool == .pressurePlate || editor.tool == .fileSensor {
+                    HelpButton(title: "Desktop detectors", text: "A plate holds power while a Finder item is on its tile. A sensor can match an item name or a file extension. Icon centers determine the tile; automatic Finder refresh detects changes about twice a second. Empty or unavailable readings turn detectors off. In Test Circuit, click detectors to toggle simulated detection without moving files.")
+                }
                 Divider()
                 selectionControls
                 BlueprintShelfView(library: appState.blueprints, editor: editor, appState: appState)
@@ -155,7 +163,7 @@ struct EditorView: View {
                     Text("Tile (\(coordinate.x), \(coordinate.y))").font(.body.monospaced())
                     Text("Terrain: \(editor.browsingWorld(appState).tile(at: coordinate).map { TerrainAppearance.tile($0, generated: editor.browsingWorld(appState).generation != nil && editor.browsingWorld(appState).tiles[coordinate] == nil).terrain.rawValue } ?? "unspecified")")
                     Text("Decoration: \(editor.browsingWorld(appState).tile(at: coordinate)?.decoration.map { DecorationAppearance.choose($0, at: coordinate, seed: editor.browsingWorld(appState).generation?.seed ?? 0, terrain: editor.browsingWorld(appState).tile(at: coordinate)?.terrain).name } ?? "none")")
-                    Text("Component: \(editor.browsingWorld(appState).circuit.components[coordinate]?.kind.rawValue ?? "none")")
+                    Text("Component: \(editor.browsingWorld(appState).circuit.components[coordinate]?.kind.title ?? "none")")
                     Text(occupancyText(at: coordinate)).font(.caption)
                     Text("Power: \(editor.displayedPower(at: coordinate, appState: appState).rawValue)")
                     if editor.browsingWorld(appState).circuit.components[coordinate]?.kind == .repeater {
@@ -176,6 +184,11 @@ struct EditorView: View {
                             Text("Run a .sh, .command or .zsh script on this Output. You’ll be asked before a new or changed script runs.")
                                 .font(.caption).foregroundStyle(.secondary)
                         }
+                    }
+                    if let component = editor.browsingWorld(appState).circuit.components[coordinate], component.kind == .fileSensor {
+                        FileSensorConfigurationView(filter: component.sensorFilter) { appState.configureFileSensor(at: coordinate, filter: $0) }
+                            .id("sensor:\(appState.selectedWorldID):\(coordinate)")
+                            .disabled(appState.isEditorConfigurationLocked || editor.isPreviewing(appState) || editor.circuitTest != nil)
                     }
                     Button("Erase selected component") {
                         appState.eraseCircuitComponent(at: coordinate, audioMapper: editor.mapper(size: editor.viewport))

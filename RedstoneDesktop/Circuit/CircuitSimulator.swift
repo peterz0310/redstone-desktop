@@ -10,6 +10,10 @@ struct CircuitSimulator: Equatable, Sendable {
     private(set) var power: [WorldCoordinate: PowerLevel] = [:]
     private(set) var activeLevers: Set<WorldCoordinate> = []
     private var delayedHistory: [WorldCoordinate: [Bool]] = [:]
+    private(set) var activeDesktopSensors: Set<WorldCoordinate> = []
+    mutating func setDesktopSensors(_ active: Set<WorldCoordinate>) {
+        activeDesktopSensors = active.filter { world.components[$0]?.kind.isDesktopSensor == true }
+    }
     private var buttonTicks: [WorldCoordinate: Int] = [:]
 
     var poweredTiles: Set<WorldCoordinate> { Set(power.keys) }
@@ -51,7 +55,8 @@ struct CircuitSimulator: Equatable, Sendable {
         for coordinate in coordinates {
             let kind = world.components[coordinate]?.kind
             if (kind == .button && (buttonTicks[coordinate] ?? 0) > 0)
-                || (kind == .lever && activeLevers.contains(coordinate)) {
+                || (kind == .lever && activeLevers.contains(coordinate))
+                || (kind?.isDesktopSensor == true && activeDesktopSensors.contains(coordinate)) {
                 next[coordinate] = .full
                 queue.append(coordinate)
             }

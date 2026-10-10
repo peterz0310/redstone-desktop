@@ -26,7 +26,7 @@ struct CircuitBlueprint: Codable, Equatable, Sendable, Identifiable {
     func validate() throws {
         guard !name.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty, name.utf8.count <= 128,
               !circuit.components.isEmpty, circuit.components.count <= Self.maximumComponents,
-              circuit.components.allSatisfy({ (0..<256).contains($0.key.x) && (0..<256).contains($0.key.y) && $0.value.kind != .empty }),
+              circuit.components.allSatisfy({ (0..<256).contains($0.key.x) && (0..<256).contains($0.key.y) && $0.value.kind != .empty && $0.value.sensorFilter.isValid }),
               activeLevers.allSatisfy({ circuit.components[$0]?.kind == .lever }) else {
             throw BlueprintError("A blueprint needs a name and 1–4096 components inside a 256×256 area.")
         }

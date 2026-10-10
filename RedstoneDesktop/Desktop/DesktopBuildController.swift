@@ -48,7 +48,7 @@ final class DesktopBuildController: NSObject, DesktopBuildPresenting, NSWindowDe
         surface.changeDelay = { [weak appState] tile in appState?.editHoveredBuildRepeater(at: tile, rotate: false) }
         surface.exit = exit
 
-        palette = NSPanel(contentRect: CGRect(x: screen.frame.midX - min(760, screen.frame.width - 32) / 2, y: screen.frame.maxY - 250, width: min(760, screen.frame.width - 32), height: 190),
+        palette = NSPanel(contentRect: CGRect(x: screen.frame.midX - min(760, screen.frame.width - 32) / 2, y: screen.frame.maxY - 380, width: min(760, screen.frame.width - 32), height: 320),
                           styleMask: [.titled, .closable, .utilityWindow], backing: .buffered, defer: false)
         palette.title = "Desktop Build Mode — Circuit stopped"
         palette.level = .floating
@@ -238,11 +238,22 @@ private struct DesktopBuildHotbar: View {
                 Spacer()
                 Button("Exit Build Mode") { appState.exitDesktopBuildMode() }.keyboardShortcut(.cancelAction)
             }
-            Picker("Tool", selection: $session.tool) {
-                ForEach(Array(DesktopBuildSession.Tool.allCases.enumerated()), id: \.element) { index, tool in
-                    Label { Text("\(index + 1) \(tool.rawValue)") } icon: { ToolIcon(name: tool.rawValue) }.tag(tool)
+            ForEach(0..<2) { row in
+                HStack(spacing: 5) {
+                    ForEach(Array(DesktopBuildSession.Tool.allCases.enumerated()).filter { $0.offset / 5 == row }, id: \.element) { index, tool in
+                        Button { session.tool = tool } label: {
+                            Label { Text("\(index + 1) \(tool.rawValue)") } icon: { ToolIcon(name: tool.rawValue) }
+                        }.tint(session.tool == tool ? .accentColor : .secondary)
+                    }
                 }
-            }.pickerStyle(.segmented)
+            }
+            if let tile = session.selectedTile, let component = appState.desktopWorld.circuit.components[tile], component.kind == .fileSensor {
+                FileSensorConfigurationView(filter: component.sensorFilter) { filter in
+                    appState.configureBuildFileSensor(at: tile, filter: filter)
+                }.id("sensor:\(tile)")
+            } else if session.tool == .fileSensor {
+                FileSensorConfigurationView(filter: session.sensorFilter) { session.sensorFilter = $0 }
+            }
             HStack {
                 Button("Rotate") { appState.rotateBuildRepeater() }
                 Text(session.direction.rawValue.capitalized).frame(width: 45)

@@ -16,6 +16,8 @@ Finder access goes through `DesktopItemProviding`. Cached occupancy is presentat
 
 Open-item actions use native workspace APIs. Script actions support only documented shell extensions, explicit opt-in and approvals bound to the exact file/content. Never execute pack code. Setup and permission checks must not run scripts. See [SCRIPT_OUTPUTS.md](SCRIPT_OUTPUTS.md).
 
+Desktop pressure plates and file sensors consume mapped occupancy snapshots through `DesktopSensorInputs`; AppState rejects unavailable, frozen, settling or stale readings. The simulator accepts plain active-coordinate sets and never queries Finder. Inputs hold strength 15 while detection is true; only Outputs dispatch actions, including on startup/recovered occupancy. Configuration/filter validation applies to placement, worlds and blueprints. See [DESKTOP_SENSORS.md](DESKTOP_SENSORS.md).
+
 ## Persistence and UI
 
 `WorldLibraryDocument` validates references, IDs, terrain and component configuration. Publication follows successful durable commits for library management operations. Import validates a bounded JSON file, copies IDs and appends worlds/areas transactionally; it never restores permissions, scripts or imported assets and never changes the current desktop assignment. Reset is backed up and staged, with failure/rollback handling; see [RECOVERY.md](RECOVERY.md).
