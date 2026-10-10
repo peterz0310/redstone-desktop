@@ -25,16 +25,16 @@ final class JavaTextureImportTests: XCTestCase {
     func testSyntheticDeflatedJavaArchiveImportsOnlyPNGAndPreservesSourceBytes() throws {
         let root = try temporary(), sourceBefore = try Data(contentsOf: Self.fixture)
         let result = try JavaTextureImporter.importTextures(from: Self.fixture, cacheRoot: root)
-        XCTAssertEqual(result.pack.textures.count, 34)
+        XCTAssertEqual(result.pack.textures.count, 36)
         XCTAssertTrue(result.pack.sounds.isEmpty)
         XCTAssertTrue(result.record.warnings.isEmpty)
         XCTAssertEqual(result.record.mappings["terrainGrass"], "assets/minecraft/textures/block/grass_block_top.png")
         XCTAssertEqual(try Data(contentsOf: Self.fixture), sourceBefore)
         let files = try FileManager.default.contentsOfDirectory(atPath: result.folder.path)
-        XCTAssertEqual(files.count, 36)
+        XCTAssertEqual(files.count, 38)
         XCTAssertTrue(files.allSatisfy { $0.hasSuffix(".png") || $0 == "pack.json" || $0 == "import.json" })
         XCTAssertEqual(try JavaTextureImporter.record(in: result.folder, cacheRoot: root).id, result.record.id)
-        XCTAssertEqual(try ResourcePackLoader.load(result.folder).textures.count, 34)
+        XCTAssertEqual(try ResourcePackLoader.load(result.folder).textures.count, 36)
     }
     func testFirstFrameAndFixedTintsAreExplicitNotGrayUntintedTextures() throws {
         let root = try temporary(), result = try JavaTextureImporter.importTextures(from: Self.fixture, cacheRoot: root)
@@ -60,7 +60,7 @@ final class JavaTextureImportTests: XCTestCase {
         try image.pngData().write(to: folder.appendingPathComponent("grass_top.png"))
         let result = try JavaTextureImporter.importTextures(from: source, cacheRoot: cache)
         XCTAssertEqual(result.pack.textures.count, 2)
-        XCTAssertEqual(result.record.warnings.count, 32)
+        XCTAssertEqual(result.record.warnings.count, 34)
         XCTAssertEqual(result.record.mappings["terrainGrass"], "assets/minecraft/textures/blocks/grass_top.png")
         XCTAssertTrue(FileManager.default.fileExists(atPath: folder.appendingPathComponent("grass_top.png").path))
     }
@@ -95,7 +95,7 @@ final class JavaTextureImportTests: XCTestCase {
         let library = AssetLibrary(preferences: defaults, importCacheRoot: root)
         await library.importJava(Self.fixture)
         let first = try XCTUnwrap(library.importFolder)
-        XCTAssertEqual(library.pack?.textures.count, 34)
+        XCTAssertEqual(library.pack?.textures.count, 36)
         library.useBuiltIn()
         XCTAssertTrue(FileManager.default.fileExists(atPath: first.path))
         XCTAssertNotNil(library.importRecord)
@@ -106,7 +106,7 @@ final class JavaTextureImportTests: XCTestCase {
         let restored = AssetLibrary(preferences: defaults, importCacheRoot: root)
         await restored.restoreSelection()
         XCTAssertEqual(restored.importRecord?.sourcePath, Self.fixture.path)
-        XCTAssertEqual(restored.pack?.textures.count, 34)
+        XCTAssertEqual(restored.pack?.textures.count, 36)
         restored.removeImportedAssets()
         XCTAssertNil(restored.pack); XCTAssertNil(restored.importRecord)
         XCTAssertNil(defaults.string(forKey: "assetPackPath")); XCTAssertNil(defaults.string(forKey: "lastJavaImportID"))
@@ -120,7 +120,7 @@ final class JavaTextureImportTests: XCTestCase {
         let revision = library.revision, folder = library.importFolder
         await library.importJava(root.appendingPathComponent("missing.jar"))
         XCTAssertEqual(library.revision, revision); XCTAssertEqual(library.importFolder, folder)
-        XCTAssertEqual(library.pack?.textures.count, 34)
+        XCTAssertEqual(library.pack?.textures.count, 36)
         XCTAssertTrue(library.status.contains("refused"))
     }
     @MainActor

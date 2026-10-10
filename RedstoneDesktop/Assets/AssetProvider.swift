@@ -26,9 +26,11 @@ final class BuiltInAssetProvider: AssetProvider {
         if let circuit = id.circuitID { texture = SKTexture(image: CircuitTextures.image(for: circuit)) }
         else {
             let terrain = TerrainID.allCases.first { TextureAssetID.terrain($0) == id }
-            let appearance = id.decorationAppearance
+            let appearance: DecorationAppearance? = id == .decorationTree ? .treeLeaves : id == .decorationPine ? .pineLeaves : id.decorationAppearance
             let decoration: DecorationID? = appearance.map { value in
                 switch value {
+                case .pineLeaves: .pineLeaves
+                case .treeLeaves: .treeLeaves
                 case .pine: .pine
                 case .shrub: .shrub
                 case .mushroom: .mushroom
@@ -38,11 +40,13 @@ final class BuiltInAssetProvider: AssetProvider {
                 default: .flower
                 }
             }
-            guard terrain != nil || decoration != nil else { return nil }
+            guard terrain != nil || decoration != nil || id == .decorationOakLog || id == .decorationSpruceLog else { return nil }
             var bytes: [UInt8] = []
             for y in (0..<8).reversed() {
                 for x in 0..<8 {
-                    let value = OriginalTerrainPixels.pixel(Tile(terrain: terrain ?? .grass, decoration: decoration), x: x, y: y, appearance: appearance)
+                    let value = id == .decorationOakLog || id == .decorationSpruceLog
+                        ? OriginalTerrainPixels.logPixel(x: x, y: y, pine: id == .decorationSpruceLog)
+                        : OriginalTerrainPixels.pixel(Tile(terrain: terrain ?? .grass, decoration: decoration), x: x, y: y, appearance: appearance)
                     let plain = OriginalTerrainPixels.pixel(Tile(terrain: terrain ?? .grass), x: x, y: y)
                     bytes += decoration != nil && value == plain ? [0,0,0,0] : [value.0,value.1,value.2,value.3]
                 }
@@ -218,6 +222,17 @@ final class AssetLibrary: ObservableObject, AssetProvider {
                     UInt8(min(255, Int(base.1) + Int(backing.1) * inverse / 255)),
                     UInt8(min(255, Int(base.2) + Int(backing.2) * inverse / 255)), 255)
         }
+        if tile.decoration == .tree || tile.decoration == .pine {
+            let pine = tile.decoration == .pine
+            base = pack?.textures[pine ? .decorationSpruceLog : .decorationOakLog]?.sample(x: x, y: y, resolution: resolution)
+                ?? OriginalTerrainPixels.logPixel(x: x * 8 / resolution, y: y * 8 / resolution, pine: pine)
+            // A log is a solid block even if an optional custom texture has holes.
+            let backing = OriginalTerrainPixels.logPixel(x: x * 8 / resolution, y: y * 8 / resolution, pine: pine)
+            let inverse = 255 - Int(base.3)
+            base = (UInt8(min(255, Int(base.0) + Int(backing.0) * inverse / 255)),
+                    UInt8(min(255, Int(base.1) + Int(backing.1) * inverse / 255)),
+                    UInt8(min(255, Int(base.2) + Int(backing.2) * inverse / 255)), 255)
+        }
         if let decoration = tile.decoration {
             let id = appearance.map { TextureAssetID.decoration($0) } ?? TextureAssetID.decoration(decoration)
             if let raster = pack?.textures[id] ?? id.decorationFallback.flatMap({ pack?.textures[$0] }) {
@@ -227,6 +242,9 @@ final class AssetLibrary: ObservableObject, AssetProvider {
                         UInt8(min(255, Int(overlay.1) + Int(base.1) * inverse / 255)),
                         UInt8(min(255, Int(overlay.2) + Int(base.2) * inverse / 255)),
                         UInt8(min(255, Int(overlay.3) + Int(base.3) * inverse / 255)))
+            } else if [.tree, .treeLeaves, .pine, .pineLeaves].contains(decoration) {
+                let pine = decoration == .pine || decoration == .pineLeaves
+                if let leaf = OriginalTerrainPixels.leafPixel(x: x * 8 / resolution, y: y * 8 / resolution, pine: pine) { base = leaf }
             } else if original != plain { base = original }
         }
         return base

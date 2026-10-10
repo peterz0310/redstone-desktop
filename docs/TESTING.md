@@ -3,6 +3,13 @@
 These are physical-Mac checks, separate from automated tests. Report which numbered groups you actually tried and what failed; untested groups remain unverified. Use harmless folders/text files first. Place new test circuits on clear ground **to the right** of your existing builds. Do not use scripts for display-calibration tests.
 
 
+## Tree canopy follow-up — awaiting owner confirmation
+
+1. Quit the old copy and open the update. Explore snowy ground in seed **7**, then woodland in another area. Trees should be groups of five leaf blocks with wood under the middle, rather than isolated leaf tiles. Zoom in to see holes showing wood at the center and grass/snow on the outer blocks.
+2. Check both original art and your current imported textures. Existing imports should use original log backing automatically. Import the Java version again for actual oak/spruce log tops. Opaque custom leaves can hide the log; that is expected from their alpha.
+3. Try building on both the center and an outer leaf block: both should reject placement. Clear one leaf tile with Terrain: it should reveal its original ground and accept building without removing other leaves. A 3×3 Clear Decorations brush should clear the whole canopy; Undo/Redo should restore/remove it together.
+4. Pan across several chunks and compare editor/Desktop: canopies should stay aligned and complete across chunk edges, with no leaves spilling into water. Check panning remains responsive. Tree positions have changed, while biome surfaces, rivers and saved painted ground remain the same.
+
 ## Improved default landscapes — awaiting owner confirmation
 
 1. Quit the old copy and open the updated app. Create fresh worlds with seeds **2026**, **42** and optionally **7**. No new generation options should be required. Untouched terrain in older worlds can change; do not use those builds to judge the new generator. The app should not automatically delete worlds. Backup/reset testing remains deferred.

@@ -3,6 +3,7 @@ import Foundation
 enum TextureAssetID: String, Codable, CaseIterable, Sendable {
     case terrainGrass, terrainDirt, terrainStone, terrainSand, waterShallow, waterDeep
     case terrainDryGrass, terrainSnow, terrainGravel
+    case decorationOakLog, decorationSpruceLog
     case decorationPine, decorationShrub, decorationMushroom
     case decorationTree, decorationFlower, decorationRock, decorationReed
     case decorationDandelion, decorationBlueOrchid, decorationAllium, decorationOxeyeDaisy
@@ -28,6 +29,8 @@ enum TextureAssetID: String, Codable, CaseIterable, Sendable {
     }
     static func decoration(_ id: DecorationID) -> Self {
         switch id {
+        case .treeLeaves: .decorationTree
+        case .pineLeaves: .decorationPine
         case .pine: .decorationPine
         case .shrub: .decorationShrub
         case .mushroom: .decorationMushroom
@@ -43,6 +46,8 @@ enum TextureAssetID: String, Codable, CaseIterable, Sendable {
 
     static func decoration(_ appearance: DecorationAppearance) -> Self {
         switch appearance {
+        case .treeLeaves: .decorationTree
+        case .pineLeaves: .decorationPine
         case .pine: .decorationPine
         case .shrub: .decorationShrub
         case .mushroom: .decorationMushroom

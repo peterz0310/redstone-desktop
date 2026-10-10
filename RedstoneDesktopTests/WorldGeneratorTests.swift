@@ -92,7 +92,7 @@ final class WorldGeneratorTests: XCTestCase {
     }
 
     func testDefaultGenerationGoldenFingerprintsFreezeFieldsTerrainAndDecorations() throws {
-        XCTAssertEqual(fingerprint(try generator(42)), 3320354182894613434)
+        XCTAssertEqual(fingerprint(try generator(42)), 7700977901721159530)
         XCTAssertEqual(fingerprint(try generator(2026)), 3694949341545218925)
     }
 
@@ -100,8 +100,8 @@ final class WorldGeneratorTests: XCTestCase {
         let a = try generator(42), b = try generator(2026)
         var terrain: Set<TerrainID> = [], decorations: Set<DecorationID> = [], biomes: Set<BiomeID> = []
         var differences = 0
-        for y in stride(from: -768, to: 768, by: 6) {
-            for x in stride(from: -768, to: 768, by: 6) {
+        for y in stride(from: -768, to: 768, by: 5) {
+            for x in stride(from: -768, to: 768, by: 5) {
                 let coordinate = coordinate(x, y), sample = a.sample(at: coordinate)
                 terrain.insert(sample.tile.terrain); biomes.insert(sample.biome)
                 if let decoration = sample.tile.decoration { decorations.insert(decoration) }

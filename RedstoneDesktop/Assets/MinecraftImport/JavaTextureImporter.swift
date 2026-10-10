@@ -57,6 +57,8 @@ enum JavaTextureImporter {
         mapping(.terrainGrass, "grass_block_top", old: "grass_top", tint: [108,160,62]),
         mapping(.terrainDryGrass, "grass_block_top", old: "grass_top", tint: [181,168,69]),
         mapping(.terrainSnow, "snow"), mapping(.terrainGravel, "gravel"),
+        mapping(.decorationOakLog, "oak_log_top", old: "log_oak_top"),
+        mapping(.decorationSpruceLog, "spruce_log_top", old: "log_spruce_top"),
         mapping(.decorationPine, "spruce_leaves", old: "leaves_spruce", tint: [55,100,75]),
         mapping(.decorationShrub, "acacia_leaves", old: "leaves_acacia", tint: [140,145,55]),
         mapping(.decorationMushroom, "red_mushroom", old: "mushroom_red"),

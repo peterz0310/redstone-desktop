@@ -22,7 +22,7 @@ struct TerrainSample: Equatable, Sendable {
     let biome: BiomeID
     /// Distance to the winding river contour, in noise units. Not water flow.
     let riverDistance: Int
-    let tile: Tile
+    var tile: Tile
 }
 
 /// Stateless coordinate sampling. No rendering, circuit, Finder, file I/O, or cache.
@@ -37,6 +37,22 @@ struct WorldGenerator: Sendable {
     func tile(at coordinate: WorldCoordinate) -> Tile { sample(at: coordinate).tile }
 
     func sample(at coordinate: WorldCoordinate) -> TerrainSample {
+        var ground = groundSample(at: coordinate)
+        guard [.grass, .snow].contains(ground.tile.terrain),
+              let center = TreeCanopy.center(near: coordinate, seed: settings.seed) else { return ground }
+        let site = center == coordinate ? ground : groundSample(at: center)
+        guard site.tile.terrain == ground.tile.terrain else { return ground }
+        let groves = SeededNoise.value(seed: settings.seed, at: center, scale: 40, channel: 10)
+        let roll = SeededNoise.hash(seed: settings.seed, x: center.x, y: center.y, channel: 0x7EED) % 100
+        let pine = site.biome == .alpine && groves > 27000 && roll < 65
+        let oak = (site.biome == .woodland && roll < (groves > 32000 ? 85 : 15))
+            || (site.biome == .plains && groves > 48000 && roll < 25)
+        if pine { ground.tile.decoration = center == coordinate ? .pine : .pineLeaves }
+        else if oak { ground.tile.decoration = center == coordinate ? .tree : .treeLeaves }
+        return ground
+    }
+
+    private func groundSample(at coordinate: WorldCoordinate) -> TerrainSample {
         let seed = settings.seed
         func noise(_ scale: Int, _ channel: UInt64) -> Int {
             SeededNoise.value(seed: seed, at: coordinate, scale: scale, channel: channel)
@@ -76,16 +92,14 @@ struct WorldGenerator: Sendable {
         let decoration: DecorationID?
         switch biome {
         case .woodland:
-            if roll < (groves > 32000 ? 8500 : 900) { decoration = .tree }
-            else if roll > 62000 && groves > 35000 { decoration = .mushroom }
+            if roll > 62000 && groves > 35000 { decoration = .mushroom }
             else if roll < 11000 && groves < 32000 { decoration = .flower }
             else { decoration = nil }
         case .meadow: decoration = roll < (detail > 28000 ? 9000 : 2000) ? .flower : nil
         case .plains:
-            if groves > 48000 && roll < 2800 { decoration = .tree }
-            else { decoration = roll < 1600 ? .flower : nil }
+            decoration = roll < 1600 ? .flower : nil
         case .savanna: decoration = roll < 2200 ? .shrub : nil
-        case .alpine: decoration = terrain == .snow && groves > 27000 && roll < 4000 ? .pine : nil
+        case .alpine: decoration = nil
         case .rocky: decoration = terrain == .stone && roll < 4800 ? .rock : nil
         case .desert: decoration = roll < 2000 ? .rock : nil // cactus appearance on sand
         case .wetland: decoration = terrain == .shallowWater && roll < 6000 ? .reed : nil

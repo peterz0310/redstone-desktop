@@ -1,3 +1,3 @@
 enum DecorationID: String, CaseIterable, Codable, Sendable {
-    case tree, flower, rock, reed, pine, shrub, mushroom
+    case tree, flower, rock, reed, pine, shrub, mushroom, treeLeaves, pineLeaves
 }

@@ -16,18 +16,16 @@ enum OriginalTerrainPixels {
         if let decoration = tile.decoration {
             let style = appearance ?? DecorationAppearance.choose(decoration, at: WorldCoordinate(x: 0, y: 0), seed: 0, terrain: tile.terrain)
             switch style {
-            case .pine:
-                if x == 4 && (0...5).contains(y) { return (93, 65, 44, 255) }
-                if (2...7).contains(y) && abs(x - 4) <= (7 - y) / 2 { return (30, 80, 64, 255) }
+            case .pine, .pineLeaves, .tree, .treeLeaves:
+                let pine = style == .pine || style == .pineLeaves
+                if let leaf = leafPixel(x: x, y: y, pine: pine) { return leaf }
+                if style == .tree || style == .pine { return logPixel(x: x, y: y, pine: pine) }
             case .shrub:
                 if (2...5).contains(x) && (2...4).contains(y) { return (104, 111, 43, 255) }
                 if x == 4 && y == 1 { return (111, 77, 42, 255) }
             case .mushroom:
                 if x == 4 && (1...3).contains(y) { return (221, 209, 180, 255) }
                 if (2...6).contains(x) && (4...5).contains(y) { return (x + y) % 3 == 0 ? (245, 233, 207, 255) : (185, 45, 36, 255) }
-            case .tree:
-                if x == 4 && (1...5).contains(y) { return (95, 61, 35, 255) }
-                if (2...6).contains(x) && (3...6).contains(y) { return (31, 77, 38, 255) }
             case .poppy, .dandelion, .blueOrchid, .allium, .oxeyeDaisy:
                 if x == 4 && (1...3).contains(y) { return (43, 100, 42, 255) }
                 if x == 4 && y == 5 { return (242, 213, 66, 255) }
@@ -56,4 +54,19 @@ enum OriginalTerrainPixels {
         let shade: UInt8 = tile.terrain == .gravel ? UInt8((x * 7 + y * 3) % 4 * 9) : ((x + y) % 5 == 0 ? 8 : 0)
         return (base.0 - shade, base.1 - shade, base.2 - shade, 255)
     }
+
+    /// Whole leaf-block top, with holes that reveal ground or the central log.
+    static func leafPixel(x: Int, y: Int, pine: Bool) -> (UInt8, UInt8, UInt8, UInt8)? {
+        if (x * 5 + y * 3) % 11 < 3 { return nil }
+        let shade = UInt8((x * 3 + y * 7) % 3 * 12)
+        return pine ? (38 + shade, 85 + shade, 65 + shade, 255) : (40 + shade, 103 + shade, 43 + shade, 255)
+    }
+
+    static func logPixel(x: Int, y: Int, pine: Bool) -> (UInt8, UInt8, UInt8, UInt8) {
+        let ring = max(abs(x - 3), abs(y - 3))
+        if x == 0 || y == 0 || x == 7 || y == 7 { return pine ? (67, 47, 32, 255) : (94, 67, 38, 255) }
+        let shade: UInt8 = ring % 2 == 0 ? 16 : 0
+        return pine ? (127 - shade, 89 - shade, 56 - shade, 255) : (185 - shade, 145 - shade, 87 - shade, 255)
+    }
+
 }

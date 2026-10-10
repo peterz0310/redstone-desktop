@@ -1,11 +1,13 @@
 /// Stable scenery variants, independent of rendering or load order.
 /// The legacy `rock` slot is displayed as an ore deposit; it is never rewritten in saves.
 enum DecorationAppearance: String, CaseIterable, Sendable {
-    case tree, poppy, dandelion, blueOrchid, allium, oxeyeDaisy, coal, iron, reed, cactus, pine, shrub, mushroom
+    case tree, poppy, dandelion, blueOrchid, allium, oxeyeDaisy, coal, iron, reed, cactus, pine, shrub, mushroom, treeLeaves, pineLeaves
 
     static func choose(_ decoration: DecorationID, at coordinate: WorldCoordinate, seed: UInt64, terrain: TerrainID? = nil) -> Self {
         let roll = SeededNoise.hash(seed: seed, x: coordinate.x, y: coordinate.y, channel: 0xDEC0)
         switch decoration {
+        case .treeLeaves: return .treeLeaves
+        case .pineLeaves: return .pineLeaves
         case .tree: return .tree
         case .pine: return .pine
         case .shrub: return .shrub
@@ -20,6 +22,8 @@ enum DecorationAppearance: String, CaseIterable, Sendable {
         switch self {
         case .blueOrchid: "blue orchid"
         case .oxeyeDaisy: "oxeye daisy"
+        case .treeLeaves: "oak leaves"
+        case .pineLeaves: "pine leaves"
         case .coal: "coal deposit"
         case .iron: "iron deposit"
         default: rawValue

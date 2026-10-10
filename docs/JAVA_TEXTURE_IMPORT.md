@@ -28,7 +28,7 @@ A folder must contain `assets/minecraft/textures/` directly. An archive may have
 
 ## Supported mappings
 
-There are 34 optional mappings, including six new landscape surface/scenery mappings. Current automated imports use original synthetic assets. Reimport an installed version to add the new textures to an existing cache. Torch direction/NOT labels stay app UI; pack pixels never affect the documented [circuit rules](REDSTONE_RULES.md).
+There are 36 optional mappings, including landscape surface/scenery mappings and two log tops. Current automated imports use original synthetic assets. Reimport an installed version to add the new textures to an existing cache. Torch direction/NOT labels stay app UI; pack pixels never affect the documented [circuit rules](REDSTONE_RULES.md).
 
 Modern paths below are relative to `assets/minecraft/textures/block/`. Legacy paths are relative to `assets/minecraft/textures/blocks/`. Modern paths are tried first, then the legacy alternative. Each semantic ID can independently fall back.
 
@@ -38,6 +38,8 @@ Modern paths below are relative to `assets/minecraft/textures/block/`. Legacy pa
 | `terrainDryGrass` | `grass_block_top.png` | `grass_top.png` | 181, 168, 69 |
 | `terrainSnow` | `snow.png` | `snow.png` | None |
 | `terrainGravel` | `gravel.png` | `gravel.png` | None |
+| `decorationOakLog` | `oak_log_top.png` | `log_oak_top.png` | Solid backing beneath central oak leaves |
+| `decorationSpruceLog` | `spruce_log_top.png` | `log_spruce_top.png` | Solid backing beneath central pine leaves |
 | `decorationPine` | `spruce_leaves.png` | `leaves_spruce.png` | 55, 100, 75 |
 | `decorationShrub` | `acacia_leaves.png` | `leaves_acacia.png` | 140, 145, 55 |
 | `decorationMushroom` | `red_mushroom.png` | `mushroom_red.png` | None |
