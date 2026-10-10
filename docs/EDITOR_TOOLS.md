@@ -37,9 +37,9 @@ Undo doesn't reverse camera movement, world/area creation or deletion, blueprint
 
 ## Blueprints and examples
 
-Select a circuit and choose **Save Selection as Blueprint…**, give it a name and Save. Expand **Blueprints & Examples** to place it in any world. Right-click a saved blueprint to delete it; placed circuit copies are unaffected. Blueprints persist after quitting.
+Select a circuit and choose **Save Selection as Blueprint…**, give it a name and Save. Open the **Blueprints** tab to place it in any world. Right-click a saved blueprint to delete it; placed circuit copies are unaffected. Blueprints persist after quitting.
 
-Three examples are included: **Delayed Button**, **Toggle Switch** and **Pulse Generator**. Place them on clear ground to the right of your existing builds, then use Test Circuit. Press the first example's button, toggle the second's lever, or let the pulse generator run. Example Outputs use **Do Nothing**. You can deliberately change a placed Output's mode later to connect real desktop actions.
+Eight examples are included, including **Switched Pulse Generator**, whose lever enables and disables its clock. See [BLUEPRINTS.md](BLUEPRINTS.md) for the browser, all examples and editor context menus. Place them on clear ground to the right of your existing builds, then use Test Circuit. Press button examples, toggle lever examples, or click a detector to simulate occupancy. Example Outputs use **Do Nothing**. You can deliberately change a placed Output's mode later to connect real desktop actions.
 
 Blueprints are limited to 4096 components in a 256 by 256 tile bounding rectangle. Up to 128 can be saved, with a 2 MB library limit. Storage is `~/Library/Application Support/RedstoneDesktop/blueprints.json`, written atomically and validated before loading. An unreadable file is preserved and shelf writes are blocked rather than replacing it.
 

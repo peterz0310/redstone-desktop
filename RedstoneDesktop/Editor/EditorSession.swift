@@ -21,9 +21,17 @@ final class EditorSession: ObservableObject {
             case .select, .region, .erase, .terrain: return nil
             }
         }
+        var description: String {
+            if let componentKind { return ToolDescriptions.component(componentKind) }
+            switch self { case .select: return ToolDescriptions.move; case .region: return ToolDescriptions.select; case .terrain: return ToolDescriptions.terrain; default: return ToolDescriptions.erase }
+        }
         var editsWorld: Bool { componentKind != nil || self == .erase || self == .terrain }
     }
 
+    enum SidebarTab: String, CaseIterable { case build = "Build", blueprints = "Blueprints" }
+    @Published var sidebarTab = SidebarTab.build
+    @Published var isSavingBlueprint = false
+    func requestBlueprintSave() { sidebarTab = .blueprints; isSavingBlueprint = true }
     @Published private(set) var camera = CameraState(worldOrigin: WorldPoint(x: 0, y: 0), pointsPerTile: 40)
     @Published var tool = Tool.select
     @Published var terrainBrush = TerrainBrush.grass
@@ -66,6 +74,14 @@ final class EditorSession: ObservableObject {
     }
     @Published private(set) var pendingPlacement: PendingPlacement?
 
+    func setContextStatus(_ text: String) { status = text }
+    func selectContextTile(_ tile: WorldCoordinate, appState: AppState) {
+        selectedTile = tile
+        if !selectedTiles.contains(tile) { selectedTiles = browsingWorld(appState).circuit.components[tile] == nil ? [] : [tile] }
+        if let component = browsingWorld(appState).circuit.components[tile] {
+            direction = component.direction; delay = component.repeaterDelay; sensorFilter = component.sensorFilter
+        }
+    }
     func selection(_ appState: AppState) -> Set<WorldCoordinate> {
         let valid = selectedTiles.filter { appState.editorWorld.circuit.components[$0] != nil }
         if valid.isEmpty, let selectedTile, appState.editorWorld.circuit.components[selectedTile] != nil { return [selectedTile] }
@@ -94,7 +110,7 @@ final class EditorSession: ObservableObject {
     }
     func endRegion() { regionStart = nil; regionEnd = nil; selectionBeforeDrag = [] }
     func cancelPlacement() { pendingPlacement = nil }
-    func clearSelection() { selectedTiles = []; selectedTile = nil; endRegion(); cancelPlacement(); cancelTerrainStroke() }
+    func clearSelection() { isSavingBlueprint = false; selectedTiles = []; selectedTile = nil; endRegion(); cancelPlacement(); cancelTerrainStroke() }
     private func selectedBlueprint(_ appState: AppState, name: String = "Copied Circuit") throws -> CircuitBlueprint {
         let coordinates = selection(appState)
         return try CircuitBlueprint.capture(name: name, components: appState.editorWorld.circuit.components.filter { coordinates.contains($0.key) }, levers: appState.editorLeverPositions)

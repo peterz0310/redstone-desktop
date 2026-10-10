@@ -126,109 +126,116 @@ struct EditorView: View {
                     Button { editor.undo(appState, redo: true) } label: { Label("Redo", systemImage: "arrow.uturn.forward") }
                         .disabled(!appState.canRedoCircuit || editor.circuitTest != nil || editor.isPreviewing(appState)).help("Redo (⇧⌘Z with the canvas focused)")
                 }
-                HStack { Text("Build").font(.headline); HelpButton(title: "Building circuits", text: "Connect a button or lever to an Output with redstone dust. Place a file or folder on the Output, then start Desktop and press the button. Move lets you inspect and pan. Select lets you drag a box around components; Shift-click adds to your selection.") }
-                LazyVGrid(columns: [GridItem(.flexible()), GridItem(.flexible())], spacing: 6) {
-                    ForEach(EditorSession.Tool.allCases, id: \.self) { tool in
-                        Button { editor.tool = tool } label: {
-                            HStack(spacing: 4) {
-                                ToolIcon(name: tool.rawValue)
-                                Text(tool.rawValue)
-                                if editor.tool == tool { Image(systemName: "checkmark").font(.caption2) }
-                            }.frame(maxWidth: .infinity).padding(.vertical, 3)
+                Picker("Sidebar", selection: $editor.sidebarTab) {
+                    ForEach(EditorSession.SidebarTab.allCases, id: \.self) { Text($0.rawValue).tag($0) }
+                }.pickerStyle(.segmented)
+                if editor.sidebarTab == .blueprints {
+                    BlueprintShelfView(library: appState.blueprints, editor: editor, appState: appState)
+                } else {
+                    HStack { Text("Build").font(.headline); HelpButton(title: "Building circuits", text: "Connect a button or lever to an Output with redstone dust. Place a file or folder on the Output, then start Desktop and press the button. Move lets you inspect and pan. Select lets you drag a box around components; Shift-click adds to your selection.") }
+                    LazyVGrid(columns: [GridItem(.flexible()), GridItem(.flexible())], spacing: 6) {
+                        ForEach(EditorSession.Tool.allCases, id: \.self) { tool in
+                            Button { editor.tool = tool } label: {
+                                HStack(spacing: 4) {
+                                    ToolIcon(name: tool.rawValue)
+                                    Text(tool.rawValue)
+                                    if editor.tool == tool { Image(systemName: "checkmark").font(.caption2) }
+                                }.frame(maxWidth: .infinity).padding(.vertical, 3)
+                            }
+                            .tint(editor.tool == tool ? .accentColor : .secondary).help(tool.description)
+                            .disabled((appState.isEditorConfigurationLocked || editor.isPreviewing(appState) || editor.circuitTest != nil) && tool.editsWorld)
                         }
-                        .tint(editor.tool == tool ? .accentColor : .secondary)
-                        .disabled((appState.isEditorConfigurationLocked || editor.isPreviewing(appState) || editor.circuitTest != nil) && tool.editsWorld)
                     }
-                }
-                Text(appState.isEditorConfigurationLocked ? (appState.isDesktopBuildMode ? "This world is in Build Mode. Exit Build Mode to edit here." : "This world is running. Stop Desktop to edit it.") : editor.tool == .region ? "Drag a box around components. Shift-click adds or removes one." : editor.tool == .select ? "Click to inspect, drag to pan. Pinch or scroll to zoom." : "Choose a tool, then click clear ground to build.")
-                    .font(.caption).foregroundStyle(.secondary)
-                if editor.tool == .output {
-                    Text("With Show Finder Items enabled, Output snaps within 24 points of an icon center. Red markers mean several items share a tile.")
+                    Text(editor.tool.description).font(.caption).foregroundStyle(.secondary).fixedSize(horizontal: false, vertical: true)
+                    Text(appState.isEditorConfigurationLocked ? (appState.isDesktopBuildMode ? "This world is in Build Mode. Exit Build Mode to edit here." : "This world is running. Stop Desktop to edit it.") : editor.tool == .region ? "Drag a box around components. Shift-click adds or removes one." : editor.tool == .select ? "Click to inspect, drag to pan. Pinch or scroll to zoom." : "Choose a tool, then click clear ground to build.")
                         .font(.caption).foregroundStyle(.secondary)
-                }
-                if editor.tool == .terrain {
-                    TerrainBrushControls(brush: $editor.terrainBrush, size: $editor.terrainBrushSize)
-                        .disabled(appState.isEditorConfigurationLocked || editor.isPreviewing(appState) || editor.circuitTest != nil)
-                }
-                if editor.tool == .fileSensor, editor.selectedTile.flatMap({ editor.browsingWorld(appState).circuit.components[$0]?.kind }) != .fileSensor {
-                    Text("New sensors").font(.caption.bold())
-                    FileSensorConfigurationView(filter: editor.sensorFilter) { editor.sensorFilter = $0 }
-                        .disabled(editor.isPreviewing(appState) || editor.circuitTest != nil || appState.isEditorConfigurationLocked)
-                }
-                if editor.tool == .pressurePlate || editor.tool == .fileSensor {
-                    HelpButton(title: "Desktop detectors", text: "A plate holds power while a Finder item is on its tile. A sensor can match an item name or a file extension. Icon centers determine the tile; automatic Finder refresh detects changes about twice a second. Empty or unavailable readings turn detectors off. In Test Circuit, click detectors to toggle simulated detection without moving files.")
-                }
-                Divider()
-                selectionControls
-                BlueprintShelfView(library: appState.blueprints, editor: editor, appState: appState)
-                Divider()
-                Text("Inspector").font(.headline)
-                if let coordinate = editor.selectedTile {
-                    Text("Tile (\(coordinate.x), \(coordinate.y))").font(.body.monospaced())
-                    Text("Terrain: \(editor.browsingWorld(appState).tile(at: coordinate).map { TerrainAppearance.tile($0, generated: editor.browsingWorld(appState).generation != nil && editor.browsingWorld(appState).tiles[coordinate] == nil).terrain.rawValue } ?? "unspecified")")
-                    Text("Decoration: \(editor.browsingWorld(appState).tile(at: coordinate)?.decoration.map { DecorationAppearance.choose($0, at: coordinate, seed: editor.browsingWorld(appState).generation?.seed ?? 0, terrain: editor.browsingWorld(appState).tile(at: coordinate)?.terrain).name } ?? "none")")
-                    Text("Component: \(editor.browsingWorld(appState).circuit.components[coordinate]?.kind.title ?? "none")")
-                    Text(occupancyText(at: coordinate)).font(.caption)
-                    Text("Power: \(editor.displayedPower(at: coordinate, appState: appState).rawValue)")
-                    if editor.browsingWorld(appState).circuit.components[coordinate]?.kind == .repeater {
-                        Text("Stored: \(editor.browsingWorld(appState).circuit.components[coordinate]!.direction.rawValue), \(editor.browsingWorld(appState).circuit.components[coordinate]!.repeaterDelay.rawValue)t")
+                    if editor.tool == .output {
+                        Text("With Show Finder Items enabled, Output snaps within 24 points of an icon center. Red markers mean several items share a tile.")
+                            .font(.caption).foregroundStyle(.secondary)
                     }
-                    if let component = editor.browsingWorld(appState).circuit.components[coordinate], component.kind == .torch {
-                        Text("Stored: \(component.direction.rawValue), fixed 1-tick inversion")
-                    }
-                    if let component = editor.browsingWorld(appState).circuit.components[coordinate], component.kind == .output {
-                        Picker("Output action", selection: Binding(get: {
-                            editor.browsingWorld(appState).circuit.components[coordinate]?.outputAction ?? .openOccupant
-                        }, set: { appState.configureOutput(at: coordinate, mode: $0) })) {
-                            Text(appState.scriptOutputSettings.runScriptsOpenOtherItems ? "Default: scripts run, others open" : "Open item").tag(OutputActionMode.openOccupant)
-                            Text("Run script").tag(OutputActionMode.executeOccupant)
-                            Text("Do nothing").tag(OutputActionMode.none)
-                        }.disabled(appState.isEditorConfigurationLocked || editor.isPreviewing(appState) || editor.circuitTest != nil)
-                        if component.outputAction == .executeOccupant {
-                            Text("Run a .sh, .command or .zsh script on this Output. You’ll be asked before a new or changed script runs.")
-                                .font(.caption).foregroundStyle(.secondary)
-                        }
-                    }
-                    if let component = editor.browsingWorld(appState).circuit.components[coordinate], component.kind == .fileSensor {
-                        FileSensorConfigurationView(filter: component.sensorFilter) { appState.configureFileSensor(at: coordinate, filter: $0) }
-                            .id("sensor:\(appState.selectedWorldID):\(coordinate)")
+                    if editor.tool == .terrain {
+                        TerrainBrushControls(brush: $editor.terrainBrush, size: $editor.terrainBrushSize)
                             .disabled(appState.isEditorConfigurationLocked || editor.isPreviewing(appState) || editor.circuitTest != nil)
                     }
-                    Button("Erase selected component") {
-                        appState.eraseCircuitComponent(at: coordinate, audioMapper: editor.mapper(size: editor.viewport))
+                    if editor.tool == .fileSensor, editor.selectedTile.flatMap({ editor.browsingWorld(appState).circuit.components[$0]?.kind }) != .fileSensor {
+                        Text("New sensors").font(.caption.bold())
+                        FileSensorConfigurationView(filter: editor.sensorFilter) { editor.sensorFilter = $0 }
+                            .disabled(editor.isPreviewing(appState) || editor.circuitTest != nil || appState.isEditorConfigurationLocked)
                     }
-                        .disabled(appState.isEditorConfigurationLocked || editor.isPreviewing(appState) || editor.circuitTest != nil || editor.browsingWorld(appState).circuit.components[coordinate] == nil)
-                } else { Text("Move: click to inspect, drag to pan. Pinch or scroll to zoom.").foregroundStyle(.secondary) }
-                Divider()
-                if editor.tool == .repeater || editor.tool == .torch || editor.selectedTile.flatMap({ editor.browsingWorld(appState).circuit.components[$0]?.kind }).map({ [.repeater, .torch].contains($0) }) == true {
-                    Picker("Direction", selection: Binding(get: { editor.direction }, set: { editor.setDirection($0, appState: appState) })) {
-                        ForEach(Direction.allCases, id: \.self) { Text($0.rawValue.capitalized).tag($0) }
-                    }.disabled(appState.isEditorConfigurationLocked || editor.isPreviewing(appState) || editor.circuitTest != nil)
-                }
-                if editor.tool == .repeater || editor.selectedTile.flatMap({ editor.browsingWorld(appState).circuit.components[$0]?.kind }) == .repeater {
-                    Picker("Delay", selection: Binding(get: { editor.delay }, set: { editor.setDelay($0, appState: appState) })) {
-                        ForEach(RepeaterDelay.allCases, id: \.self) { Text("\($0.rawValue) tick\($0 == .one ? "" : "s")").tag($0) }
-                    }.disabled(appState.isEditorConfigurationLocked || editor.isPreviewing(appState) || editor.circuitTest != nil)
-                }
-                if editor.tool == .torch {
-                    Text("A torch turns on when its rear input is off. Its arrow points toward the output.").font(.caption)
-                }
-                if let tile = editor.hoveredTile {
-                    Text("Hover (\(tile.x), \(tile.y))").font(.caption.monospaced())
-                    if let component = editor.proposedComponent {
-                        let result = appState.developerPlacementPreview(component, at: tile)
-                        Text(editor.isPreviewing(appState) ? "Create the world or cancel preview to edit." : (appState.isEditorConfigurationLocked ? appState.editorConfigurationLockMessage : result.message))
-                            .foregroundStyle(result.isAllowed ? Color.green : Color.red)
+                    if editor.tool == .pressurePlate || editor.tool == .fileSensor {
+                        HelpButton(title: "Desktop detectors", text: "A plate holds power while a Finder item is on its tile. A sensor can match an item name or a file extension. Icon centers determine the tile; automatic Finder refresh detects changes about twice a second. Empty or unavailable readings turn detectors off. In Test Circuit, click detectors to toggle simulated detection without moving files.")
                     }
-                }
-                DisclosureGroup("Technical Details") {
-                    Text(appState.developerPlacementStatus).font(.caption).textSelection(.enabled)
-                    Text("Terrain: \(editor.terrainMetrics.retainedChunks) cached chunks · \(editor.terrainMetrics.chunkNodes) nodes · \(editor.terrainMetrics.generatedChunks) generated · \(editor.terrainMetrics.textureBuilds) textures").font(.caption)
+                    Divider()
+                    selectionControls
+                    Divider()
+                    Text("Inspector").font(.headline)
+                    if let coordinate = editor.selectedTile {
+                        Text("Tile (\(coordinate.x), \(coordinate.y))").font(.body.monospaced())
+                        Text("Terrain: \(editor.browsingWorld(appState).tile(at: coordinate).map { TerrainAppearance.tile($0, generated: editor.browsingWorld(appState).generation != nil && editor.browsingWorld(appState).tiles[coordinate] == nil).terrain.rawValue } ?? "unspecified")")
+                        Text("Decoration: \(editor.browsingWorld(appState).tile(at: coordinate)?.decoration.map { DecorationAppearance.choose($0, at: coordinate, seed: editor.browsingWorld(appState).generation?.seed ?? 0, terrain: editor.browsingWorld(appState).tile(at: coordinate)?.terrain).name } ?? "none")")
+                        Text("Component: \(editor.browsingWorld(appState).circuit.components[coordinate]?.kind.title ?? "none")")
+                        Text(occupancyText(at: coordinate)).font(.caption)
+                        Text("Power: \(editor.displayedPower(at: coordinate, appState: appState).rawValue)")
+                        if editor.browsingWorld(appState).circuit.components[coordinate]?.kind == .repeater {
+                            Text("Stored: \(editor.browsingWorld(appState).circuit.components[coordinate]!.direction.rawValue), \(editor.browsingWorld(appState).circuit.components[coordinate]!.repeaterDelay.rawValue)t")
+                        }
+                        if let component = editor.browsingWorld(appState).circuit.components[coordinate], component.kind == .torch {
+                            Text("Stored: \(component.direction.rawValue), fixed 1-tick inversion")
+                        }
+                        if let component = editor.browsingWorld(appState).circuit.components[coordinate], component.kind == .output {
+                            Picker("Output action", selection: Binding(get: {
+                                editor.browsingWorld(appState).circuit.components[coordinate]?.outputAction ?? .openOccupant
+                            }, set: { appState.configureOutput(at: coordinate, mode: $0) })) {
+                                Text(appState.scriptOutputSettings.runScriptsOpenOtherItems ? "Default: scripts run, others open" : "Open item").tag(OutputActionMode.openOccupant)
+                                Text("Run script").tag(OutputActionMode.executeOccupant)
+                                Text("Do nothing").tag(OutputActionMode.none)
+                            }.disabled(appState.isEditorConfigurationLocked || editor.isPreviewing(appState) || editor.circuitTest != nil)
+                            if component.outputAction == .executeOccupant {
+                                Text("Run a .sh, .command or .zsh script on this Output. You’ll be asked before a new or changed script runs.")
+                                    .font(.caption).foregroundStyle(.secondary)
+                            }
+                        }
+                        if let component = editor.browsingWorld(appState).circuit.components[coordinate], component.kind == .fileSensor {
+                            FileSensorConfigurationView(filter: component.sensorFilter) { appState.configureFileSensor(at: coordinate, filter: $0) }
+                                .id("sensor:\(appState.selectedWorldID):\(coordinate)")
+                                .disabled(appState.isEditorConfigurationLocked || editor.isPreviewing(appState) || editor.circuitTest != nil)
+                        }
+                        Button("Erase selected component") {
+                            appState.eraseCircuitComponent(at: coordinate, audioMapper: editor.mapper(size: editor.viewport))
+                        }
+                            .disabled(appState.isEditorConfigurationLocked || editor.isPreviewing(appState) || editor.circuitTest != nil || editor.browsingWorld(appState).circuit.components[coordinate] == nil)
+                    } else { Text("Move: click to inspect, drag to pan. Pinch or scroll to zoom.").foregroundStyle(.secondary) }
+                    Divider()
+                    if editor.tool == .repeater || editor.tool == .torch || editor.selectedTile.flatMap({ editor.browsingWorld(appState).circuit.components[$0]?.kind }).map({ [.repeater, .torch].contains($0) }) == true {
+                        Picker("Direction", selection: Binding(get: { editor.direction }, set: { editor.setDirection($0, appState: appState) })) {
+                            ForEach(Direction.allCases, id: \.self) { Text($0.rawValue.capitalized).tag($0) }
+                        }.disabled(appState.isEditorConfigurationLocked || editor.isPreviewing(appState) || editor.circuitTest != nil)
+                    }
+                    if editor.tool == .repeater || editor.selectedTile.flatMap({ editor.browsingWorld(appState).circuit.components[$0]?.kind }) == .repeater {
+                        Picker("Delay", selection: Binding(get: { editor.delay }, set: { editor.setDelay($0, appState: appState) })) {
+                            ForEach(RepeaterDelay.allCases, id: \.self) { Text("\($0.rawValue) tick\($0 == .one ? "" : "s")").tag($0) }
+                        }.disabled(appState.isEditorConfigurationLocked || editor.isPreviewing(appState) || editor.circuitTest != nil)
+                    }
+                    if editor.tool == .torch {
+                        Text("A torch turns on when its rear input is off. Its arrow points toward the output.").font(.caption)
+                    }
+                    if let tile = editor.hoveredTile {
+                        Text("Hover (\(tile.x), \(tile.y))").font(.caption.monospaced())
+                        if let component = editor.proposedComponent {
+                            let result = appState.developerPlacementPreview(component, at: tile)
+                            Text(editor.isPreviewing(appState) ? "Create the world or cancel preview to edit." : (appState.isEditorConfigurationLocked ? appState.editorConfigurationLockMessage : result.message))
+                                .foregroundStyle(result.isAllowed ? Color.green : Color.red)
+                        }
+                    }
+                    DisclosureGroup("Technical Details") {
+                        Text(appState.developerPlacementStatus).font(.caption).textSelection(.enabled)
+                        Text("Terrain: \(editor.terrainMetrics.retainedChunks) cached chunks · \(editor.terrainMetrics.chunkNodes) nodes · \(editor.terrainMetrics.generatedChunks) generated · \(editor.terrainMetrics.textureBuilds) textures").font(.caption)
 
+                    }
+                    Divider()
+                    Text("When you’re ready, start Desktop and press a button on your desktop to try your circuit.")
+                        .font(.caption).foregroundStyle(.secondary)
                 }
-                Divider()
-                Text("When you’re ready, start Desktop and press a button on your desktop to try your circuit.")
-                    .font(.caption).foregroundStyle(.secondary)
             }.padding(12).frame(maxWidth: .infinity, alignment: .leading)
         }
     }

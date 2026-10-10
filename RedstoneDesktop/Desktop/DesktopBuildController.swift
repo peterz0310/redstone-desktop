@@ -52,7 +52,7 @@ final class DesktopBuildController: NSObject, DesktopBuildPresenting, NSWindowDe
         surface.changeDelay = { [weak appState] tile in appState?.editHoveredBuildRepeater(at: tile, rotate: false) }
         surface.exit = exit
 
-        palette = NSPanel(contentRect: CGRect(x: screen.frame.midX - min(760, screen.frame.width - 32) / 2, y: screen.frame.maxY - 420, width: min(760, screen.frame.width - 32), height: 360),
+        palette = NSPanel(contentRect: CGRect(x: screen.frame.midX - min(760, screen.frame.width - 32) / 2, y: screen.frame.maxY - 460, width: min(760, screen.frame.width - 32), height: 400),
                           styleMask: [.titled, .closable, .utilityWindow], backing: .buffered, defer: false)
         palette.title = "Desktop Build Mode — Circuit stopped"
         palette.level = .floating
@@ -266,10 +266,11 @@ private struct DesktopBuildHotbar: View {
                     ForEach(Array(DesktopBuildSession.Tool.allCases.enumerated()).filter { $0.offset / 5 == row }, id: \.element) { index, tool in
                         Button { session.tool = tool } label: {
                             Label { Text("\(index == 9 ? 0 : index + 1) \(tool.rawValue)") } icon: { ToolIcon(name: tool.rawValue) }
-                        }.tint(session.tool == tool ? .accentColor : .secondary)
+                        }.tint(session.tool == tool ? .accentColor : .secondary).help(tool.description)
                     }
                 }
             }
+            Text(session.tool.description).font(.caption).foregroundStyle(.secondary).fixedSize(horizontal: false, vertical: true)
             if session.tool == .terrain {
                 TerrainBrushControls(brush: $session.terrainBrush, size: $session.terrainBrushSize)
             } else if let tile = session.selectedTile, let component = appState.desktopWorld.circuit.components[tile], component.kind == .fileSensor {

@@ -8,6 +8,7 @@ final class DesktopBuildSession: ObservableObject {
         case dust = "Dust", button = "Button", lever = "Lever"
         case repeater = "Repeater", output = "Output", erase = "Erase", torch = "Torch", pressurePlate = "Plate", fileSensor = "Sensor", terrain = "Terrain"
 
+        var description: String { kind.map(ToolDescriptions.component) ?? (self == .terrain ? ToolDescriptions.terrain : ToolDescriptions.erase) }
         var kind: CircuitComponentKind? {
             switch self {
             case .dust: .dust

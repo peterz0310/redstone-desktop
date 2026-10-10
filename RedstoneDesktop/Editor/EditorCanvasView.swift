@@ -118,6 +118,31 @@ final class EditorCanvasSurface: SKView {
         refresh()
     }
 
+    private final class ContextInvocation: NSObject {
+        let action: EditorContextAction, tile: WorldCoordinate, worldID: UUID
+        init(_ action: EditorContextAction, tile: WorldCoordinate, worldID: UUID) { self.action = action; self.tile = tile; self.worldID = worldID }
+    }
+    override func menu(for event: NSEvent) -> NSMenu? {
+        guard let editor, let appState else { return nil }
+        let point = convert(event.locationInWindow, from: nil)
+        guard let mapper = editor.mapper(size: bounds.size), mapper.canvasFrame.contains(point), let tile = mapper.tile(atScreen: point) else { return nil }
+        editor.prepareContext(at: tile, appState: appState)
+        refresh()
+        let menu = NSMenu(); menu.autoenablesItems = false
+        for option in editor.contextOptions(at: tile, appState: appState) {
+            let item = NSMenuItem(title: option.title, action: #selector(runContext(_:)), keyEquivalent: "")
+            item.target = self; item.isEnabled = option.enabled
+            item.representedObject = ContextInvocation(option.action, tile: tile, worldID: appState.selectedWorldID)
+            menu.addItem(item)
+        }
+        return menu
+    }
+    @objc private func runContext(_ item: NSMenuItem) {
+        guard let invocation = item.representedObject as? ContextInvocation, let editor, let appState else { return }
+        editor.performContext(invocation.action, at: invocation.tile, worldID: invocation.worldID, appState: appState)
+        refresh()
+    }
+
     override func keyDown(with event: NSEvent) {
         if handleShortcut(event) { refresh() } else { super.keyDown(with: event) }
     }

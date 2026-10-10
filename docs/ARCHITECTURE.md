@@ -26,6 +26,8 @@ Live pointer, rendering and power updates should not rebuild menu trees. `MenuPr
 
 Terrain editing uses pure bounded plans and transient stroke previews, publishing one sparse override/history operation on release. World format 4 stores terrain overrides; format 3 decodes with no edits. Circuit support validation protects occupied cells, and terrain changes invalidate only affected render chunks. Edits are included in library export/import but not component blueprints. See [TERRAIN_EDITING.md](TERRAIN_EDITING.md) for limits and integration contracts.
 
+Blueprint previews are cached, bounded AppKit images mapped through CoordinateMapper; they do not create per-card SpriteKit loops or query Finder. Native editor menus consume action options and revalidate the current world/locks before execution. Tool descriptions are shared across build modes. The switched clock is an example made from existing ports/delays, not a new simulator special case. See [BLUEPRINTS.md](BLUEPRINTS.md).
+
 ## Assets and verification
 
 Original assets provide a complete fallback. Local Java/custom packs are bounded image/audio data, not executable content. Imported world assets remain outside the repository and app bundles. Only explicitly owner-authorized icon artwork is shipped; provenance and MIT exclusions are in [third-party notices](../THIRD_PARTY_NOTICES.md). Do not extend that exception to general world textures or game audio.

@@ -227,7 +227,7 @@ final class SelectionBlueprintTests: XCTestCase {
     }
     @MainActor func testEveryExampleValidatesAndPulseGeneratorActuallyPulses() throws {
         let examples = BlueprintLibrary.examples
-        XCTAssertEqual(examples.count, 3)
+        XCTAssertEqual(examples.count, 8)
         for example in examples {
             try example.validate()
             XCTAssertTrue(example.circuit.components.values.filter { $0.kind == .output }.allSatisfy { $0.outputAction == .none })

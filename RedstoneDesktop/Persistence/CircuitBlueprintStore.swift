@@ -59,6 +59,12 @@ final class BlueprintLibrary: ObservableObject {
         document.blueprints.removeAll { $0.id == id }
         return commit(document)
     }
+    @discardableResult func rename(_ id: UUID, to name: String) -> Bool {
+        guard !loadFailed, let index = saved.firstIndex(where: { $0.id == id }) else { return false }
+        var document = CircuitBlueprintDocument(blueprints: saved)
+        document.blueprints[index].name = name.trimmingCharacters(in: .whitespacesAndNewlines)
+        return commit(document)
+    }
     private func commit(_ document: CircuitBlueprintDocument) -> Bool {
         do {
             try document.validate(); try store?.save(document)
@@ -66,7 +72,7 @@ final class BlueprintLibrary: ObservableObject {
             return true
         } catch { status = "Couldn’t save blueprints: \(error.localizedDescription) Previous library preserved."; return false }
     }
-    static var examples: [CircuitBlueprint] {
+    static let examples: [CircuitBlueprint] = {
         func make(_ name: String, _ number: Int, _ cells: [WorldCoordinate: CircuitComponent]) -> CircuitBlueprint {
             var result = try! CircuitBlueprint.capture(name: name, components: cells)
             result.id = UUID(uuidString: String(format: "00000000-0000-0000-0000-%012d", number))!
@@ -80,6 +86,31 @@ final class BlueprintLibrary: ObservableObject {
         var clock: [WorldCoordinate: CircuitComponent] = [p(1,1): CircuitComponent(kind: .torch, direction: .east),
             p(3,1): CircuitComponent(kind: .repeater, direction: .east, repeaterDelay: .four), p(5,1): output]
         for tile in [p(2,1), p(4,1), p(4,0), p(3,0), p(2,0), p(1,0), p(0,0), p(0,1)] { clock[tile] = CircuitComponent(kind: .dust) }
-        return [delayed, toggle, make("Pulse Generator", 3, clock)]
+        // The front repeater isolates the return wire, so the disable signal cannot hold the Output on.
+        var switched: [WorldCoordinate: CircuitComponent] = [
+            p(-4,1): CircuitComponent(kind: .lever), p(-3,1): CircuitComponent(kind: .torch, direction: .east),
+            p(0,1): CircuitComponent(kind: .repeater, direction: .east),
+            p(1,1): CircuitComponent(kind: .torch, direction: .east),
+            p(3,1): CircuitComponent(kind: .repeater, direction: .east, repeaterDelay: .four), p(2,2): output]
+        for tile in [p(-2,1), p(-1,1), p(2,1), p(4,1), p(4,0), p(4,-1), p(4,-2), p(3,-2), p(2,-2), p(1,-2), p(0,-2), p(-1,-2), p(-1,-1), p(-1,0)] { switched[tile] = CircuitComponent(kind: .dust) }
+        let inverter = make("Inverted Switch", 5, [p(0): CircuitComponent(kind: .lever), p(1): CircuitComponent(kind: .torch, direction: .east), p(2): CircuitComponent(kind: .dust), p(3): output])
+        let either = make("Either Button", 6, [p(0,0): CircuitComponent(kind: .button), p(0,2): CircuitComponent(kind: .button), p(0,1): CircuitComponent(kind: .dust), p(1,1): CircuitComponent(kind: .dust), p(2,1): output])
+        let pdf = make("PDF Detector", 7, [p(0): CircuitComponent(kind: .fileSensor, sensorFilter: FileSensorFilter(match: .fileExtension, value: "pdf")), p(1): CircuitComponent(kind: .dust), p(2): CircuitComponent(kind: .repeater, direction: .east), p(3): output])
+        let plate = make("Desktop Plate", 8, [p(0): CircuitComponent(kind: .pressurePlate), p(1): CircuitComponent(kind: .dust), p(2): output])
+        return [delayed, toggle, make("Pulse Generator", 3, clock), make("Switched Pulse Generator", 4, switched), inverter, either, pdf, plate]
+    }()
+    static func description(for blueprint: CircuitBlueprint) -> String? {
+        guard examples.contains(where: { $0.id == blueprint.id }) else { return nil }
+        switch blueprint.name {
+        case "Delayed Button": return "Press the button for a pulse delayed by four redstone ticks."
+        case "Toggle Switch": return "The lever holds the Output on until you switch it off."
+        case "Pulse Generator": return "A clock that pulses continuously without a switch."
+        case "Switched Pulse Generator": return "Lever ON runs the clock; OFF stops it. Allow a moment to settle. Torches can produce a brief startup pulse."
+        case "Inverted Switch": return "The Output is on while the lever is off, and off while it is on."
+        case "Either Button": return "Either button triggers the shared Output."
+        case "PDF Detector": return "Detects a PDF file on the sensor tile; click the sensor to simulate detection in Test Circuit."
+        case "Desktop Plate": return "An item on the plate powers the Output; click the plate to simulate it in Test Circuit."
+        default: return nil
+        }
     }
 }
