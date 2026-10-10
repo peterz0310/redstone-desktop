@@ -27,6 +27,18 @@ struct RasterAsset: Sendable {
         guard success else { throw PackError("PNG raster decode failed.") }
         return Self(width: width, height: height, pixels: pixels)
     }
+    /// Source pixels are premultiplied; an opaque backing prevents the world grid showing through water.
+    func backedByOpaqueColor(_ color: (UInt8, UInt8, UInt8, UInt8)) -> Self {
+        var result = self
+        for index in stride(from: 0, to: pixels.count, by: 4) {
+            let inverse = 255 - Int(pixels[index + 3])
+            result.pixels[index] = UInt8(min(255, Int(pixels[index]) + Int(color.0) * inverse / 255))
+            result.pixels[index + 1] = UInt8(min(255, Int(pixels[index + 1]) + Int(color.1) * inverse / 255))
+            result.pixels[index + 2] = UInt8(min(255, Int(pixels[index + 2]) + Int(color.2) * inverse / 255))
+            result.pixels[index + 3] = 255
+        }
+        return result
+    }
     var cgImage: CGImage? {
         guard let provider = CGDataProvider(data: Data(pixels) as CFData) else { return nil }
         return CGImage(width: width, height: height, bitsPerComponent: 8, bitsPerPixel: 32, bytesPerRow: width * 4,

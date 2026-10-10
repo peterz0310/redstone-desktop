@@ -5,6 +5,8 @@ These are physical-Mac checks, separate from automated tests. Report which numbe
 
 ## Latest polish checks — awaiting owner confirmation
 
+Label/water follow-up: both zone labels should sit the same distance above their own top edge; coincident labels appear side by side. With imported Java textures, shallow/deep water should show no checker backdrop. No re-import is needed.
+
 Settings → Data → Reveal Backups Folder should open Finder even before the first backup; an empty folder is expected then. This button does not reset the app.
 
 Backup/reset testing remains deferred; the polish changes do not require Start Over. Owner feedback on 2026-10-09 confirms the tool icons look good and menus work better. The latest follow-up changes still need these checks: pan zone labels offscreen and back, check their position above the top lines, and switch menu areas with Desktop both running and stopped.

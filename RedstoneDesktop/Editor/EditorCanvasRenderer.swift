@@ -62,10 +62,15 @@ final class EditorCanvasRenderer {
                     let label = SKLabelNode(fontNamed: "AvenirNext-DemiBold")
                     label.name = name + "-label"; label.text = title; label.fontSize = 12; label.fontColor = color
                     label.horizontalAlignmentMode = .left; label.verticalAlignmentMode = .bottom
-                    label.position = CGPoint(x: rect.minX + 8, y: rect.maxY + 6 + (name == "chosen-desktop" ? 20 : 0))
+                    label.position = CGPoint(x: rect.minX + 8, y: rect.maxY + 6)
                     let background = SKShapeNode(rect: CGRect(x: -4, y: -3, width: label.frame.width + 8, height: 22), cornerRadius: 4)
                     background.fillColor = NSColor.black.withAlphaComponent(0.8); background.strokeColor = .clear; background.zPosition = -1
-                    label.addChild(background); areas.addChild(label)
+                    label.addChild(background)
+                    if name == "chosen-desktop", let other = areas.childNode(withName: "current-desktop-label"),
+                       other.calculateAccumulatedFrame().insetBy(dx: -4, dy: 0).intersects(label.calculateAccumulatedFrame()) {
+                        label.position.x = other.calculateAccumulatedFrame().maxX + 8
+                    }
+                    areas.addChild(label)
                 }
             }
         }

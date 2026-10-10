@@ -194,7 +194,11 @@ final class AssetLibrary: ObservableObject, AssetProvider {
     }
     func texture(for id: TextureAssetID) -> SKTexture? {
         if let value = textures[id] { return value }
-        guard let raster = pack?.textures[id] ?? id.decorationFallback.flatMap({ pack?.textures[$0] }), let image = raster.cgImage else { return builtIn.texture(for: id) }
+        guard var raster = pack?.textures[id] ?? id.decorationFallback.flatMap({ pack?.textures[$0] }) else { return builtIn.texture(for: id) }
+        if let terrain = TerrainID.allCases.first(where: { TextureAssetID.terrain($0) == id && $0.definition.isLiquid }) {
+            raster = raster.backedByOpaqueColor(OriginalTerrainPixels.pixel(Tile(terrain: terrain), x: 1, y: 0))
+        }
+        guard let image = raster.cgImage else { return builtIn.texture(for: id) }
         let value = SKTexture(cgImage: image); value.filteringMode = .nearest; value.usesMipmaps = false
         textures[id] = value
         return value
@@ -204,6 +208,13 @@ final class AssetLibrary: ObservableObject, AssetProvider {
         let original = OriginalTerrainPixels.pixel(tile, x: x * 8 / resolution, y: y * 8 / resolution, appearance: appearance)
         let plain = OriginalTerrainPixels.pixel(Tile(terrain: tile.terrain), x: x * 8 / resolution, y: y * 8 / resolution)
         var base = pack?.textures[.terrain(tile.terrain)]?.sample(x: x, y: y, resolution: resolution) ?? plain
+        if tile.terrain.definition.isLiquid {
+            let backing = OriginalTerrainPixels.pixel(Tile(terrain: tile.terrain), x: 1, y: 0)
+            let inverse = 255 - Int(base.3)
+            base = (UInt8(min(255, Int(base.0) + Int(backing.0) * inverse / 255)),
+                    UInt8(min(255, Int(base.1) + Int(backing.1) * inverse / 255)),
+                    UInt8(min(255, Int(base.2) + Int(backing.2) * inverse / 255)), 255)
+        }
         if let decoration = tile.decoration {
             let id = appearance.map { TextureAssetID.decoration($0) } ?? TextureAssetID.decoration(decoration)
             if let raster = pack?.textures[id] ?? id.decorationFallback.flatMap({ pack?.textures[$0] }) {

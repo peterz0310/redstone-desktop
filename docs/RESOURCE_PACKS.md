@@ -120,3 +120,5 @@ Bounds are checked before raster decode using [ImageIO image properties](https:/
 Relevant files: `Assets/AssetID.swift` defines the contract; `ResourcePack.swift` validates manifest/raster/WAV; `SafeZIP.swift` handles archives; `AssetProvider.swift` resolves overrides/fallback and manages revisions; `AssetSettingsView.swift` exposes controls. `TerrainChunkRenderer`, `CircuitTextures` and `AudioEngine` consume validated assets. Pure simulation/domain code has no asset or SpriteKit dependency.
 
 When adding an ID, update enum, built-in fallback, renderer consumer, this table and tests. When changing accepted data, version/document the contract and add malformed/boundary cases. Never add third-party game art to examples, fixtures or the app bundle. Use original tiny test images, or load an owner's local game installation outside the repository for manual validation.
+
+Water textures are composited over an opaque blue base for their depth, so translucent Java/custom water does not expose the checker backdrop. Decoration transparency is preserved. Imported/cache PNGs are unchanged; this is a rendering rule and requires no re-import.

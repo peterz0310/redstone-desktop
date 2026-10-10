@@ -90,6 +90,33 @@ final class ResourcePackTests: XCTestCase {
         XCTAssertThrowsError(try PackWAV.decode(Data()))
     }
     @MainActor
+    func testTransparentWaterHasOpaqueBackingForChunksAndFiniteTiles() throws {
+        let library = AssetLibrary()
+        for terrain in [TerrainID.shallowWater, .deepWater] {
+            for alpha in [UInt8(0), 128, 255] {
+                let rgba: [UInt8] = alpha == 0 ? [0, 0, 0, 0] : [10, 20, 30, alpha]
+                let raster = RasterAsset(width: 1, height: 1, pixels: rgba)
+                library.apply(LoadedPack(manifest: PackManifest(name: "Water", assets: [:]),
+                    textures: [.terrain(terrain): raster], sounds: [:], warnings: []))
+                let base = OriginalTerrainPixels.pixel(Tile(terrain: terrain), x: 1, y: 0)
+                let pixel = library.pixel(Tile(terrain: terrain), x: 1, y: 0)
+                XCTAssertEqual(pixel.0, UInt8(Int(rgba[0]) + Int(base.0) * (255 - Int(alpha)) / 255))
+                XCTAssertEqual(pixel.1, UInt8(Int(rgba[1]) + Int(base.1) * (255 - Int(alpha)) / 255))
+                XCTAssertEqual(pixel.2, UInt8(Int(rgba[2]) + Int(base.2) * (255 - Int(alpha)) / 255))
+                XCTAssertEqual(pixel.3, 255)
+                let image = try XCTUnwrap(library.texture(for: .terrain(terrain)))
+                let bitmap = NSBitmapImageRep(cgImage: image.cgImage())
+                XCTAssertEqual(try XCTUnwrap(bitmap.colorAt(x: 0, y: 0)).alphaComponent, 1, accuracy: 0.001)
+                XCTAssertEqual(raster.pixels, rgba, "Source/cache pixels remain unchanged")
+            }
+        }
+        let decoration = RasterAsset(width: 1, height: 1, pixels: [0, 0, 0, 0])
+        library.apply(LoadedPack(manifest: PackManifest(name: "Decoration", assets: [:]), textures: [.decorationTree: decoration], sounds: [:], warnings: []))
+        let image = try XCTUnwrap(library.texture(for: .decorationTree))
+        XCTAssertEqual(try XCTUnwrap(NSBitmapImageRep(cgImage: image.cgImage()).colorAt(x: 0, y: 0)).alphaComponent, 0, accuracy: 0.001)
+    }
+
+    @MainActor
     func testProviderPartialFallbackAndRevisionInvalidatesCircuitCache() throws {
         let library = AssetLibrary(), textures = CircuitTextures()
         textures.assets = library

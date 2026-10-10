@@ -154,6 +154,17 @@ final class SeedBrowserTests: XCTestCase {
     }
 
     @MainActor
+    func testCoincidentZoneLabelsShareHeightWithoutOverlapping() throws {
+        let state = state(), editor = EditorSession(), renderer = EditorCanvasRenderer()
+        defer { state.shutdown() }
+        let scene = try XCTUnwrap(renderer.update(appState: state, editor: editor, size: CGSize(width: 800, height: 600)))
+        let desktop = try XCTUnwrap(scene.childNode(withName: "editor-desktop-viewport/current-desktop-label") as? SKLabelNode)
+        let current = try XCTUnwrap(scene.childNode(withName: "editor-desktop-viewport/chosen-desktop-label") as? SKLabelNode)
+        XCTAssertEqual(desktop.position.y, current.position.y)
+        XCTAssertGreaterThan(current.calculateAccumulatedFrame().minX, desktop.calculateAccumulatedFrame().maxX)
+    }
+
+    @MainActor
     func testPhysicalViewportOutlineUsesDisplaySizeAndMapperAtNegativeOrigin() throws {
         let state = state(), editor = EditorSession(), renderer = EditorCanvasRenderer()
         defer { state.shutdown() }
