@@ -47,6 +47,7 @@ enum AppStartup {
             let store = WorldLibraryStore(fileURL: smoke.root.appendingPathComponent("library.json"), legacyFileURL: smoke.root.appendingPathComponent("world.json"))
             let state = AppState(libraryStore: store, preferences: prefs, soundPlayer: SilentSoundPlayer(),
                 assets: AssetLibrary(preferences: prefs, importCacheRoot: smoke.root.appendingPathComponent("ImportedTextures")),
+                blueprintStore: CircuitBlueprintStore(fileURL: smoke.root.appendingPathComponent("blueprints.json")),
                 maintenanceStore: LibraryMaintenanceStore(root: smoke.root, backups: smoke.root.deletingLastPathComponent().appendingPathComponent("Backups")),
                 preferencesDomain: smoke.domain)
             MaintenanceSmokeConfiguration.report("startup", state: state)
@@ -58,6 +59,7 @@ enum AppStartup {
             libraryStore: testing ? nil : WorldLibraryStore.applicationDefault(), automaticallyRefreshFinder: !testing,
             preferences: testing ? nil : .standard,
             soundPlayer: testing ? SilentSoundPlayer() : (try? AudioEngine()) ?? SilentSoundPlayer(), assets: assets,
+            blueprintStore: testing ? nil : CircuitBlueprintStore.applicationDefault(),
             maintenanceStore: testing ? nil : .applicationDefault(),
             preferencesDomain: testing ? nil : Bundle.main.bundleIdentifier,
             screensProviding: testing ? nil : { NSScreen.screens.map { ScreenDescriptor(screen: $0) } })

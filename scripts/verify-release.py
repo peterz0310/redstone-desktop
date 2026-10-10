@@ -42,7 +42,7 @@ def validate(path):
         for name in names:
             item = PurePosixPath(name)
             assert not {'ImportedTextures', 'node_modules', 'Minecraft'}.intersection(item.parts), 'Local/runtime data bundled: ' + name
-            assert item.name not in {'library.json', 'world.json', 'import.json', 'pack.json', 'preferences.plist'}, 'Saved/imported data bundled: ' + name
+            assert item.name not in {'library.json', 'blueprints.json', 'world.json', 'import.json', 'pack.json', 'preferences.plist'}, 'Saved/imported data bundled: ' + name
             assert item.suffix.lower() not in {'.jar', '.zip', '.sh', '.command', '.zsh', '.class', '.lua', '.py'}, 'Source pack/script bundled: ' + name
         print('Release verified: identity, macOS 14 target, permissions, icon, notices, universal binary, no saves/imports/scripts.' )
     finally:

@@ -8,6 +8,8 @@ final class EditorCanvasRenderer {
     private var lastOccupancy: DesktopOccupancySnapshot?
     private var lastProjection: EditorFinderProjection?
     private var lastPower: [WorldCoordinate: PowerLevel] = [:]
+    private var lastTestID: UUID?
+    private var lastTestTick = -1
     private var lastLevers: Set<WorldCoordinate> = []
     private let terrainRenderer = TerrainChunkRenderer()
     private let ghostRenderer = CircuitRenderer()
@@ -31,14 +33,22 @@ final class EditorCanvasRenderer {
         scene.setAssets(appState.assets)
         ghostRenderer.textures.assets = appState.assets
         let world = editor.browsingWorld(appState)
-        let power: [WorldCoordinate: PowerLevel] = editor.isPreviewing(appState) || !appState.isEditingActiveWorld ? [:] : appState.simulator.power
-        let levers: Set<WorldCoordinate> = editor.isPreviewing(appState) ? [] : appState.editorLeverPositions
+        let power: [WorldCoordinate: PowerLevel] = editor.circuitTest?.simulator.power ?? (editor.isPreviewing(appState) || !appState.isEditingActiveWorld ? [:] : appState.simulator.power)
+        let levers: Set<WorldCoordinate> = editor.circuitTest?.simulator.activeLevers ?? (editor.isPreviewing(appState) ? [] : appState.editorLeverPositions)
         if lastWorld != world || lastPower != power || lastLevers != levers {
             scene.updateWorld(world, poweredTiles: Set(power.keys), leverPositions: levers, powerLevels: power)
             lastWorld = world
             lastPower = power
             lastLevers = levers
         }
+        if let test = editor.circuitTest {
+            if lastTestID != test.id { lastTestTick = -1; scene.childNode(withName: "output-flash")?.removeAllChildren() }
+            if lastTestTick != test.tick {
+                for tile in test.lastOutputs { scene.flashOutput(at: tile) }
+                lastTestTick = test.tick
+            }
+            lastTestID = test.id
+        } else { lastTestID = nil; lastTestTick = -1 }
         let projection = editor.finderProjection(appState)
         scene.updateFinderMarkers(projection.markers.map { marker in
             FinderItemMapping(item: marker.item, screenCenter: mapper.screenPoint(fromWorld: marker.worldCenter), tile: marker.tile)
@@ -101,13 +111,30 @@ final class EditorCanvasRenderer {
         }
         let selection = overlay("editor-selection", in: scene)
         selection.removeAllChildren()
-        if let tile = editor.selectedTile {
-            selection.addChild(outline(tile, color: .systemBlue, mapper: mapper, scene: scene))
+        var selected = editor.selection(appState)
+        if selected.isEmpty, let tile = editor.selectedTile { selected.insert(tile) }
+        for tile in selected {
+            if mapper.sceneRect(forTile: tile, on: scene.screen).intersects(CGRect(origin: .zero, size: size)) {
+                selection.addChild(outline(tile, color: .systemBlue, mapper: mapper, scene: scene))
+            }
+        }
+        if let start = editor.regionStart, let end = editor.regionEnd {
+            let rect = mapper.sceneRect(forTile: start, on: scene.screen).union(mapper.sceneRect(forTile: end, on: scene.screen))
+            let box = SKShapeNode(rect: rect); box.strokeColor = .systemBlue; box.fillColor = NSColor.systemBlue.withAlphaComponent(0.08); box.lineWidth = 2
+            box.name = "selection-box"; selection.addChild(box)
         }
         let preview = overlay("editor-preview", in: scene)
         preview.removeAllChildren()
         if let tile = editor.hoveredTile {
-            if let component = editor.proposedComponent {
+            if let (circuit, allowed) = editor.placementPreview(at: tile, appState: appState) {
+                let ghost = SKNode(); ghost.alpha = 0.5
+                ghostRenderer.render(circuit, poweredTiles: [], occupancy: .unavailable("Blueprint preview"), mapper: mapper,
+                    screen: scene.screen, viewport: CGRect(origin: .zero, size: size), into: ghost)
+                preview.addChild(ghost)
+                for point in circuit.components.keys where mapper.sceneRect(forTile: point, on: scene.screen).intersects(CGRect(origin: .zero, size: size)) {
+                    preview.addChild(outline(point, color: allowed ? .systemGreen : .systemRed, mapper: mapper, scene: scene))
+                }
+            } else if let component = editor.proposedComponent, editor.circuitTest == nil {
                 let result = PlacementRules().canPlace(component: component, at: tile, in: world)
                 let ghost = SKNode()
                 ghost.alpha = 0.45

@@ -54,7 +54,7 @@ struct AppSettingsView: View {
                     Button("Import Library…") { importing = true }
                     HStack {
                         Text("Save a copy of all your worlds, areas and circuits, or add worlds from a previous export.").font(.caption).foregroundStyle(.secondary)
-                        HelpButton(title: "Library files", text: "Exports include every world, saved area and circuit. They don’t include your desktop files, script permissions or texture packs. Import adds independent copies to your library and keeps your current desktop assignment.")
+                        HelpButton(title: "Library files", text: "Exports include every world, saved area and circuit. They don’t include your saved blueprint shelf, desktop files, script permissions or texture packs. Circuit copies already placed in worlds are included. Import adds independent copies to your library and keeps your current desktop assignment.")
                     }
                     if !exportStatus.isEmpty { Text(exportStatus).font(.caption).textSelection(.enabled) }
                     if let backup = appState.lastBackup {

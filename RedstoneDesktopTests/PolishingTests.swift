@@ -177,6 +177,6 @@ final class PolishingTests: XCTestCase {
         editor.showDesktopArea(app)
         XCTAssertEqual(app.selectedAreaID, active)
         XCTAssertEqual(editor.camera.worldOrigin, app.desktopCamera.worldOrigin)
-        XCTAssertEqual(EditorSession.Tool.allCases.filter { !$0.editsWorld }, [.select])
+        XCTAssertEqual(EditorSession.Tool.allCases.filter { !$0.editsWorld }, [.select, .region])
     }
 }

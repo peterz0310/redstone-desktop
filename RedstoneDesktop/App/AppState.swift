@@ -58,6 +58,38 @@ final class AppState: ObservableObject {
     private var autosaver: WorldAutosaver?
     private var persistenceBlocked = false
     var canSaveWorld: Bool { autosaver != nil }
+    let blueprints: BlueprintLibrary
+    @Published private(set) var editHistoryRevision = 0
+    private var editHistories: [UUID: CircuitEditHistory] = [:]
+    var canUndoCircuit: Bool { !isEditorConfigurationLocked && !persistenceBlocked && !(editHistories[selectedWorldID]?.undo.isEmpty ?? true) }
+    var canRedoCircuit: Bool { !isEditorConfigurationLocked && !persistenceBlocked && !(editHistories[selectedWorldID]?.redo.isEmpty ?? true) }
+
+    @discardableResult
+    func replaceEditorCircuit(_ circuit: CircuitWorld, levers: Set<WorldCoordinate>? = nil, recordUndo: Bool = true) -> Bool {
+        guard !isEditorConfigurationLocked, !persistenceBlocked else { developerPlacementStatus = editorConfigurationLockMessage; return false }
+        var document = selectedDocument
+        document.circuit = circuit
+        document.activeLevers = (levers ?? document.activeLevers).filter { circuit.components[$0]?.kind == .lever }
+        do {
+            let world = try document.restoredWorld()
+            commitCircuit(world, worldID: document.id, recordUndo: recordUndo, leverPositions: document.activeLevers)
+            return true
+        } catch { developerPlacementStatus = "Nothing changed: \(error.localizedDescription)"; return false }
+    }
+    @discardableResult
+    func undoCircuit(redo: Bool = false) -> Bool {
+        guard redo ? canRedoCircuit : canUndoCircuit,
+              let change = redo ? editHistories[selectedWorldID]?.redo.last : editHistories[selectedWorldID]?.undo.last else { return false }
+        do {
+            let (circuit, levers) = try change.applying(to: selectedDocument.circuit, levers: selectedDocument.activeLevers, undo: !redo)
+            guard replaceEditorCircuit(circuit, levers: levers, recordUndo: false) else { return false }
+            if redo { editHistories[selectedWorldID]?.didRedo() } else { editHistories[selectedWorldID]?.didUndo() }
+            editHistoryRevision += 1
+            developerPlacementStatus = redo ? "Edit redone." : "Edit undone."
+            return true
+        } catch { developerPlacementStatus = error.localizedDescription; return false }
+    }
+
     let finderDiagnostics: FinderDiagnosticsModel
     let desktopItemTracker: DesktopItemTracker
     @Published private(set) var editorFinderItemsVisible = false
@@ -155,6 +187,7 @@ final class AppState: ObservableObject {
        buildControllerFactory: @escaping (DesktopBuildSession, ScreenDescriptor, AppState) -> any DesktopBuildPresenting = {
            DesktopBuildController(session: $0, screen: $1, appState: $2)
        },
+       blueprintStore: (any CircuitBlueprintStoring)? = nil,
        maintenanceStore: LibraryMaintenanceStore? = nil,
        preferencesDomain: String? = nil,
        relauncher: any AppRelaunching = NativeAppRelauncher(),
@@ -193,6 +226,7 @@ final class AppState: ObservableObject {
         executeScriptAction = ExecuteScriptAction(executor: scriptExecutor, authorizer: scriptAuthorizer, store: authorizations)
         self.displaySettleDelay = displaySettleDelay
         self.preferences = preferences
+        blueprints = BlueprintLibrary(store: blueprintStore)
         self.maintenanceStore = maintenanceStore
         self.preferencesDomain = preferencesDomain
         self.relauncher = relauncher
@@ -567,6 +601,9 @@ final class AppState: ObservableObject {
             ?? next.areas.first { $0.worldID == selectedWorldID }
             ?? next.activeArea!
         library = next
+        let remainingWorlds = Set(next.worlds.map(\.id))
+        editHistories = editHistories.filter { remainingWorlds.contains($0.key) }
+        editHistoryRevision += 1
         selectedWorldID = remaining.worldID
         selectedAreaID = remaining.id
         editorWorld = try! selectedDocument.restoredWorld() // already validated before commit
@@ -726,10 +763,17 @@ final class AppState: ObservableObject {
         commitCircuit(editorWorld, worldID: selectedWorldID)
     }
 
-    private func commitCircuit(_ world: World, worldID: UUID) {
+    private func commitCircuit(_ world: World, worldID: UUID, recordUndo: Bool = true, leverPositions: Set<WorldCoordinate>? = nil) {
         guard let index = library.worlds.firstIndex(where: { $0.id == worldID }) else { return }
+        let before = library.worlds[index]
+        let nextLevers = (leverPositions ?? before.activeLevers).filter { world.circuit.components[$0]?.kind == .lever }
+        if recordUndo {
+            let change = CircuitChange(before: before.circuit, after: world.circuit, leversBefore: before.activeLevers, leversAfter: nextLevers)
+            editHistories[worldID, default: CircuitEditHistory()].record(change)
+            editHistoryRevision += 1
+        }
         library.worlds[index].circuit = world.circuit
-        library.worlds[index].activeLevers = library.worlds[index].activeLevers.filter { world.circuit.components[$0]?.kind == .lever }
+        library.worlds[index].activeLevers = nextLevers
         if selectedWorldID == worldID { editorWorld = world }
         if activeWorldID == worldID {
             desktopWorld = world

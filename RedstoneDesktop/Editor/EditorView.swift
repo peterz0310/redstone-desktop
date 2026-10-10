@@ -40,6 +40,7 @@ struct EditorView: View {
                             .font(.caption).foregroundStyle(.secondary)
                         Spacer()
                     }.padding(10)
+                    testControls
                     EditorCanvasView(appState: appState, editor: editor)
                         .frame(maxWidth: .infinity, maxHeight: .infinity)
                         .overlay(alignment: .topLeading) {
@@ -96,7 +97,12 @@ struct EditorView: View {
         .onChange(of: appState.requestedEditorArea) { _, request in
             if request != nil, appState.consumeEditorAreaRequest() { editor.showDesktopArea(appState) }
         }
-        .onDisappear { appState.setEditorFinderItemsVisible(false) }
+        .onChange(of: editor.tool) { _, tool in if tool != .select { editor.cancelPlacement() } }
+        .onChange(of: appState.selectedWorldID) { _, _ in editor.syncSelectedWorld(appState) }
+        .onChange(of: appState.selectedDocument.circuit) { _, _ in editor.invalidateTestIfNeeded(appState) }
+        .onChange(of: appState.isEditorConfigurationLocked) { _, locked in if locked { editor.cancelPlacement() } }
+        .onChange(of: appState.isMaintenanceLocked) { _, _ in editor.invalidateTestIfNeeded(appState) }
+        .onDisappear { editor.stopTesting(); appState.setEditorFinderItemsVisible(false) }
         .sheet(item: $sheet, onDismiss: { if editor.isPreviewing(appState) { editor.cancelPreview(appState) } }) { request in
             LibrarySheetView(kind: request.kind, appState: appState, editor: editor, targetID: request.targetID)
         }
@@ -114,7 +120,13 @@ struct EditorView: View {
     private var inspector: some View {
         ScrollView {
             VStack(alignment: .leading, spacing: 12) {
-                HStack { Text("Build").font(.headline); HelpButton(title: "Building circuits", text: "Connect a button or lever to an Output with redstone dust. Place a file or folder on the Output, then start Desktop and press the button. Select lets you inspect components and drag the map.") }
+                HStack {
+                    Button { editor.undo(appState) } label: { Label("Undo", systemImage: "arrow.uturn.backward") }
+                        .disabled(!appState.canUndoCircuit || editor.circuitTest != nil || editor.isPreviewing(appState)).help("Undo a circuit edit (⌘Z with the canvas focused)")
+                    Button { editor.undo(appState, redo: true) } label: { Label("Redo", systemImage: "arrow.uturn.forward") }
+                        .disabled(!appState.canRedoCircuit || editor.circuitTest != nil || editor.isPreviewing(appState)).help("Redo (⇧⌘Z with the canvas focused)")
+                }
+                HStack { Text("Build").font(.headline); HelpButton(title: "Building circuits", text: "Connect a button or lever to an Output with redstone dust. Place a file or folder on the Output, then start Desktop and press the button. Move lets you inspect and pan. Select lets you drag a box around components; Shift-click adds to your selection.") }
                 LazyVGrid(columns: [GridItem(.flexible()), GridItem(.flexible())], spacing: 6) {
                     ForEach(EditorSession.Tool.allCases, id: \.self) { tool in
                         Button { editor.tool = tool } label: {
@@ -125,15 +137,18 @@ struct EditorView: View {
                             }.frame(maxWidth: .infinity).padding(.vertical, 3)
                         }
                         .tint(editor.tool == tool ? .accentColor : .secondary)
-                        .disabled((appState.isEditorConfigurationLocked || editor.isPreviewing(appState)) && tool.editsWorld)
+                        .disabled((appState.isEditorConfigurationLocked || editor.isPreviewing(appState) || editor.circuitTest != nil) && tool.editsWorld)
                     }
                 }
-                Text(appState.isEditorConfigurationLocked ? (appState.isDesktopBuildMode ? "This world is in Build Mode. Exit Build Mode to edit here." : "This world is running. Stop Desktop to edit it.") : editor.tool == .select ? "Click to inspect, drag to pan. Pinch or scroll to zoom." : "Choose a tool, then click clear ground to build.")
+                Text(appState.isEditorConfigurationLocked ? (appState.isDesktopBuildMode ? "This world is in Build Mode. Exit Build Mode to edit here." : "This world is running. Stop Desktop to edit it.") : editor.tool == .region ? "Drag a box around components. Shift-click adds or removes one." : editor.tool == .select ? "Click to inspect, drag to pan. Pinch or scroll to zoom." : "Choose a tool, then click clear ground to build.")
                     .font(.caption).foregroundStyle(.secondary)
                 if editor.tool == .output {
                     Text("With Show Finder Items enabled, Output snaps within 24 points of an icon center. Red markers mean several items share a tile.")
                         .font(.caption).foregroundStyle(.secondary)
                 }
+                Divider()
+                selectionControls
+                BlueprintShelfView(library: appState.blueprints, editor: editor, appState: appState)
                 Divider()
                 Text("Inspector").font(.headline)
                 if let coordinate = editor.selectedTile {
@@ -142,7 +157,7 @@ struct EditorView: View {
                     Text("Decoration: \(editor.browsingWorld(appState).tile(at: coordinate)?.decoration.map { DecorationAppearance.choose($0, at: coordinate, seed: editor.browsingWorld(appState).generation?.seed ?? 0, terrain: editor.browsingWorld(appState).tile(at: coordinate)?.terrain).name } ?? "none")")
                     Text("Component: \(editor.browsingWorld(appState).circuit.components[coordinate]?.kind.rawValue ?? "none")")
                     Text(occupancyText(at: coordinate)).font(.caption)
-                    Text("Power: \((editor.isPreviewing(appState) ? PowerLevel.off : appState.editorPower(at: coordinate)).rawValue)")
+                    Text("Power: \(editor.displayedPower(at: coordinate, appState: appState).rawValue)")
                     if editor.browsingWorld(appState).circuit.components[coordinate]?.kind == .repeater {
                         Text("Stored: \(editor.browsingWorld(appState).circuit.components[coordinate]!.direction.rawValue), \(editor.browsingWorld(appState).circuit.components[coordinate]!.repeaterDelay.rawValue)t")
                     }
@@ -156,7 +171,7 @@ struct EditorView: View {
                             Text(appState.scriptOutputSettings.runScriptsOpenOtherItems ? "Default: scripts run, others open" : "Open item").tag(OutputActionMode.openOccupant)
                             Text("Run script").tag(OutputActionMode.executeOccupant)
                             Text("Do nothing").tag(OutputActionMode.none)
-                        }.disabled(appState.isEditorConfigurationLocked || editor.isPreviewing(appState))
+                        }.disabled(appState.isEditorConfigurationLocked || editor.isPreviewing(appState) || editor.circuitTest != nil)
                         if component.outputAction == .executeOccupant {
                             Text("Run a .sh, .command or .zsh script on this Output. You’ll be asked before a new or changed script runs.")
                                 .font(.caption).foregroundStyle(.secondary)
@@ -165,18 +180,18 @@ struct EditorView: View {
                     Button("Erase selected component") {
                         appState.eraseCircuitComponent(at: coordinate, audioMapper: editor.mapper(size: editor.viewport))
                     }
-                        .disabled(appState.isEditorConfigurationLocked || editor.isPreviewing(appState) || editor.browsingWorld(appState).circuit.components[coordinate] == nil)
+                        .disabled(appState.isEditorConfigurationLocked || editor.isPreviewing(appState) || editor.circuitTest != nil || editor.browsingWorld(appState).circuit.components[coordinate] == nil)
                 } else { Text("Move: click to inspect, drag to pan. Pinch or scroll to zoom.").foregroundStyle(.secondary) }
                 Divider()
                 if editor.tool == .repeater || editor.tool == .torch || editor.selectedTile.flatMap({ editor.browsingWorld(appState).circuit.components[$0]?.kind }).map({ [.repeater, .torch].contains($0) }) == true {
                     Picker("Direction", selection: Binding(get: { editor.direction }, set: { editor.setDirection($0, appState: appState) })) {
                         ForEach(Direction.allCases, id: \.self) { Text($0.rawValue.capitalized).tag($0) }
-                    }.disabled(appState.isEditorConfigurationLocked || editor.isPreviewing(appState))
+                    }.disabled(appState.isEditorConfigurationLocked || editor.isPreviewing(appState) || editor.circuitTest != nil)
                 }
                 if editor.tool == .repeater || editor.selectedTile.flatMap({ editor.browsingWorld(appState).circuit.components[$0]?.kind }) == .repeater {
                     Picker("Delay", selection: Binding(get: { editor.delay }, set: { editor.setDelay($0, appState: appState) })) {
                         ForEach(RepeaterDelay.allCases, id: \.self) { Text("\($0.rawValue) tick\($0 == .one ? "" : "s")").tag($0) }
-                    }.disabled(appState.isEditorConfigurationLocked || editor.isPreviewing(appState))
+                    }.disabled(appState.isEditorConfigurationLocked || editor.isPreviewing(appState) || editor.circuitTest != nil)
                 }
                 if editor.tool == .torch {
                     Text("A torch turns on when its rear input is off. Its arrow points toward the output.").font(.caption)
@@ -199,6 +214,46 @@ struct EditorView: View {
                     .font(.caption).foregroundStyle(.secondary)
             }.padding(12).frame(maxWidth: .infinity, alignment: .leading)
         }
+    }
+
+    private var selectionControls: some View {
+        VStack(alignment: .leading, spacing: 8) {
+            HStack {
+                Text("Selection · \(editor.selection(appState).count)").font(.headline)
+                HelpButton(title: "Working with a group", text: "Choose Select and drag a box. Shift-click adds or removes components. Copy (⌘C), Paste (⌘V), Select All (⌘A), Undo (⌘Z) and Redo (⇧⌘Z) work when the canvas is focused. Move Selection asks you to click a destination. R rotates a selected group or placement preview; Escape cancels. Every group edit can be undone in one step.")
+            }
+            LazyVGrid(columns: [GridItem(.flexible()), GridItem(.flexible())], spacing: 6) {
+                Button("Copy") { editor.copyToClipboard(appState) }.disabled(editor.selection(appState).isEmpty)
+                Button("Paste") { editor.pasteFromClipboard(appState) }.disabled(editor.clipboard == nil || appState.isEditorConfigurationLocked)
+                Button("Move Selection") { editor.beginMove(appState) }.disabled(editor.selection(appState).isEmpty || appState.isEditorConfigurationLocked)
+                Button("Rotate") { if editor.pendingPlacement != nil { editor.rotatePending() } else { editor.rotateSelection(appState) } }.disabled((editor.selection(appState).isEmpty && editor.pendingPlacement == nil) || appState.isEditorConfigurationLocked)
+                Button("Erase Group") { editor.deleteSelection(appState) }.disabled(editor.selection(appState).isEmpty || appState.isEditorConfigurationLocked)
+                Button("Clear") { editor.clearSelection() }
+            }.disabled(editor.circuitTest != nil || editor.isPreviewing(appState))
+            if editor.pendingPlacement != nil {
+                Text("Click to place · R rotates · Escape cancels").font(.caption).foregroundStyle(.secondary)
+                Button("Cancel Placement") { editor.cancelPlacement() }
+            }
+        }
+    }
+
+    private var testControls: some View {
+        HStack(spacing: 10) {
+            if let test = editor.circuitTest {
+                Label("Test mode", systemImage: "testtube.2").foregroundStyle(.teal)
+                Button { editor.toggleTestPlayback(appState) } label: { Label(test.isPlaying ? "Pause" : "Play", systemImage: test.isPlaying ? "pause.fill" : "play.fill") }
+                Button("Step") { editor.stepTest(appState) }.disabled(test.isPlaying).help("Advance one simulation tick (50 ms)")
+                Button("Reset") { editor.resetTest(appState) }
+                Text("Tick \(test.tick) · \(test.outputPulses.values.reduce(0, +)) output pulses").font(.caption.monospacedDigit())
+                Spacer()
+                Button("Done Testing") { editor.stopTesting() }
+            } else {
+                Button { editor.startTesting(appState) } label: { Label("Test Circuit", systemImage: "play.rectangle") }
+                    .disabled(editor.isPreviewing(appState))
+                Text("Try your circuit here without opening files.").font(.caption).foregroundStyle(.secondary)
+                Spacer()
+            }
+        }.padding(.horizontal, 10).padding(.bottom, 8)
     }
 
     private var viewportControls: some View {

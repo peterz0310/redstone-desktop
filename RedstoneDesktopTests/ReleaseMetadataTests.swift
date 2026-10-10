@@ -19,7 +19,7 @@ final class ReleaseMetadataTests: XCTestCase {
         let enumerator = try XCTUnwrap(FileManager.default.enumerator(at: root, includingPropertiesForKeys: nil))
         for case let url as URL in enumerator {
             XCTAssertFalse(["jar", "zip", "sh", "command", "zsh", "class", "lua"].contains(url.pathExtension.lowercased()))
-            XCTAssertFalse(["library.json", "world.json", "import.json", "pack.json", "preferences.plist"].contains(url.lastPathComponent))
+            XCTAssertFalse(["library.json", "blueprints.json", "world.json", "import.json", "pack.json", "preferences.plist"].contains(url.lastPathComponent))
             XCTAssertFalse(url.pathComponents.contains("ImportedTextures"))
         }
     }

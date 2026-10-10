@@ -5,7 +5,7 @@ import Foundation
 @MainActor
 final class EditorSession: ObservableObject {
     enum Tool: String, CaseIterable {
-        case select = "Move", dust = "Dust", button = "Button"
+        case select = "Move", region = "Select", dust = "Dust", button = "Button"
         case lever = "Lever", repeater = "Repeater", output = "Output", erase = "Erase", torch = "Torch"
 
         var componentKind: CircuitComponentKind? {
@@ -16,7 +16,7 @@ final class EditorSession: ObservableObject {
             case .torch: return .torch
             case .repeater: return .repeater
             case .output: return .output
-            case .select, .erase: return nil
+            case .select, .region, .erase: return nil
             }
         }
         var editsWorld: Bool { componentKind != nil || self == .erase }
@@ -28,12 +28,191 @@ final class EditorSession: ObservableObject {
     @Published var delay = RepeaterDelay.one
     @Published var selectedTile: WorldCoordinate?
     @Published var hoveredTile: WorldCoordinate?
+    @Published private(set) var selectedTiles: Set<WorldCoordinate> = []
+    @Published private(set) var regionStart: WorldCoordinate?
+    @Published private(set) var regionEnd: WorldCoordinate?
+    private var selectionBeforeDrag: Set<WorldCoordinate> = []
+    @Published private(set) var clipboard: CircuitBlueprint?
+    struct PendingPlacement: Equatable {
+        var blueprint: CircuitBlueprint
+        let worldID: UUID
+        let original: [WorldCoordinate: CircuitComponent]
+        var removing: Set<WorldCoordinate> { Set(original.keys) }
+    }
+    @Published private(set) var pendingPlacement: PendingPlacement?
+
+    func selection(_ appState: AppState) -> Set<WorldCoordinate> {
+        let valid = selectedTiles.filter { appState.editorWorld.circuit.components[$0] != nil }
+        if valid.isEmpty, let selectedTile, appState.editorWorld.circuit.components[selectedTile] != nil { return [selectedTile] }
+        return valid
+    }
+    func selectAll(_ appState: AppState) {
+        let cells = Set(appState.editorWorld.circuit.components.keys)
+        guard cells.count <= CircuitBlueprint.maximumComponents else { status = "Select a smaller group (4096 components maximum)."; return }
+        selectedTiles = cells; selectedTile = cells.count == 1 ? cells.first : nil
+        status = "Selected \(cells.count) components."
+    }
+    func beginRegion(at point: CGPoint, size: CGSize, additive: Bool) {
+        guard let tile = mapper(size: size)?.tile(atScreen: point) else { return }
+        regionStart = tile; regionEnd = tile
+        selectionBeforeDrag = additive ? selectedTiles : []
+    }
+    func dragRegion(to point: CGPoint, size: CGSize, appState: AppState) {
+        guard let start = regionStart, let end = mapper(size: size)?.tile(atScreen: point) else { return }
+        regionEnd = end
+        let found = Set(appState.editorWorld.circuit.components.keys.filter {
+            (min(start.x, end.x)...max(start.x, end.x)).contains($0.x) && (min(start.y, end.y)...max(start.y, end.y)).contains($0.y)
+        }).union(selectionBeforeDrag)
+        guard found.count <= CircuitBlueprint.maximumComponents else { status = "Select a smaller group (4096 components maximum)."; return }
+        selectedTiles = found; selectedTile = found.count == 1 ? found.first : nil
+        status = "Selected \(found.count) components."
+    }
+    func endRegion() { regionStart = nil; regionEnd = nil; selectionBeforeDrag = [] }
+    func cancelPlacement() { pendingPlacement = nil }
+    func clearSelection() { selectedTiles = []; selectedTile = nil; endRegion(); cancelPlacement() }
+    private func selectedBlueprint(_ appState: AppState, name: String = "Copied Circuit") throws -> CircuitBlueprint {
+        let coordinates = selection(appState)
+        return try CircuitBlueprint.capture(name: name, components: appState.editorWorld.circuit.components.filter { coordinates.contains($0.key) }, levers: appState.editorLeverPositions)
+    }
+    @discardableResult func copySelection(_ appState: AppState) -> Bool {
+        do { clipboard = try selectedBlueprint(appState); status = "Copied \(clipboard!.circuit.components.count) components. Choose Paste, then click a destination."; return true }
+        catch { status = error.localizedDescription; return false }
+    }
+    func copyToClipboard(_ appState: AppState) {
+        guard copySelection(appState), let clipboard else { return }
+        do { try EditorCircuitClipboard.write(clipboard) } catch { status = error.localizedDescription }
+    }
+    func pasteFromClipboard(_ appState: AppState) {
+        do { beginPaste(appState, blueprint: try EditorCircuitClipboard.read()) }
+        catch { status = error.localizedDescription }
+    }
+    @discardableResult func saveBlueprint(_ appState: AppState, name: String) -> Bool {
+        do {
+            let blueprint = try selectedBlueprint(appState, name: name)
+            let result = appState.blueprints.save(blueprint); status = appState.blueprints.status; return result
+        } catch { status = error.localizedDescription; return false }
+    }
+    func beginPaste(_ appState: AppState, blueprint: CircuitBlueprint? = nil) {
+        guard circuitTest == nil, !isPreviewing(appState), !appState.isEditorConfigurationLocked else { return }
+        guard let source = blueprint ?? clipboard else { status = "Copy a circuit or choose a blueprint first."; return }
+        do { try source.validate() } catch { status = error.localizedDescription; return }
+        pendingPlacement = PendingPlacement(blueprint: source, worldID: appState.selectedWorldID, original: [:])
+        tool = .select; status = "Click a clear destination to place \(source.name). R rotates; Escape cancels."
+    }
+    func beginMove(_ appState: AppState) {
+        guard circuitTest == nil, !isPreviewing(appState), !appState.isEditorConfigurationLocked else { return }
+        do {
+            let blueprint = try selectedBlueprint(appState)
+            let cells = selection(appState)
+            pendingPlacement = PendingPlacement(blueprint: blueprint, worldID: appState.selectedWorldID,
+                original: appState.editorWorld.circuit.components.filter { cells.contains($0.key) })
+            tool = .select; status = "Click a destination to move the selection. R rotates; Escape cancels."
+        } catch { status = error.localizedDescription }
+    }
+    func rotatePending() {
+        guard let pending = pendingPlacement else { return }
+        do { pendingPlacement?.blueprint = try pending.blueprint.rotatedClockwise() }
+        catch { status = error.localizedDescription }
+    }
+    func placementPreview(at anchor: WorldCoordinate, appState: AppState) -> (CircuitWorld, Bool)? {
+        guard let pending = pendingPlacement, pending.worldID == appState.selectedWorldID,
+              let (circuit, _) = try? pending.blueprint.positioned(at: anchor) else { return nil }
+        return (circuit, (try? BlueprintPlacement.applying(pending.blueprint, at: anchor, to: appState.editorWorld, removing: pending.removing)) != nil)
+    }
+    @discardableResult private func placePending(at anchor: WorldCoordinate, appState: AppState) -> Bool {
+        guard let pending = pendingPlacement, pending.worldID == appState.selectedWorldID,
+              circuitTest == nil, !isPreviewing(appState), !appState.isEditorConfigurationLocked else { return false }
+        do {
+            guard pending.original.allSatisfy({ appState.editorWorld.circuit.components[$0.key] == $0.value }) else {
+                throw BlueprintError("The original selection changed. Cancel and select it again.")
+            }
+            let world = try BlueprintPlacement.applying(pending.blueprint, at: anchor, to: appState.editorWorld, removing: pending.removing)
+            let (placed, levers) = try pending.blueprint.positioned(at: anchor)
+            let savedLevers = appState.editorLeverPositions.subtracting(pending.removing).union(levers)
+            guard appState.replaceEditorCircuit(world.circuit, levers: savedLevers) else { status = appState.developerPlacementStatus; return false }
+            selectedTiles = Set(placed.components.keys); selectedTile = selectedTiles.count == 1 ? selectedTiles.first : nil
+            pendingPlacement = nil; status = "Placed \(placed.components.count) components. Undo reverses the whole operation."
+            return true
+        } catch { status = "Nothing changed: \(error.localizedDescription)"; return false }
+    }
+    func rotateSelection(_ appState: AppState) {
+        guard circuitTest == nil, !isPreviewing(appState), !appState.isEditorConfigurationLocked else { return }
+        let cells = selection(appState)
+        guard let x = cells.map(\.x).min(), let y = cells.map(\.y).min() else { return }
+        beginMove(appState)
+        guard pendingPlacement != nil else { return }
+        rotatePending()
+        if !placePending(at: WorldCoordinate(x: x, y: y), appState: appState) { cancelPlacement() }
+    }
+    func deleteSelection(_ appState: AppState) {
+        guard circuitTest == nil, !isPreviewing(appState) else { return }
+        let cells = selection(appState); guard !cells.isEmpty else { return }
+        var circuit = appState.editorWorld.circuit
+        for point in cells { circuit.components.removeValue(forKey: point) }
+        if appState.replaceEditorCircuit(circuit) { clearSelection(); status = "Selection erased. Terrain preserved." }
+        else { status = appState.developerPlacementStatus }
+    }
+    func undo(_ appState: AppState, redo: Bool = false) {
+        guard circuitTest == nil, !isPreviewing(appState) else { return }
+        if appState.undoCircuit(redo: redo) { clearSelection() }
+        status = appState.developerPlacementStatus
+    }
+
     @Published private(set) var status = "Move: click to inspect, drag to pan. Pinch or scroll to zoom."
     @Published var seedText = "2026"
     @Published var newWorldName = "New World"
     @Published private(set) var previewGeneration: WorldGenerationSettings?
     @Published var terrainMetrics = TerrainRenderMetrics()
     var viewport = CGSize(width: 800, height: 600)
+    @Published private(set) var circuitTest: EditorCircuitTest?
+    private let testScheduler: any CircuitTickScheduling
+
+    init(testScheduler: any CircuitTickScheduling = CircuitTickScheduler()) { self.testScheduler = testScheduler }
+
+    func startTesting(_ appState: AppState) {
+        guard !isPreviewing(appState), !appState.isMaintenanceLocked else { return }
+        stopTesting(); cancelPlacement()
+        circuitTest = EditorCircuitTest(worldID: appState.selectedWorldID, circuit: appState.editorWorld.circuit, levers: appState.editorLeverPositions)
+        tool = .select
+        status = "Test mode: click buttons and levers. Outputs only flash here; files never open."
+        scheduleTest(appState)
+    }
+    func stopTesting() {
+        testScheduler.stop(); circuitTest = nil
+    }
+    func toggleTestPlayback(_ appState: AppState) {
+        guard circuitTest != nil else { return }
+        circuitTest!.isPlaying.toggle()
+        if circuitTest!.isPlaying { scheduleTest(appState) } else { testScheduler.stop() }
+    }
+    func stepTest(_ appState: AppState) {
+        guard circuitTest?.isPlaying == false else { return }
+        advanceTest(appState)
+    }
+    func resetTest(_ appState: AppState) {
+        guard let current = circuitTest else { return }
+        var fresh = EditorCircuitTest(worldID: current.worldID, circuit: current.source, levers: current.initialLevers)
+        fresh.isPlaying = current.isPlaying; circuitTest = fresh
+        invalidateTestIfNeeded(appState)
+    }
+    func invalidateTestIfNeeded(_ appState: AppState) {
+        guard let test = circuitTest else { return }
+        if test.worldID != appState.selectedWorldID || test.source != appState.editorWorld.circuit || appState.isMaintenanceLocked { stopTesting() }
+    }
+    private func scheduleTest(_ appState: AppState) {
+        testScheduler.start { [weak self, weak appState] in
+            guard let self, let appState else { return }
+            self.advanceTest(appState)
+        }
+    }
+    private func advanceTest(_ appState: AppState) {
+        invalidateTestIfNeeded(appState)
+        circuitTest?.advance()
+    }
+    func displayedPower(at tile: WorldCoordinate, appState: AppState) -> PowerLevel {
+        circuitTest?.simulator.power(at: tile) ?? (isPreviewing(appState) ? .off : appState.editorPower(at: tile))
+    }
+
 
     func isPreviewing(_ appState: AppState) -> Bool {
         previewGeneration != nil
@@ -50,6 +229,7 @@ final class EditorSession: ObservableObject {
 
     @discardableResult
     func previewSeed() -> Bool {
+        stopTesting(); clearSelection()
         let text = seedText.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !text.isEmpty, text.utf8.allSatisfy({ (48...57).contains($0) }), let seed = UInt64(text) else {
             status = "Enter a whole seed from 0 to 18446744073709551615."
@@ -125,6 +305,7 @@ final class EditorSession: ObservableObject {
     }
 
     func syncSelectedWorld(_ appState: AppState) {
+        stopTesting(); clearSelection()
         previewGeneration = nil
         seedText = String(appState.selectedDocument.generation.seed)
         camera = CameraState(worldOrigin: appState.selectedAreaCamera.worldOrigin, pointsPerTile: camera.pointsPerTile)
@@ -148,7 +329,7 @@ final class EditorSession: ObservableObject {
         delay = value; saveSelectedConfiguration(appState)
     }
     private func saveSelectedConfiguration(_ appState: AppState) {
-        guard !isPreviewing(appState), !appState.isEditorConfigurationLocked,
+        guard circuitTest == nil, !isPreviewing(appState), !appState.isEditorConfigurationLocked,
               let selectedTile, let component = browsingWorld(appState).circuit.components[selectedTile] else { return }
         if component.kind == .repeater { appState.configureRepeater(at: selectedTile, direction: direction, delay: delay) }
         if component.kind == .torch { appState.configureTorch(at: selectedTile, direction: direction) }
@@ -173,24 +354,38 @@ final class EditorSession: ObservableObject {
         hoveredTile = appState.flatMap { placementTile(at: point, mapper: mapper, appState: $0) } ?? mapper.tile(atScreen: point)
     }
 
-    func click(at point: CGPoint, size: CGSize, appState: AppState) {
+    func click(at point: CGPoint, size: CGSize, appState: AppState, additive: Bool = false) {
         guard let mapper = mapper(size: size), mapper.canvasFrame.contains(point),
               let tile = placementTile(at: point, mapper: mapper, appState: appState) else { return }
+        if pendingPlacement != nil { _ = placePending(at: tile, appState: appState); return }
+        if circuitTest != nil {
+            invalidateTestIfNeeded(appState)
+            selectedTile = tile
+            let activated = circuitTest?.click(tile) ?? false
+            status = activated ? "Test input received. Outputs flash without opening files." : "Test mode: click a button or lever. Pause to inspect one tick at a time."
+            return
+        }
         if tool.editsWorld && isPreviewing(appState) {
             status = "Create the new world or cancel its preview before editing the circuit."
             return
         }
         selectedTile = tile
-        if tool == .select {
+        if tool == .select || tool == .region {
+            if additive {
+                if !selectedTiles.insert(tile).inserted { selectedTiles.remove(tile) }
+                selectedTile = selectedTiles.count == 1 ? selectedTiles.first : nil
+            } else { selectedTiles = browsingWorld(appState).circuit.components[tile] == nil ? [] : [tile] }
             if let component = browsingWorld(appState).circuit.components[tile], [.repeater, .torch].contains(component.kind) {
                 direction = component.direction
                 delay = component.repeaterDelay
             }
             status = "Selected (\(tile.x), \(tile.y))."
         } else if tool == .erase {
+            selectedTiles = []
             appState.eraseCircuitComponent(at: tile, audioMapper: mapper)
             status = appState.developerPlacementStatus
         } else if let component = proposedComponent {
+            selectedTiles = [tile]
             appState.placeCircuitComponent(component, at: tile, audioMapper: mapper)
             status = appState.developerPlacementStatus
         }

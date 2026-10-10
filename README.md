@@ -8,9 +8,10 @@ Build little redstone circuits underneath your real Mac desktop files. A button 
 
 - **Worlds** are separate maps with their own landscapes and builds. **Areas** are saved views within a world.
 - Build in the editor, save or update an area, and choose **Activate on Desktop**. **Start Desktop** runs that area. Browsing another world doesn’t change the desktop assignment.
+- **Test Circuit** runs a safe editor copy with Pause, Step and Reset. Outputs flash without opening files. Select groups to copy, move, rotate, undo or save reusable blueprints; [the editor guide](docs/EDITOR_TOOLS.md) walks through these tools.
 - **Build on Desktop** temporarily stops the circuit and lets you place components on the desktop. Exit to use your files normally again. R rotates the hovered repeater/torch; T changes a repeater’s delay.
 - **Settings → Appearance** can use textures from your installed Minecraft Java Edition. Original artwork is available without a game installation. Help buttons explain optional settings.
-- **Settings → Data** exports every world, area and circuit. **Import Library** adds independent copies, preserving your existing builds and desktop assignment. Texture packs, desktop files and script approvals are excluded.
+- **Settings → Data** exports every world, area and circuit. **Import Library** adds independent copies, preserving your existing builds and desktop assignment. The separate blueprint shelf, texture packs, desktop files and script approvals are excluded.
 - **Start Over** creates a recovery backup before resetting app data. Read [the recovery guide](docs/RECOVERY.md) first. Backup/reset acceptance is still awaiting the owner’s manual testing.
 
 The dust menu in the macOS menu bar provides Start/Stop, area selection, editor, build mode, Settings and sound controls. Choosing an area automatically resumes Desktop when it was running; a stopped desktop stays stopped. Setup can be reopened from Settings → General. Connect to Finder when asked; script access is a separate optional permission.
