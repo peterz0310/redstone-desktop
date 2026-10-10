@@ -9,9 +9,9 @@ Climate regions are broader than before. Eight biomes mix large recognizable are
 | Plains | Open grass, scattered flowers and occasional small groves |
 | Woodland | Clusters of trees, flower clearings and mushrooms |
 | Meadow | Grass with denser patches of mixed flowers |
-| Savanna | Golden dry grass with sparse shrubs |
-| Desert | Sand and scattered cacti |
-| Rocky | Stone, gravel patches and coal/iron deposits |
+| Savanna | Golden dry grass with sparse shrubs and rare lava pools |
+| Desert | Sand, scattered cacti and rare lava pools |
+| Rocky | Stone, gravel patches, coal/iron deposits and rare lava pools |
 | Alpine | Snow, exposed stone and evergreen pines |
 | Wetland | Lakes, winding rivers, shallow-water reeds and gravel or sandy banks |
 
@@ -19,7 +19,7 @@ Rivers follow continuous winding contours independently of lake elevation, so th
 
 Trees now occupy a 3×3 canopy with five required blocks (center plus four neighbors) and independently optional corners, plus an occasional leaf extending one arm, with a full wood block beneath the center leaves. Transparent outer leaves reveal the ground; transparent center leaves reveal the log. Planting cells keep canopies spaced apart, and banks clip foliage rather than placing it on water. About one quarter of trees get one extra leaf, chosen independently of their corners and attached to a required arm. The maximum footprint fits a 5×5 clearing brush. Both the central block and surrounding leaves block construction until cleared.
 
-Dry grass, snow and gravel support every circuit component. Water does not. Trees, flowers, pines, shrubs, mushrooms, reeds and cacti must be cleared or painted over to build; ore deposits on stone remain buildable. The new surfaces are available in both Terrain brush menus. Restore Original restores this generator's terrain, not a historical map.
+Dry grass, snow and gravel support every circuit component. Water and lava do not. Trees, flowers, pines, shrubs, mushrooms, reeds and cacti must be cleared or painted over to build; ore deposits on stone remain buildable. The new surfaces are available in both Terrain brush menus. Restore Original restores this generator's terrain, not a historical map.
 
 ## Existing worlds
 
@@ -36,3 +36,5 @@ Every new surface and decoration has project-owned fallback pixels, so no Minecr
 Automated tests cover fixed seed fingerprints, all biomes/surfaces/scenery, integer limits, chunk seams, inland rivers and banks, broad region continuity, dry-ground coverage, varied tree footprints with all sixteen corner combinations, occasional connected extensions in every direction, cross-chunk canopies, transparent leaf/log compositing, new brush persistence, placement and complete built-in/Java texture support. Golden fingerprints represent the current generator, not historical version-1 terrain. Native appearance, imported pack fit and real panning remain [Mac checks](TESTING.md).
 
 Run `scripts/terrain-preview.sh` to write `build/terrain-preview.png`: seeds 42, 2026 and 7 show wide landscape overviews and close-ups using the actual original fallback pixels. This developer tool compiles only generation/domain types and pixel art; it never launches the app or reads its library. The overview samples every four tiles, so narrow features can appear broken there even when the full-resolution map is continuous.
+
+Rare lava pools use deterministic 64-tile cells: one in six cells proposes a jagged radius-2–4 pool, clipped to desert, rocky or savanna terrain. The sampled seed-42 region is tested to keep lava below 0.5% of tiles. Pools have no scenery overlays and never replace lakes, rivers or their banks. They are visual liquids, without spreading, damage, heat, ignition or Finder actions. Lava is also available as a Terrain brush, with ordinary circuit protection, persistence and Undo/Redo. [Animation](TERRAIN_ANIMATION.md) is a renderer concern; the generator has no clock, asset or SpriteKit dependency.

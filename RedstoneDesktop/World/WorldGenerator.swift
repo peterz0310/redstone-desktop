@@ -89,8 +89,10 @@ struct WorldGenerator: Sendable {
         } else {
             biome = .plains; terrain = .grass
         }
+        let surface: TerrainID = [.desert, .rocky, .savanna].contains(biome) && LavaPool.contains(coordinate, seed: seed) ? .lava : terrain
         let decoration: DecorationID?
-        switch biome {
+        if surface == .lava { decoration = nil }
+        else { switch biome {
         case .woodland:
             if roll > 62000 && groves > 35000 { decoration = .mushroom }
             else if roll < 11000 && groves < 32000 { decoration = .flower }
@@ -104,8 +106,9 @@ struct WorldGenerator: Sendable {
         case .desert: decoration = roll < 2000 ? .rock : nil // cactus appearance on sand
         case .wetland: decoration = terrain == .shallowWater && roll < 6000 ? .reed : nil
         }
+        }
         return TerrainSample(elevation: elevation, moisture: moisture, temperature: temperature,
-                             biome: biome, riverDistance: riverDistance, tile: Tile(terrain: terrain, decoration: decoration))
+                             biome: biome, riverDistance: riverDistance, tile: Tile(terrain: surface, decoration: decoration))
     }
 
     func chunk(at coordinate: ChunkCoordinate) throws -> TerrainChunk {

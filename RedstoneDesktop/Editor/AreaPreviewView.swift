@@ -40,6 +40,7 @@ enum AreaPreviewRenderer {
                 case .stone: color = .gray
                 case .sand: color = NSColor(red: 0.8, green: 0.72, blue: 0.45, alpha: 1)
                 case .shallowWater: color = .systemTeal
+                case .lava: color = .systemOrange
                 case .deepWater: color = .systemBlue
                 case nil: color = .darkGray
                 }

@@ -2,6 +2,7 @@ import Foundation
 
 enum TextureAssetID: String, Codable, CaseIterable, Sendable {
     case terrainGrass, terrainDirt, terrainStone, terrainSand, waterShallow, waterDeep
+    case lavaStill
     case terrainDryGrass, terrainSnow, terrainGravel
     case decorationOakLog, decorationSpruceLog
     case decorationPine, decorationShrub, decorationMushroom
@@ -25,6 +26,7 @@ enum TextureAssetID: String, Codable, CaseIterable, Sendable {
         case .sand: .terrainSand
         case .shallowWater: .waterShallow
         case .deepWater: .waterDeep
+        case .lava: .lavaStill
         }
     }
     static func decoration(_ id: DecorationID) -> Self {
@@ -40,6 +42,8 @@ enum TextureAssetID: String, Codable, CaseIterable, Sendable {
         case .reed: .decorationReed
         }
     }
+    var isAnimatedLiquid: Bool { [.waterShallow, .waterDeep, .lavaStill].contains(self) }
+
     var circuitID: CircuitTextureID? {
         CircuitTextureID.allCases.first { $0.assetID == self }
     }
@@ -81,6 +85,7 @@ struct PackManifest: Codable, Equatable, Sendable {
     var name: String
     var author: String?
     var assets: [String: String]
+    var animations: [String: TextureAnimationSpec]? = nil
 }
 
 struct PackError: LocalizedError {

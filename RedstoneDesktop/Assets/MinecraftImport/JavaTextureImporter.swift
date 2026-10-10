@@ -63,6 +63,7 @@ enum JavaTextureImporter {
         mapping(.decorationShrub, "acacia_leaves", old: "leaves_acacia", tint: [140,145,55]),
         mapping(.decorationMushroom, "red_mushroom", old: "mushroom_red"),
         mapping(.terrainDirt, "dirt"), mapping(.terrainStone, "stone"), mapping(.terrainSand, "sand"),
+        mapping(.lavaStill, "lava_still"),
         mapping(.waterShallow, "water_still", tint: [80,180,220]), mapping(.waterDeep, "water_still", tint: [45,95,180]),
         mapping(.decorationTree, "oak_leaves", old: "leaves_oak", tint: [70,145,50]),
         mapping(.decorationFlower, "poppy", old: "flower_rose"), mapping(.decorationReed, "sugar_cane", old: "reeds"),
@@ -101,6 +102,7 @@ enum JavaTextureImporter {
             source = nil; archive = zip; prefix = found
         }
         var images: [TextureAssetID: RasterAsset] = [:], used: [String: String] = [:], warnings: [String] = []
+        var animations: [TextureAssetID: AnimatedRaster] = [:]
         for mapping in mappings {
             var accepted = false
             for path in mapping.paths {
@@ -109,9 +111,10 @@ enum JavaTextureImporter {
                     if let archive { data = try archive.read(prefix + path, limit: 4 * 1024 * 1024) }
                     else { data = try source!.read(path, limit: 4 * 1024 * 1024) }
                     var raster = try RasterAsset.decode(data)
-                    // Java animations are vertical square-frame strips. Import only their first frame.
-                    if raster.height != raster.width {
-                        guard raster.height > raster.width, raster.height % raster.width == 0 else { throw PackError("Unsupported nonsquare Java texture.") }
+                    // Retain bounded liquid strips; other Java animation strips still use frame zero.
+                    guard raster.height == raster.width || (raster.height > raster.width && raster.height % raster.width == 0) else { throw PackError("Unsupported nonsquare Java texture.") }
+                    let frameCount = raster.height / raster.width
+                    if !mapping.id.isAnimatedLiquid && frameCount > 1 {
                         raster = RasterAsset(width: raster.width, height: raster.width, pixels: Array(raster.pixels.prefix(raster.width * raster.width * 4)))
                     }
                     if let tint = mapping.tint {
@@ -120,6 +123,18 @@ enum JavaTextureImporter {
                         }
                     }
                     if let art = mapping.art { raster = art.render(raster) }
+                    if mapping.id.isAnimatedLiquid && frameCount > 1 {
+                        let metadata: Data?
+                        if let archive { metadata = try? archive.read(prefix + path + ".mcmeta", limit: 64 * 1024) }
+                        else { metadata = try? source!.read(path + ".mcmeta", limit: 64 * 1024) }
+                        let spec: TextureAnimationSpec
+                        do { spec = try TextureAnimationSpec.java(metadata: metadata, frameCount: frameCount) }
+                        catch {
+                            warnings.append("\(mapping.id.rawValue): invalid animation metadata; default frame timing used.")
+                            spec = try TextureAnimationSpec.java(metadata: nil, frameCount: frameCount)
+                        }
+                        animations[mapping.id] = try AnimatedRaster(strip: raster, spec: spec)
+                    }
                     images[mapping.id] = raster; used[mapping.id.rawValue] = prefix + path
                     accepted = true; break
                 } catch {
@@ -142,7 +157,7 @@ enum JavaTextureImporter {
             try image.pngData().write(to: staging.appendingPathComponent(filename), options: .atomic)
             assets[id.rawValue] = filename
         }
-        let manifest = PackManifest(name: "Java textures · \(String(sourceURL.deletingPathExtension().lastPathComponent.prefix(100)))", author: "Local import; original source rights apply", assets: assets)
+        let manifest = PackManifest(name: "Java textures · \(String(sourceURL.deletingPathExtension().lastPathComponent.prefix(100)))", author: "Local import; original source rights apply", assets: assets, animations: animations.isEmpty ? nil : Dictionary(uniqueKeysWithValues: animations.map { ($0.key.rawValue, $0.value.spec) }))
         try JSONEncoder().encode(manifest).write(to: staging.appendingPathComponent("pack.json"), options: .atomic)
         try JSONEncoder().encode(record).write(to: staging.appendingPathComponent("import.json"), options: .atomic)
         let validated = try ResourcePackLoader.load(staging) // Validate the generated format-1 pack before publishing its directory.

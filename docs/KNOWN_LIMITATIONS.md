@@ -15,3 +15,5 @@ This is an experimental prototype; completed code/tests do not establish physica
 - CI is configured but a hosted GitHub run is not claimed until it actually runs. Local release archives are unsigned unless signing is explicitly configured. No Developer ID signature/notarization or internet release is claimed.
 
 Pending physical checks remain unverified in TESTING.md until the owner confirms them. Backup/reset testing is explicitly deferred.
+
+- Water/lava animation supports vertical square-frame PNG strips and bounded frame/timing metadata only, sampled at 16 pixels per tile. Other animated Java textures still use their first frame; custom static packs remain static. No pack shader/model code, flowing fluids, heat or damage is simulated. Preview cards remain static. Old imports require one refresh for liquid animation. See [Terrain animation](TERRAIN_ANIMATION.md).

@@ -28,7 +28,7 @@ A folder must contain `assets/minecraft/textures/` directly. An archive may have
 
 ## Supported mappings
 
-There are 36 optional mappings, including landscape surface/scenery mappings and two log tops. Current automated imports use original synthetic assets. Reimport an installed version to add the new textures to an existing cache. Torch direction/NOT labels stay app UI; pack pixels never affect the documented [circuit rules](REDSTONE_RULES.md).
+There are 37 optional mappings, including landscape surface/scenery mappings and two log tops. Current automated imports use original synthetic assets. Reimport an installed version to add the new textures to an existing cache. Torch direction/NOT labels stay app UI; pack pixels never affect the documented [circuit rules](REDSTONE_RULES.md).
 
 Modern paths below are relative to `assets/minecraft/textures/block/`. Legacy paths are relative to `assets/minecraft/textures/blocks/`. Modern paths are tried first, then the legacy alternative. Each semantic ID can independently fall back.
 
@@ -48,6 +48,7 @@ Modern paths below are relative to `assets/minecraft/textures/block/`. Legacy pa
 | `terrainSand` | `sand.png` | `sand.png` | None |
 | `waterShallow` | `water_still.png` | `water_still.png` | 80, 180, 220 |
 | `waterDeep` | `water_still.png` | `water_still.png` | 45, 95, 180 |
+| `lavaStill` | `lava_still.png` | `lava_still.png` | none |
 | `decorationTree` | `oak_leaves.png` | `leaves_oak.png` | 70, 145, 50 |
 | `decorationFlower` | `poppy.png` | `flower_rose.png` | None |
 | `decorationReed` | `sugar_cane.png` | `reeds.png` | None |
@@ -73,7 +74,7 @@ Modern paths below are relative to `assets/minecraft/textures/block/`. Legacy pa
 
 For rows with numeric tint, each decoded RGB channel is multiplied by the listed channel divided by 255, preserving alpha. This approximates readable grass/leaves/water; it does not reproduce Minecraft biome lighting or colormaps. Already-colored pack art receives the same tint.
 
-Square PNGs are accepted. Vertical strips whose height is an integer multiple of their width contribute **only the first, top square frame**. Other nonsquare images are skipped. Animation metadata is ignored; there is no animated water. Source PNG dimensions must be 1–1024 on each axis and encoded size at most 4 MiB. Generated terrain is sampled at 16 pixels per tile, with nearest filtering.
+Square PNGs are accepted. Water and lava retain vertical square-frame strips with up to 64 frames. Their adjacent `.png.mcmeta` files contribute frame order, integer frame times (1–200 ticks, 20 ticks/second), and optional interpolation. Missing metadata uses sequential 1-tick frames; malformed metadata warns and uses that default. Unreadable/oversized metadata uses the missing-metadata default. Only bounded JSON data is read; pack shaders, models and code are never executed. Other animated textures still contribute only the first, top square frame. Other nonsquare images are skipped. Source PNG dimensions remain 1–1024 on each axis and encoded size at most 4 MiB. All terrain is sampled at 16 pixels per tile, with nearest filtering. See [terrain animation](TERRAIN_ANIMATION.md) for rendering, limits and Reduce Motion.
 
 Tree/flower/reed images are 2D decoration overlays, not 3D models. Dust uses the existing connected wire geometry with the imported material. Selection overlays and all sounds retain original built-in assets. Outputs use the command-block face with a small original red indicator when powered; soft occupancy glow remains app UI; Output art covers a full tile with no text or colored backing. Cacti crop the central top face into a transparent 16×16 overlay. Missing individual mappings also use original fallback. Importing textures does not change terrain rules, circuits, Finder targets, world data or cameras.
 
@@ -85,7 +86,7 @@ Dust converts source-dot luminance into an **opaque** textured material, dark re
 
 The existing generator's flower and legacy rock positions are preserved. Stable seed/coordinate selection chooses poppy/dandelion/blue orchid/allium/oxeye daisy, with cactus on sand (including sandy shores) and coal/iron elsewhere. Generated dirt is presented with the imported grass-block top; explicit saved dirt overrides remain dirt. Ore art replaces loose rock art; deposits remain placement-blocking decorations, not mineable resources. This is appearance variety, not a generation/save migration.
 
-**After upgrading from an older 11-, 23- or 26-mapping importer, press **More options & custom packs → Refresh Imported Minecraft Textures** once to generate the current 28-mapping pack.** Reload reads the old generated cache and cannot create missing variant/component mappings or update its orange dust image. No automatic rewrite of user caches occurs.
+**After upgrading an existing import, use More options & custom packs → Refresh Imported Minecraft Textures once.** Reload only reads the generated cache; it cannot recover discarded animation frames or add new mappings. Reimport reads the original local source and creates the current 37-mapping pack, including water/lava strips and log tops. No automatic rewrite of user caches occurs.
 
 ## Cache, reload and removal
 
@@ -127,4 +128,6 @@ The source, original built-in assets and original examples use the repository li
 
 Code: `Assets/MinecraftImport/JavaTextureImporter.swift` owns discovery/mapping/cache records; `JavaCircuitArt.swift` owns fixed raster recipes and `World/DecorationAppearance.swift` chooses stable variants; `Assets/AssetProvider.swift` owns asynchronous selection and lifecycle; `Assets/AssetSettingsView.swift` exposes controls. Renderer consumers only see semantic validated assets; simulation never sees pack paths or depends on SpriteKit.
 
-Tests in `JavaTextureImportTests.swift` use original synthetic PNGs in a real deflated ZIP, isolated preferences and temporary roots. They cover discovery, modern/legacy mappings, tint/first frame, ignored unrelated data, partial fallback, rejection/write failure, managed deletion, source preservation, reload/re-import/startup and inactive-cache removal. Extend mappings with original fixtures and explicit fallback expectations. A real local JAR can be validated in a temporary cache without committing its images or changing the owner's active selection.
+Tests in `JavaTextureImportTests.swift` use original synthetic PNGs in a real deflated ZIP, isolated preferences and temporary roots. They cover discovery, modern/legacy mappings, tint, liquid frames/timing/cache round trips, static first-frame fallback, ignored unrelated data, partial fallback, rejection/write failure, managed deletion, source preservation, reload/re-import/startup and inactive-cache removal. Extend mappings with original fixtures and explicit fallback expectations. A real local JAR can be validated in a temporary cache without committing its images or changing the owner's active selection.
+
+The animation follow-up was also checked against the locally installed **1.21.8 JAR** in a temporary cache: 37 textures, no import warnings; water has 32 frames at 0.1 seconds each, and lava has 20 frames in a 38-step forward/backward sequence at 0.1 seconds each. Cache reload preserved the sequences. This read did not change the owner’s active pack, save data or source JAR, and its temporary imported images were removed. Other Java versions/packs still need their own validation.

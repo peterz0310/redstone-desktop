@@ -4,12 +4,14 @@ enum TerrainBrush: String, CaseIterable, Sendable {
     case grass = "Grass", dirt = "Dirt", stone = "Stone", sand = "Sand"
     case dryGrass = "Dry grass", snow = "Snow", gravel = "Gravel"
     case shallowWater = "Shallow water", deepWater = "Deep water"
+    case lava = "Lava"
     case clearDecorations = "Clear decorations", restore = "Restore original"
     var terrain: TerrainID? {
         switch self {
         case .grass: .grass; case .dirt: .dirt; case .stone: .stone; case .sand: .sand
         case .dryGrass: .dryGrass; case .snow: .snow; case .gravel: .gravel
         case .shallowWater: .shallowWater; case .deepWater: .deepWater
+        case .lava: .lava
         case .clearDecorations, .restore: nil
         }
     }

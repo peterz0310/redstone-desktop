@@ -37,7 +37,7 @@ MyPack/
 }
 ```
 
-`formatVersion`, `name` and `assets` are required. `author` is optional. Name must be nonblank and at most 128 characters; author at most 256; manifest at most 64 KiB; at most 64 asset entries. Version 1 is the only supported version. An empty asset map is valid and means all built-in defaults. Additional JSON metadata fields are currently ignored; do not rely on them for renderer behavior. Publish your artwork license/attribution separately in a README/LICENSE.
+`formatVersion`, `name` and `assets` are required. `author` and `animations` are optional. Name must be nonblank and at most 128 characters; author at most 256; manifest at most 64 KiB; at most 64 asset entries. Version 1 is the only supported version. An empty asset map is valid and means all built-in defaults. Additional JSON metadata fields are currently ignored; do not rely on them for renderer behavior. Publish your artwork license/attribution separately in a README/LICENSE.
 
 Paths are relative to **the folder containing pack.json**, including inside ZIPs. Use `/`, not `\`. Absolute paths, drive prefixes/colons, control characters, empty path components, `.` and `..` are refused. Asset symlinks are ignored with diagnostics; assets may not escape the selected root. Do not use URLs, executable scripts or compiled plugins as asset paths.
 
@@ -58,6 +58,7 @@ All IDs below accept **PNG only**. These are the actual format-1 names; examples
 | `terrainGravel` | Gravel riverbank / rocky surface |
 | `waterShallow` | Shallow-water surface |
 | `waterDeep` | Deep-water surface |
+| `lavaStill` | Lava-pool surface |
 | `decorationTree` | Oak leaf-block overlay, reused across the canopy |
 | `decorationOakLog` | Solid log top beneath central oak leaves |
 | `decorationSpruceLog` | Solid log top beneath central pine leaves |
@@ -89,7 +90,7 @@ All IDs below accept **PNG only**. These are the actual format-1 names; examples
 | `redstoneOutputOff` | Unpowered output icon |
 | `redstoneOutputOn` | Powered output icon |
 
-PNG bounds: 1–1024 pixels in each dimension, at most 4 MiB encoded, one image frame. Square images are recommended; rectangular images stretch to the semantic surface. Transparent decorations overlay the terrain; alpha is decoded as premultiplied RGBA and composited. Texture sampling is nearest-neighbor. There are 41 texture IDs in format 1; the two tree log IDs, three new landscape surface IDs and three scenery IDs, the seven decoration variant IDs, two torch IDs and four desktop detector IDs are additive, so earlier manifests remain valid. Button/lever/repeater icons retain labels, rotation and power frames; full-tile Outputs retain soft occupancy glows; a pack does not replace interaction geometry. Dust uses filled square junctions and cardinal strips one fifth of a tile wide; its material is overridden, not a full-tile vanilla dust model. Built-in powered material is bright red, with dark red when off. Texture colors are displayed without multiplying by a yellow/orange UI tint. Positive power multiplies material RGB by a neutral brightness factor `0.45 + 0.55 × power/15`, preserving hue and alpha; zero uses the separate off material. Custom packs may deliberately choose other colors. Repeaters cover 86% of a tile, with short wire strips bridging compatible front/rear ports to adjacent repeaters and other connected components; side/head-to-head neighbors do not gain ports. Button/lever art has transparent backing; button/lever state labels and repeater rotation/delay remain. Outputs cover a full tile without app text or colored backing; their glow is green for one occupant, gently red for empty, amber for ambiguous and gray for unavailable. Highlight/selection/diagnostic overlays remain app UI.
+PNG bounds: 1–1024 pixels in each dimension, at most 4 MiB encoded, one image frame. Square images are recommended; rectangular images stretch to the semantic surface. Transparent decorations overlay the terrain; alpha is decoded as premultiplied RGBA and composited. Texture sampling is nearest-neighbor. There are 42 texture IDs in format 1; the lava ID, two tree log IDs, three new landscape surface IDs and three scenery IDs, the seven decoration variant IDs, two torch IDs and four desktop detector IDs are additive, so earlier manifests remain valid. Button/lever/repeater icons retain labels, rotation and power frames; full-tile Outputs retain soft occupancy glows; a pack does not replace interaction geometry. Dust uses filled square junctions and cardinal strips one fifth of a tile wide; its material is overridden, not a full-tile vanilla dust model. Built-in powered material is bright red, with dark red when off. Texture colors are displayed without multiplying by a yellow/orange UI tint. Positive power multiplies material RGB by a neutral brightness factor `0.45 + 0.55 × power/15`, preserving hue and alpha; zero uses the separate off material. Custom packs may deliberately choose other colors. Repeaters cover 86% of a tile, with short wire strips bridging compatible front/rear ports to adjacent repeaters and other connected components; side/head-to-head neighbors do not gain ports. Button/lever art has transparent backing; button/lever state labels and repeater rotation/delay remain. Outputs cover a full tile without app text or colored backing; their glow is green for one occupant, gently red for empty, amber for ambiguous and gray for unavailable. Highlight/selection/diagnostic overlays remain app UI.
 
 Generated terrain is baked into bounded chunk sprites. Generated dirt uses `terrainGrass` (Java grass-block top); explicit saved dirt overrides still use `terrainDirt`. Legacy rock slots on sand, including sandy shores, use `decorationCactus`; other rock slots choose coal/iron. These are appearance choices independent of generation and placement rules. Default terrain generation has changed; see [World generation](WORLD_GENERATION.md). Outputs use original terminal-block defaults or optional command-block Java art; occupancy glow, inspector details and actions remain separate. Built-in terrain uses 8 pixels/tile. A terrain/decoration override uses 16 pixels/tile, sampled from the source PNG (higher-resolution files are reduced with nearest sampling). This keeps memory bounded and preserves standard 16-pixel Java texture detail. Circuit textures retain their source raster resolution. Shelf thumbnails remain schematic summaries rather than pack previews. Explicit non-generated diagnostic terrain uses provider textures; generated legacy overrides use the same terrain pack as their surroundings.
 
@@ -134,3 +135,21 @@ Relevant files: `Assets/AssetID.swift` defines the contract; `ResourcePack.swift
 When adding an ID, update enum, built-in fallback, renderer consumer, this table and tests. When changing accepted data, version/document the contract and add malformed/boundary cases. Never add third-party game art to examples, fixtures or the app bundle. Use original tiny test images, or load an owner's local game installation outside the repository for manual validation.
 
 Water textures are composited over an opaque blue base for their depth, so translucent Java/custom water does not expose the checker backdrop. Decoration transparency is preserved. Imported/cache PNGs are unchanged; this is a rendering rule and requires no re-import.
+
+## Optional liquid animation (format 1)
+
+Existing static packs need no changes. To animate `waterShallow`, `waterDeep` or `lavaStill`, supply a vertical strip of square PNG frames and an optional `animations` object alongside `assets`:
+
+```json
+"animations": {
+  "waterShallow": {
+    "frames": [0, 1, 2, 1],
+    "durations": [0.1, 0.1, 0.2, 0.1],
+    "interpolate": true
+  }
+}
+```
+
+Indices are zero-based, from the top of the PNG. Durations are seconds, one per sequence entry; `interpolate` defaults to false. Limits: 1–64 stored frames, 1–256 sequence steps, finite 0.05–10 second durations, at most the three liquid IDs. An animation ID must have a matching `assets` entry; other animation IDs refuse the pack. Invalid per-image animation data warns and uses original fallback for that image. PNG/manifest/archive bounds and safe-path rules remain unchanged. Custom packs without animation declarations remain static; Java imports convert `.png.mcmeta` into these declarations. No user-supplied shader code is accepted.
+
+See [Terrain animation](TERRAIN_ANIMATION.md) for implementation and testing. Liquid alpha is composited over an opaque liquid color, keeping the diagnostic grid from showing through. World/area preview cards remain static thumbnails; the editor and Desktop animate.

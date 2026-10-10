@@ -3,6 +3,16 @@
 These are physical-Mac checks, separate from automated tests. Report which numbered groups you actually tried and what failed; untested groups remain unverified. Use harmless folders/text files first. Place new test circuits on clear ground **to the right** of your existing builds. Do not use scripts for display-calibration tests.
 
 
+## Water, lava and scenery animation — awaiting owner confirmation
+
+1. Quit the old copy and open the updated app. With **Use Original Look**, find water (seed **42** starts near a lake), zoom in and watch for gentle waves. Start Desktop and check it animates there too. Trees, flowers and reeds should have a slight glint, while ground, ores, circuits and Finder items stay steady.
+2. In Appearance & Packs, use **More options & custom packs → Refresh Imported Minecraft Textures**, or import your installed Java version again. Old imports had their strips discarded, so Reload alone will not animate them. Check water now uses the game's animation. Switch Original/Java a few times; colors and animation should switch together without stale frames or a checkerboard showing through the water.
+3. Stop Desktop, choose **Terrain → Lava**, and paint a small pool **to the right** of existing circuits. Lava should animate, reject component placement, and preserve any existing components painted across. Undo/Redo and quit/reopen should preserve the edited pool correctly. Explore desert/stone/savanna further out to find occasional small natural pools; they are deliberately rare.
+4. Enable **System Settings → Accessibility → Display → Reduce motion** while the app is open. Water, lava and scenery glints should freeze in both views; turning it off should resume them. Restore your preferred setting afterward.
+5. Pan and zoom around both views for a minute, including across chunk boundaries with Java textures. Look for smooth interaction, stable scenery, no flashing seams, missing frames or regular pauses. Try building and testing a small circuit afterward: animation must not affect its signals or file behavior.
+
+These Mac appearance/performance checks are pending. Automated checks include actual SpriteKit rendered pixels, frame metadata and looping, Reduce Motion freezing, cache/node stability, lava rarity/biome rules, placement, brush persistence and a real-JAR temporary-cache import. They do not replace owner acceptance.
+
 ## Tree canopy follow-up — awaiting owner confirmation
 
 1. Quit the old copy and open the update. Explore snowy ground in seed **7**, then woodland in another area. Trees should be varied groups of five to ten leaf blocks, with a required cross, some corners filled, an occasional extra leaf making a tree wider or taller, and wood under the middle, rather than isolated leaf tiles. Check nearby trees have different corner shapes, which stay fixed after panning or reopening. Zoom in to see holes showing wood at the center and grass/snow on the outer blocks.

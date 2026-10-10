@@ -9,7 +9,7 @@ final class PlacementRulesTests: XCTestCase {
     func testTerrainDefinitionsMatchCapabilityTable() {
         for id in TerrainID.allCases {
             let definition = id.definition
-            let water = id == .shallowWater || id == .deepWater
+            let water = id == .shallowWater || id == .deepWater || id == .lava
             XCTAssertEqual(definition.id, id)
             XCTAssertEqual(definition.isLiquid, water)
             XCTAssertEqual(definition.isSolidSurface, !water)
@@ -27,8 +27,8 @@ final class PlacementRulesTests: XCTestCase {
         }
     }
 
-    func testBothWaterTypesRejectAllComponentsWithoutMutation() {
-        for terrain in [TerrainID.shallowWater, .deepWater] {
+    func testAllLiquidsRejectAllComponentsWithoutMutation() {
+        for terrain in [TerrainID.shallowWater, .deepWater, .lava] {
             for kind in kinds {
                 var world = World(tiles: [coordinate: Tile(terrain: terrain)])
                 let before = world

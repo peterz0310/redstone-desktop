@@ -11,6 +11,7 @@ enum OriginalTerrainPixels {
         case .stone: base = (139, 148, 154)
         case .sand: base = (214, 197, 132)
         case .shallowWater: base = (85, 177, 196)
+        case .lava: base = (230, 104, 22)
         case .deepWater: base = (43, 97, 143)
         }
         if let decoration = tile.decoration {

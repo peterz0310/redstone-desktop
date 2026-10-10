@@ -6,10 +6,13 @@ protocol AssetProvider: AnyObject {
     var revision: UUID { get }
     var terrainResolution: Int { get }
     func texture(for id: TextureAssetID) -> SKTexture?
+    func liquidAnimation(for terrain: TerrainID) -> AnimatedRaster
     func pixel(_ tile: Tile, x: Int, y: Int, appearance: DecorationAppearance?) -> (UInt8, UInt8, UInt8, UInt8)
 }
 
 extension AssetProvider {
+    func liquidAnimation(for terrain: TerrainID) -> AnimatedRaster { OriginalLiquidAnimation.make(terrain) }
+
     func pixel(_ tile: Tile, x: Int, y: Int) -> (UInt8, UInt8, UInt8, UInt8) {
         pixel(tile, x: x, y: y, appearance: nil)
     }
@@ -198,6 +201,14 @@ final class AssetLibrary: ObservableObject, AssetProvider {
         pack = value; textures = [:]; name = value?.manifest.name ?? "Built-in original assets"
         terrainResolution = value?.textures.keys.contains(where: { $0.circuitID == nil }) == true ? 16 : 8
         warnings = value?.warnings ?? []; revision = UUID()
+    }
+    func liquidAnimation(for terrain: TerrainID) -> AnimatedRaster {
+        let id = TextureAssetID.terrain(terrain)
+        if let animation = pack?.animations[id] { return animation }
+        if let raster = pack?.textures[id], raster.width == raster.height {
+            return try! AnimatedRaster(strip: raster, spec: TextureAnimationSpec(frames: [0], durations: [1]))
+        }
+        return OriginalLiquidAnimation.make(terrain)
     }
     func texture(for id: TextureAssetID) -> SKTexture? {
         if let value = textures[id] { return value }

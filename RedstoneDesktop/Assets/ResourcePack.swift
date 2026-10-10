@@ -65,6 +65,7 @@ struct LoadedPack: Sendable {
     let textures: [TextureAssetID: RasterAsset]
     let sounds: [SoundID: [Float]]
     let warnings: [String]
+    var animations: [TextureAssetID: AnimatedRaster] = [:]
 }
 
 /// Deliberately restricted WAV decoder: little-endian PCM16 or float32, mono/stereo, <=2 s.
@@ -152,18 +153,27 @@ enum ResourcePackLoader {
         guard manifest.formatVersion == 1, !manifest.name.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty,
               manifest.name.count <= 128, (manifest.author?.count ?? 0) <= 256, manifest.assets.count <= 64 else { throw PackError("Unsupported format, missing/long name, or too many assets.") }
         var textures: [TextureAssetID: RasterAsset] = [:], sounds: [SoundID: [Float]] = [:], warnings: [String] = []
+        var animations: [TextureAssetID: AnimatedRaster] = [:]
+        guard (manifest.animations?.count ?? 0) <= 3 else { throw PackError("Only three liquid animations are supported.") }
+        for id in manifest.animations?.keys.sorted() ?? [] {
+            guard TextureAssetID(rawValue: id)?.isAnimatedLiquid == true, manifest.assets[id] != nil else { throw PackError("Animations require a declared water/lava asset.") }
+        }
         for (id, path) in manifest.assets.sorted(by: { $0.key < $1.key }) {
             try PackFiles.validatePath(path) // Even ignored/unknown IDs may not declare escaping paths.
             do {
                 if let texture = TextureAssetID(rawValue: id) {
                     guard URL(fileURLWithPath: path).pathExtension.lowercased() == "png" else { throw PackError("Textures require PNG.") }
-                    textures[texture] = try RasterAsset.decode(source.read(path, limit: 4 * 1024 * 1024))
+                    let raster = try RasterAsset.decode(source.read(path, limit: 4 * 1024 * 1024))
+                    if let spec = manifest.animations?[id] {
+                        let animated = try AnimatedRaster(strip: raster, spec: spec)
+                        animations[texture] = animated; textures[texture] = animated.frame(0)
+                    } else { textures[texture] = raster }
                 } else if let sound = SoundID(rawValue: id) {
                     guard URL(fileURLWithPath: path).pathExtension.lowercased() == "wav" else { throw PackError("Sounds require WAV.") }
                     sounds[sound] = try PackWAV.decode(source.read(path, limit: 8 * 1024 * 1024))
                 } else { warnings.append("Unknown asset ID \(id); ignored.") }
             } catch { warnings.append("\(id): \(error.localizedDescription) Built-in fallback.") }
         }
-        return LoadedPack(manifest: manifest, textures: textures, sounds: sounds, warnings: warnings)
+        return LoadedPack(manifest: manifest, textures: textures, sounds: sounds, warnings: warnings, animations: animations)
     }
 }

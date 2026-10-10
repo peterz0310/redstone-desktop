@@ -13,7 +13,7 @@ extension TerrainID {
         case .grass, .dirt, .stone, .sand, .dryGrass, .snow, .gravel:
             return TerrainDefinition(id: self, isLiquid: false, isSolidSurface: true,
                                      supportsCircuit: true, supportsHeavyComponent: true)
-        case .shallowWater, .deepWater:
+        case .shallowWater, .deepWater, .lava:
             return TerrainDefinition(id: self, isLiquid: true, isSolidSurface: false,
                                      supportsCircuit: false, supportsHeavyComponent: false)
         }

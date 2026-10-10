@@ -1,4 +1,5 @@
 import SpriteKit
+import Combine
 
 /// Diagnostic world tiles and cursor outline, using CoordinateMapper exclusively.
 final class DesktopScene: SKScene {
@@ -23,6 +24,8 @@ final class DesktopScene: SKScene {
     private var renderedPower: Set<WorldCoordinate> = []
     private var renderedPowerLevels: [WorldCoordinate: PowerLevel]?
     private var renderedLevers: Set<WorldCoordinate>?
+    private var reducedMotion = NSWorkspace.shared.accessibilityDisplayShouldReduceMotion
+    private var motionObserver: AnyCancellable?
     var reduceMotionProviding: () -> Bool = { NSWorkspace.shared.accessibilityDisplayShouldReduceMotion }
     private(set) var feedbackUsesReducedMotion = false
     private(set) var highlightedTile: WorldCoordinate?
@@ -32,6 +35,10 @@ final class DesktopScene: SKScene {
         self.screen = screen
         self.mapper = mapper
         super.init(size: screen.frame.size)
+        motionObserver = NSWorkspace.shared.notificationCenter.publisher(for: NSWorkspace.accessibilityDisplayOptionsDidChangeNotification)
+            .receive(on: RunLoop.main).sink { [weak self] _ in
+                MainActor.assumeIsolated { self?.reducedMotion = NSWorkspace.shared.accessibilityDisplayShouldReduceMotion }
+            }
         scaleMode = .resizeFill
         backgroundColor = .black
         highlight.name = "cursor-highlight"
@@ -65,6 +72,7 @@ final class DesktopScene: SKScene {
     override func update(_ currentTime: TimeInterval) {
         // Sample real scene callbacks without publishing to SwiftUI each frame.
         frameRate.record(at: ProcessInfo.processInfo.systemUptime)
+        terrainRenderer.advanceAnimation(at: currentTime, reducedMotion: reducedMotion)
     }
 
     func setDiagnosticOverlays(_ settings: DiagnosticOverlaySettings) {
@@ -193,6 +201,7 @@ final class DesktopScene: SKScene {
         case .stone: return .gray
         case .sand: return NSColor(calibratedRed: 0.8, green: 0.72, blue: 0.45, alpha: 1)
         case .shallowWater: return .cyan
+        case .lava: return .systemOrange
         case .deepWater: return .blue
         }
     }

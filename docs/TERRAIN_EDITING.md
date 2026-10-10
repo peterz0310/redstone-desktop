@@ -5,15 +5,15 @@ Choose **Terrain** in the editor's Build tools. Pick a surface and brush size, t
 ## Brushes
 
 - **Grass, Dirt, Stone, Sand, Dry grass, Snow, Gravel:** replace the surface and remove decorations. Use Grass to make a clear construction patch over trees or water. Dirt is an intentional exposed dirt surface; generated dirt retains the existing grassy appearance.
-- **Shallow water / Deep water:** paint water onto clear tiles.
-- **Clear decorations:** removes trees, flowers, ores, cactuses or reeds while keeping the visible ground surface. It doesn't turn water into buildable land.
+- **Shallow water / Deep water / Lava:** paint animated liquid onto clear tiles. Liquids reject component placement; see [Terrain animation](TERRAIN_ANIMATION.md).
+- **Clear decorations:** removes trees, flowers, ores, cactuses or reeds while keeping the visible ground surface. It doesn't turn liquids into buildable land.
 - **Restore original:** removes your terrain edits and restores the world's original generated terrain, including decorations. Older fixture-based worlds restore their original construction patch too.
 
 Brushes are centered square footprints: **1×1**, **3×3**, or **5×5** tiles. The editor outlines their footprint; green is editable and orange protects a circuit tile. The status message reports changed and protected tiles.
 
 ## Existing circuits and undo
 
-Painting preserves every component, its settings and saved lever position. Dry surfaces can be painted underneath a circuit. Water painting or restoration skips any tile that would leave its component on water, decoration or missing ground; the rest of the stroke still applies. Explicitly erase the component first if you intend to change that ground.
+Painting preserves every component, its settings and saved lever position. Dry surfaces can be painted underneath a circuit. Liquid painting or restoration skips any tile that would leave its component on water, lava, decoration or missing ground; the rest of the stroke still applies. Explicitly erase the component first if you intend to change that ground.
 
 Terrain and circuit edits share the right panel's Undo/Redo history, so a drag is one operation. Undo placement before undoing the terrain that made placement possible. History remains per world and session-only; the resulting terrain itself persists after quitting. Terrain edits don't move the camera, copy components between worlds, reassign Desktop, open files or change Finder icons.
 
