@@ -1,4 +1,5 @@
-/// A five-block canopy fits entirely inside its six-tile planting cell.
+/// A 3×3 canopy fits inside its six-tile planting cell. The cross is always
+/// present; each corner is independently included by a stable per-tree hash.
 /// Global cells keep trees coherent across chunk boundaries without neighbor loads.
 enum TreeCanopy {
     static func center(near tile: WorldCoordinate, seed: UInt64) -> WorldCoordinate? {
@@ -6,9 +7,15 @@ enum TreeCanopy {
         let roll = SeededNoise.hash(seed: seed, x: x.quotient, y: y.quotient, channel: 0x7EEE)
         let dx = 2 + Int(roll & 1) - x.remainder
         let dy = 2 + Int((roll >> 1) & 1) - y.remainder
-        guard abs(dx) + abs(dy) <= 1 else { return nil }
+        guard abs(dx) <= 1, abs(dy) <= 1 else { return nil }
         let cx = tile.x.addingReportingOverflow(dx), cy = tile.y.addingReportingOverflow(dy)
         guard !cx.overflow, !cy.overflow else { return nil }
-        return WorldCoordinate(x: cx.partialValue, y: cy.partialValue)
+        let center = WorldCoordinate(x: cx.partialValue, y: cy.partialValue)
+        if abs(dx) + abs(dy) == 2 {
+            let corner = (dx < 0 ? 0 : 1) + (dy < 0 ? 0 : 2)
+            let mask = SeededNoise.hash(seed: seed, x: center.x, y: center.y, channel: 0xC0A0)
+            guard mask & (UInt64(1) << corner) != 0 else { return nil }
+        }
+        return center
     }
 }

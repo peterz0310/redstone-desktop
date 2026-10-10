@@ -6,18 +6,38 @@ final class TreeCanopyTests: XCTestCase {
         [(0, 0), (-1, 0), (1, 0), (0, -1), (0, 1)].map { WorldCoordinate(x: center.x + $0.0, y: center.y + $0.1) }
     }
 
-    func testPlantingCellsResolveOneFiveBlockCanopyAtPositiveAndNegativeCoordinates() {
+    func testPlantingCellsKeepRequiredCrossWithinVariableThreeByThreeCanopies() {
         for origin in [-192, -6, 0, 30, 192] {
             let coordinates = (origin..<origin + 6).flatMap { y in (origin..<origin + 6).map { WorldCoordinate(x: $0, y: y) } }
             let sites = coordinates.compactMap { TreeCanopy.center(near: $0, seed: 42) }
-            XCTAssertEqual(sites.count, 5)
+            XCTAssertTrue((5...9).contains(sites.count))
             XCTAssertEqual(Set(sites).count, 1)
             let center = sites[0]
-            XCTAssertEqual(Set(coordinates.filter { TreeCanopy.center(near: $0, seed: 42) != nil }), Set(neighbors(center)))
+            let footprint = Set(coordinates.filter { TreeCanopy.center(near: $0, seed: 42) != nil })
+            XCTAssertTrue(Set(neighbors(center)).isSubset(of: footprint))
+            XCTAssertTrue(footprint.allSatisfy { abs($0.x - center.x) <= 1 && abs($0.y - center.y) <= 1 })
         }
         for x in [Int.min, Int.max] {
             _ = TreeCanopy.center(near: WorldCoordinate(x: x, y: x), seed: .max)
         }
+    }
+
+    func testCornerShapesVaryByTreeAndSeedButNeverBySamplingOrder() {
+        var shapes: Set<Int> = []
+        var seedDifferences = 0
+        for origin in stride(from: -384, through: 384, by: 6) {
+            let coordinates = (origin..<origin + 6).flatMap { y in (origin..<origin + 6).map { WorldCoordinate(x: $0, y: y) } }
+            let footprint = coordinates.filter { TreeCanopy.center(near: $0, seed: 42) != nil }
+            XCTAssertEqual(Set(footprint), Set(coordinates.reversed().filter { TreeCanopy.center(near: $0, seed: 42) != nil }))
+            let center = TreeCanopy.center(near: footprint[0], seed: 42)!
+            let corners = footprint.filter { abs($0.x - center.x) == 1 && abs($0.y - center.y) == 1 }
+            let mask = corners.reduce(0) { $0 | (1 << (($1.x < center.x ? 0 : 1) + ($1.y < center.y ? 0 : 2))) }
+            shapes.insert(mask)
+            if footprint != coordinates.filter({ TreeCanopy.center(near: $0, seed: 2026) != nil }) { seedDifferences += 1 }
+        }
+        XCTAssertEqual(shapes.count, 16, "All combinations of missing corners should occur")
+        XCTAssertTrue(shapes.contains(0)); XCTAssertTrue(shapes.contains(15))
+        XCTAssertGreaterThan(seedDifferences, 80)
     }
 
     func testGeneratedOakAndPineHaveCentralLogsSurroundingLeavesAndCrossChunkSeams() throws {

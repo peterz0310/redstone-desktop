@@ -92,7 +92,7 @@ final class WorldGeneratorTests: XCTestCase {
     }
 
     func testDefaultGenerationGoldenFingerprintsFreezeFieldsTerrainAndDecorations() throws {
-        XCTAssertEqual(fingerprint(try generator(42)), 7700977901721159530)
+        XCTAssertEqual(fingerprint(try generator(42)), 13806883833990257094)
         XCTAssertEqual(fingerprint(try generator(2026)), 3694949341545218925)
     }
 
