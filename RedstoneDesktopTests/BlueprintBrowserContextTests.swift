@@ -169,11 +169,77 @@ final class BlueprintBrowserContextTests: XCTestCase {
         editor.tool = .erase
         let before = app.library
         let event = try XCTUnwrap(NSEvent.mouseEvent(with: .rightMouseDown, location: CGPoint(x: rect.midX,y: rect.midY), modifierFlags: [], timestamp: 0, windowNumber: window.windowNumber, context: nil, eventNumber: 1, clickCount: 1, pressure: 1))
-        let menu = try XCTUnwrap(view.menu(for: event))
+        var presented: [NSMenu] = []
+        view.presentContextMenu = { menu, received, surface in
+            XCTAssertTrue(surface === view)
+            XCTAssertTrue(received === event)
+            presented.append(menu)
+        }
+        view.rightMouseDown(with: event)
+        let menu = try XCTUnwrap(presented.first)
+        XCTAssertEqual(presented.count, 1)
+        XCTAssertTrue(window.firstResponder === view)
         XCTAssertEqual(editor.selectedTile, tile); XCTAssertEqual(app.library, before)
         XCTAssertTrue(menu.items.contains { $0.title == "Rotate Clockwise" && $0.isEnabled })
         XCTAssertTrue(menu.items.contains { $0.title == "Delete Component" && $0.isEnabled })
     }
+    @MainActor func testControlClickPresentsContextWithoutPaintingTerrainOnMouseUp() throws {
+        let app = app(), editor = EditorSession(); defer { app.shutdown() }
+        let window = NSWindow(contentRect: CGRect(origin: .zero, size: editor.viewport), styleMask: .borderless, backing: .buffered, defer: false)
+        window.isReleasedWhenClosed = false; defer { window.close() }
+        let view = EditorCanvasSurface(frame: CGRect(origin: .zero, size: editor.viewport))
+        view.appState = app; view.editor = editor; window.contentView = view
+        let tile = DemoCircuit.repeater, rect = editor.mapper(size: editor.viewport)!.screenRect(forTile: tile)
+        editor.tool = .terrain
+        let before = app.library
+        var presentations = 0
+        view.presentContextMenu = { _, _, _ in presentations += 1 }
+        for type in [NSEvent.EventType.leftMouseDown, .leftMouseUp] {
+            let event = try XCTUnwrap(NSEvent.mouseEvent(with: type, location: CGPoint(x: rect.midX, y: rect.midY), modifierFlags: .control, timestamp: 0, windowNumber: window.windowNumber, context: nil, eventNumber: 1, clickCount: 1, pressure: 1))
+            if type == .leftMouseDown { view.mouseDown(with: event) } else { view.mouseUp(with: event) }
+        }
+        XCTAssertEqual(presentations, 1)
+        XCTAssertEqual(editor.selectedTile, tile)
+        XCTAssertNil(editor.terrainStroke)
+        XCTAssertEqual(app.library, before)
+    }
+
+    @MainActor func testInspectOpensOwnTabAndToolsStartWithTwoUtilityRows() {
+        let app = app(), editor = EditorSession(); defer { app.shutdown() }
+        let before = app.library
+        editor.tool = .erase
+        editor.prepareContext(at: DemoCircuit.repeater, appState: app)
+        editor.performContext(.inspect, at: DemoCircuit.repeater, worldID: app.selectedWorldID, appState: app)
+        XCTAssertEqual(editor.sidebarTab, .inspector)
+        XCTAssertEqual(editor.tool, .select)
+        editor.tool = .terrain
+        editor.selectSidebar(.build)
+        XCTAssertEqual(editor.tool, .terrain)
+        editor.selectSidebar(.inspector)
+        XCTAssertEqual(editor.tool, .select)
+        XCTAssertEqual(editor.selectedTile, DemoCircuit.repeater)
+        XCTAssertEqual(app.library, before)
+        XCTAssertEqual(Array(EditorSession.Tool.allCases.prefix(4)), [.select, .region, .erase, .terrain])
+        XCTAssertTrue(EditorSession.Tool.allCases.dropFirst(4).allSatisfy { $0.componentKind != nil })
+        XCTAssertEqual(EditorSession.SidebarTab.allCases, [.build, .blueprints, .inspector])
+    }
+
+    @MainActor func testInspectorChangesPreserveOtherStoredSettingAfterPlacementDefaultsChange() throws {
+        let app = app(), editor = EditorSession(); defer { app.shutdown() }
+        let tile = DemoCircuit.repeater
+        editor.prepareContext(at: tile, appState: app)
+        let original = try XCTUnwrap(app.selectedDocument.circuit.components[tile])
+        editor.direction = .south
+        editor.delay = original.repeaterDelay == .one ? .four : .one
+        let newDirection: Direction = original.direction == .north ? .east : .north
+        editor.setDirection(newDirection, appState: app)
+        XCTAssertEqual(app.selectedDocument.circuit.components[tile]?.repeaterDelay, original.repeaterDelay)
+        editor.direction = .south
+        editor.setDelay(.three, appState: app)
+        XCTAssertEqual(app.selectedDocument.circuit.components[tile]?.direction, newDirection)
+        XCTAssertEqual(app.selectedDocument.circuit.components[tile]?.repeaterDelay, .three)
+    }
+
     @MainActor func testToolDescriptionsCoverBothBuildModes() {
         for tool in EditorSession.Tool.allCases { XCTAssertGreaterThan(tool.description.count, 35) }
         for tool in DesktopBuildSession.Tool.allCases { XCTAssertGreaterThan(tool.description.count, 35) }

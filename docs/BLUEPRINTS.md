@@ -1,6 +1,6 @@
 # Blueprint browser and examples
 
-The editor's right sidebar has **Build** and **Blueprints** tabs. Build contains tools and the component Inspector. Blueprints contains your saved circuits, layout previews, example circuits and the Save Selection action. Undo/Redo remain above both tabs.
+The editor's right sidebar has **Build**, **Blueprints** and **Inspector** tabs. Build contains tools, placement settings and selection actions. Inspector contains the selected tile and component settings. Blueprints contains your saved circuits, layout previews, example circuits and the Save Selection action. Undo/Redo remain above all three tabs.
 
 ## Save and reuse your circuits
 
@@ -33,7 +33,7 @@ The switched clock uses a separate control torch, rear repeater and isolated ret
 
 Hover any build tool to read its description. The selected tool's description stays below the tools in both the editor and Desktop Build Mode.
 
-Right-clicking the editor map selects/inspects without placing, erasing or pressing an input. Menus include relevant actions:
+Right-clicking (or Control-clicking) the editor map selects/inspects without placing, erasing or pressing an input. Menus include relevant actions:
 
 - Component: Inspect, Copy, Save Selection as Blueprint, Move Selection and Delete.
 - Repeater/torch: Rotate Clockwise; repeaters also offer all four delays.
@@ -42,10 +42,12 @@ Right-clicking the editor map selects/inspects without placing, erasing or press
 - Painted terrain: Restore Original Terrain, preserving components that need the edited surface.
 - Empty ground: Paste a copied circuit.
 
-Delete removes app components/scenery; it never deletes or opens Finder files. Mutating actions are disabled during tests, seed previews or when the world is locked. Menu dispatch rechecks the selected world and action availability, so a stale menu cannot edit a different world. Inspector opens Build; saving opens Blueprints. Undo reverses group changes and terrain cleanup as usual.
+Delete removes app components/scenery; it never deletes or opens Finder files. Mutating actions are disabled during tests, seed previews or when the world is locked. Menu dispatch rechecks the selected world and action availability, so a stale menu cannot edit a different world. Opening Inspector switches to Move so clicks inspect instead of building or erasing. Inspect opens Inspector; saving opens Blueprints. Undo reverses group changes and terrain cleanup as usual.
 
 ## Contributor notes
 
 Example templates use stable IDs and pure component configurations, validated and simulated in automated tests. Switched-clock tests prove OFF settles, ON pulses, OFF stops and ON restarts for all four rotations. Rename saves atomically before publishing and preserves the previous template on failure.
 
-`BlueprintPreviewImage` draws bounded cached AppKit thumbnails through CoordinateMapper, with no Finder/executor dependency or SpriteKit render loop per card. Editor context action options are separate from the native menu adapter; commands revalidate before touching AppState. Right-click selection cancels unfinished placement/terrain previews rather than committing them.
+`BlueprintPreviewImage` draws bounded cached AppKit thumbnails through CoordinateMapper, with no Finder/executor dependency or SpriteKit render loop per card. Editor context action options are separate from the native menu adapter; commands revalidate before touching AppState. The SpriteKit view explicitly handles rightMouseDown and displays the menu with public AppKit APIs; Control-click uses the same path. Automated input-dispatch tests replace only native popup presentation to avoid a blocking menu loop. Right-click selection cancels unfinished placement/terrain previews rather than committing them.
+
+Build starts with Move / Select, then Erase / Terrain; all placeable components follow. Direction and delay in Build set placement defaults; the Inspector controls immediately save changes to the selected component. The wider panel hides the picker label and removes Technical Details.

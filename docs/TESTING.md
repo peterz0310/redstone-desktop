@@ -3,9 +3,18 @@
 These are physical-Mac checks, separate from automated tests. Report which numbered groups you actually tried and what failed; untested groups remain unverified. Use harmless folders/text files first. Place new test circuits on clear ground **to the right** of your existing builds. Do not use scripts for display-calibration tests.
 
 
+## Sidebar and right-click follow-up — awaiting owner confirmation
+
+1. Quit the old app and open the updated build. Check the wider panel has Build, Blueprints and Inspector tabs, with no Sidebar label or Technical Details. Build's first rows should be Move / Select, then Erase / Terrain, with components below.
+2. Stop Desktop. Right-click a repeater on the editor map, then try Control-click. Both should show a menu even with Erase or Terrain selected, without erasing, painting or activating it. Choose Inspect: the Inspector tab should open. Rotate, change delay and Undo/Redo; settings should save immediately.
+3. Opening Inspector should switch to Move automatically, so clicks inspect without placing or erasing. Click an Output or sensor: the selected item's appropriate settings should appear. Inspect empty terrain too. Return to Build and adjust repeater placement direction/delay: the previously selected repeater should stay unchanged; a newly placed repeater should use those defaults.
+4. Right-click a selected group and try Copy, Move, Rotate, Delete and Save Selection as Blueprint. Save should open Blueprints. Check scrolling, card previews, tool descriptions and all three tabs fit at the smallest window size. While the world is running or Test Circuit is active, menus should still appear with editing actions disabled.
+
+Native menu appearance and interaction remain physical checks; automated tests exercise dispatch and action behavior.
+
 ## Blueprint browser, tool help and editor context menus — awaiting owner confirmation
 
-1. Quit the old copy and open the updated app. Stop Desktop. Check Build/Blueprints tabs in the sidebar. Blueprints should show saved cards and eight examples with readable previews/names/descriptions; scroll to reach all cards. Hover tools in Build and Desktop Build Mode, and check the selected description stays visible below them.
+1. Quit the old copy and open the updated app. Stop Desktop. Check Build/Blueprints/Inspector tabs in the sidebar. Blueprints should show saved cards and eight examples with readable previews/names/descriptions; scroll to reach all cards. Hover tools in Build and Desktop Build Mode, and check the selected description stays visible below them.
 2. Paint a clear Grass patch to the right of your existing builds, at least 9×5 tiles. Open Blueprints, choose Switched Pulse Generator, and click to place it. Test Circuit: wait about two seconds for startup to settle; Output should be off. Toggle the lever ON: the Output pulse count should keep increasing. OFF: after settling, pulses should stop and Output should be off. ON again should restart it. Reset may briefly pulse at startup; no files should open.
 3. Try the other examples. Either Button should accept either input; Inverted Switch should invert its lever; the detector examples respond to clicks in Test Circuit. All example Outputs must remain Do Nothing. Placement preview rotation/cancel and existing saved blueprints should still work.
 4. Select a group, switch to Blueprints and save it. Right-click its saved card, rename it, quit/reopen and confirm the new name/layout persists. Delete the shelf entry: placed copies must remain. Right-click a component on the map and choose Save Selection as Blueprint: it should open that tab's save dialog.

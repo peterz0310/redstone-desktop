@@ -71,6 +71,10 @@ final class EditorCanvasSurface: SKView {
     }
 
     override func mouseDown(with event: NSEvent) {
+        if event.modifierFlags.contains(.control) {
+            rightMouseDown(with: event)
+            return
+        }
         window?.makeFirstResponder(self)
         downPoint = convert(event.locationInWindow, from: nil)
         lastDragPoint = downPoint
@@ -106,6 +110,7 @@ final class EditorCanvasSurface: SKView {
     }
 
     override func mouseUp(with event: NSEvent) {
+        guard downPoint != nil else { return }
         defer { editor?.endRegion(); downPoint = nil; lastDragPoint = nil; draggingPan = false; navigating = false; selectingRegion = false }
         let point = convert(event.locationInWindow, from: nil)
         if editor?.tool == .terrain {
@@ -116,6 +121,24 @@ final class EditorCanvasSurface: SKView {
            let editor, let appState { editor.click(at: point, size: bounds.size, appState: appState, additive: event.modifierFlags.contains(.shift)) }
         editor?.hover(at: point, size: bounds.size, appState: appState)
         refresh()
+    }
+
+    // SKView handles mouse events itself; explicitly present the native menu.
+    // The presentation boundary lets tests exercise actual input dispatch without
+    // entering AppKit's blocking menu tracking loop.
+    var presentContextMenu: (NSMenu, NSEvent, NSView) -> Void = {
+        NSMenu.popUpContextMenu($0, with: $1, for: $2)
+    }
+
+    override func rightMouseDown(with event: NSEvent) {
+        downPoint = nil
+        lastDragPoint = nil
+        draggingPan = false
+        navigating = false
+        selectingRegion = false
+        window?.makeFirstResponder(self)
+        guard let menu = menu(for: event) else { return }
+        presentContextMenu(menu, event, self)
     }
 
     private final class ContextInvocation: NSObject {

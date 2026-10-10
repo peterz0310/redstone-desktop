@@ -5,8 +5,9 @@ import Foundation
 @MainActor
 final class EditorSession: ObservableObject {
     enum Tool: String, CaseIterable {
-        case select = "Move", region = "Select", dust = "Dust", button = "Button"
-        case lever = "Lever", repeater = "Repeater", output = "Output", erase = "Erase", torch = "Torch", pressurePlate = "Plate", fileSensor = "Sensor", terrain = "Terrain"
+        case select = "Move", region = "Select", erase = "Erase", terrain = "Terrain"
+        case dust = "Dust", button = "Button"
+        case lever = "Lever", repeater = "Repeater", output = "Output", torch = "Torch", pressurePlate = "Plate", fileSensor = "Sensor"
 
         var componentKind: CircuitComponentKind? {
             switch self {
@@ -28,9 +29,17 @@ final class EditorSession: ObservableObject {
         var editsWorld: Bool { componentKind != nil || self == .erase || self == .terrain }
     }
 
-    enum SidebarTab: String, CaseIterable { case build = "Build", blueprints = "Blueprints" }
+    enum SidebarTab: String, CaseIterable { case build = "Build", blueprints = "Blueprints", inspector = "Inspector" }
     @Published var sidebarTab = SidebarTab.build
     @Published var isSavingBlueprint = false
+    func selectSidebar(_ tab: SidebarTab) {
+        sidebarTab = tab
+        if tab == .inspector {
+            tool = .select
+            cancelPlacement()
+            cancelTerrainStroke()
+        }
+    }
     func requestBlueprintSave() { sidebarTab = .blueprints; isSavingBlueprint = true }
     @Published private(set) var camera = CameraState(worldOrigin: WorldPoint(x: 0, y: 0), pointsPerTile: 40)
     @Published var tool = Tool.select
@@ -364,16 +373,16 @@ final class EditorSession: ObservableObject {
     }
     /// Picker setters commit immediately; loading a selection never edits it.
     func setDirection(_ value: Direction, appState: AppState) {
-        direction = value; saveSelectedConfiguration(appState)
+        direction = value; saveSelectedConfiguration(appState, direction: value)
     }
     func setDelay(_ value: RepeaterDelay, appState: AppState) {
-        delay = value; saveSelectedConfiguration(appState)
+        delay = value; saveSelectedConfiguration(appState, delay: value)
     }
-    private func saveSelectedConfiguration(_ appState: AppState) {
+    private func saveSelectedConfiguration(_ appState: AppState, direction: Direction? = nil, delay: RepeaterDelay? = nil) {
         guard circuitTest == nil, !isPreviewing(appState), !appState.isEditorConfigurationLocked,
               let selectedTile, let component = browsingWorld(appState).circuit.components[selectedTile] else { return }
-        if component.kind == .repeater { appState.configureRepeater(at: selectedTile, direction: direction, delay: delay) }
-        if component.kind == .torch { appState.configureTorch(at: selectedTile, direction: direction) }
+        if component.kind == .repeater { appState.configureRepeater(at: selectedTile, direction: direction ?? component.direction, delay: delay ?? component.repeaterDelay) }
+        if component.kind == .torch { appState.configureTorch(at: selectedTile, direction: direction ?? component.direction) }
     }
 
     func showDesktopArea(_ appState: AppState) {

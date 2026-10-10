@@ -46,7 +46,7 @@ extension EditorSession {
         guard worldID == appState.selectedWorldID,
               contextOptions(at: tile, appState: appState).contains(where: { $0.action == action && $0.enabled }) else { return }
         switch action {
-        case .inspect: sidebarTab = .build; selectContextTile(tile, appState: appState)
+        case .inspect: selectSidebar(.inspector); selectContextTile(tile, appState: appState)
         case .copy: copyToClipboard(appState)
         case .paste: pasteFromClipboard(appState)
         case .saveBlueprint: requestBlueprintSave()
