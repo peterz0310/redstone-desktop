@@ -323,7 +323,7 @@ extension MaintenanceTests {
     @MainActor
     func testEverySetupPageHostsWithBoundedWindowAndNoPermissionOrExecutionWork() throws {
         let state = AppState(); defer { state.shutdown() }
-        for page in 0...3 {
+        for page in SetupWizardView.pageTitles.indices {
             let host = NSHostingView(rootView: SetupWizardView(appState: state, initialPage: page))
             host.frame = CGRect(x: 0, y: 0, width: 600, height: 430)
             host.layoutSubtreeIfNeeded()

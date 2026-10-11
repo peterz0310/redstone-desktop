@@ -8,12 +8,17 @@ struct SetupWizardView: View {
 
     init(appState: AppState, initialPage: Int = 0) {
         self.appState = appState; finder = appState.finderDiagnostics
-        _page = State(initialValue: min(3, max(0, initialPage)))
+        _page = State(initialValue: min(Self.pageTitles.count - 1, max(0, initialPage)))
     }
+    static let pageTitles = ["Welcome to Redstone Desktop", "Connect your desktop", "Choose your look", "Want to run scripts?", "You’re ready to build"]
+
     var body: some View {
         VStack(alignment: .leading, spacing: 18) {
-            Text(["Welcome to Redstone Desktop", "Connect your desktop", "Want to run scripts?", "You’re ready to build"][page]).font(.largeTitle)
-            Text("Step \(page + 1) of 4").font(.caption).foregroundStyle(.secondary)
+            HStack(spacing: 12) {
+                Image("AppLogo").resizable().frame(width: 48, height: 48).accessibilityHidden(true)
+                Text(Self.pageTitles[page]).font(.largeTitle)
+            }
+            Text("Step \(page + 1) of \(Self.pageTitles.count)").font(.caption).foregroundStyle(.secondary)
             ScrollView {
                 VStack(alignment: .leading, spacing: 16) {
             switch page {
@@ -26,6 +31,9 @@ struct SetupWizardView: View {
                 Text("Finder: \(finder.permission.rawValue)\(finder.error.map { " · " + $0 } ?? "")").font(.callout)
                 Text("Your Mac may ask for permission to connect to Finder. You can skip this for now and connect when you start Desktop.").font(.caption).foregroundStyle(.secondary)
             case 2:
+                JavaAssetImportView(assets: appState.assets)
+                Text("This step is optional. You can change your look anytime in Settings → Appearance.").font(.caption).foregroundStyle(.secondary)
+            case 3:
                 Text("Outputs open files and folders by default. If you also want to run shell scripts, you can enable that later in Settings → Outputs.")
                 Text("Only run scripts you trust. The app asks before running a new or changed script, and can remember your choice.")
                 Button("Allow Access to Desktop Scripts…") { appState.requestDesktopScriptAccess(retry: true) }
@@ -34,7 +42,7 @@ struct SetupWizardView: View {
                 Text("This step is optional. Allowing access here won’t run anything.").font(.caption).foregroundStyle(.secondary)
             default:
                 Text("Try a simple circuit: place a button, connect it to an Output with dust, and put a folder on the Output. Start Desktop, then press your button!")
-                Text("Want Minecraft textures? Open Settings → Appearance to use textures from your installed game. You can change sound and other preferences there too.")
+                Text("You can change textures, sounds and visual effects in Settings → Appearance. Your worlds and circuits stay the same.")
             }
                 }.frame(maxWidth: .infinity, alignment: .leading)
             }
@@ -44,7 +52,7 @@ struct SetupWizardView: View {
                 Button("Skip Setup") { finish() }
                 Spacer()
                 if page > 0 { Button("Back") { page -= 1 } }
-                Button(page == 3 ? "Let’s Build" : "Next") { if page == 3 { finish() } else { page += 1 } }
+                Button(page == Self.pageTitles.count - 1 ? "Let’s Build" : "Next") { if page == Self.pageTitles.count - 1 { finish() } else { page += 1 } }
                     .keyboardShortcut(.defaultAction)
             }
         }.padding(28).frame(width: 600, height: 430)

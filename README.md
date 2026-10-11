@@ -1,80 +1,54 @@
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset="docs/media/icon-dark.png">
+  <img src="docs/media/icon-light.png" width="96" alt="Redstone Desktop logo">
+</picture>
+
 # Redstone Desktop
 
-Build little redstone circuits underneath your real Mac desktop files. A button can open a folder, launch a file, or run a script you approve. Finder continues to manage your files normally.
+Turn your Mac desktop into a little redstone world. Build a circuit beneath your files, press a button, and open a folder — or make lights, clocks and useful desktop automations.
 
-![Native circuit power demo](docs/media/circuit-demo.gif)
+Your files stay in Finder, right where you left them. Everything runs locally. No account or Minecraft installation is required.
 
-## Using the app
+![A button sends power through dust and a repeater to an Output block](docs/media/circuit-demo.gif)
 
-- **Worlds** have larger biomes, winding rivers, flower meadows, golden savannas and snowy pine regions. [World generation](docs/WORLD_GENERATION.md) explains the new default and existing-world changes. Worlds are separate maps with their own landscapes and builds. **Areas** are saved views within a world.
-- **World Settings** (the gear beside Worlds) offers per-world day/night cycles, any fixed time of day and illumination from lava and powered redstone. See [World lighting](docs/WORLD_LIGHTING.md).
-- Build in the editor, save or update an area, and choose **Activate on Desktop**. **Start Desktop** runs that area. Browsing another world doesn’t change the desktop assignment.
-- **Terrain** paints grass, stone, sand, dirt, dry grass, snow, gravel, water or lava, clears decorations, and restores original terrain. Dragging is one undo step; existing circuits are protected. [Terrain editing](docs/TERRAIN_EDITING.md) explains both build modes.
-- **Plate** powers a circuit while a Finder item occupies its tile. **Sensor** can filter by filename or extension. [Desktop detectors](docs/DESKTOP_SENSORS.md) explains timing, configuration and testing.
-- **Blueprints** has visual circuit previews, save/rename/delete actions and eight examples, including a switch-controlled clock. Right-click the editor map for relevant editing actions; hover tools for help. [Blueprint browser](docs/BLUEPRINTS.md).
-- **Test Circuit** runs a safe editor copy with Pause, Step and Reset. Outputs flash without opening files. Select groups to copy, move, rotate, undo or save reusable blueprints; [the editor guide](docs/EDITOR_TOOLS.md) walks through these tools.
-- **Build on Desktop** temporarily stops the circuit and lets you place components on the desktop. Exit to use your files normally again. R rotates the hovered repeater/torch; T changes a repeater’s delay.
-- **Settings → Appearance** lets you independently switch liquid animation, scenery shimmer and particles on or off across every world. It can use textures from your installed Minecraft Java Edition. Original artwork is available without a game installation. Help buttons explain optional settings.
-- **Settings → Data** exports every world, area and circuit. **Import Library** adds independent copies, preserving your existing builds and desktop assignment. The separate blueprint shelf, texture packs, desktop files and script approvals are excluded.
-- **Start Over** creates a recovery backup before resetting app data. Read [the recovery guide](docs/RECOVERY.md) first. Backup/reset acceptance is still awaiting the owner’s manual testing.
+## Download
 
-The logo menu in the macOS menu bar provides Start/Stop, area selection, editor, build mode, Settings and sound controls. Choosing an area automatically resumes Desktop when it was running; a stopped desktop stays stopped. Setup can be reopened from Settings → General. Connect to Finder when asked; script access is a separate optional permission.
+A **DMG download is coming**. There isn’t a public installer yet; the app is currently in development. It requires **macOS 14 or newer**.
 
-## Launching without Xcode
+Already have a build? Move **RedstoneDesktop.app** to Applications and open it normally. You don’t need Xcode to use the app. If you’re building from source, see the [development and release guide](docs/RELEASE.md).
 
-Xcode builds source code into an ordinary `.app` and provides a debugger and logs. We used it during development so each change could be rebuilt and errors could be inspected. You do **not** need Xcode running to use Redstone Desktop.
+## Your first circuit
 
-After building, quit the previous app copy and open:
+1. Follow setup to connect to Finder. You can also import textures and sounds from your installed **Minecraft Java Edition**, or keep the original look.
+2. Place a **Button**, some **Dust**, and an **Output**. Connect them into a path. Or pick a ready-made circuit from **Blueprints**.
+3. Choose **Activate on Desktop**, then **Start Desktop**. Place a file or folder on the Output and press your circuit’s button.
+4. Use the logo in the menu bar to stop, switch areas or return to the editor.
 
-```sh
-open build/Build/Products/Debug/RedstoneDesktop.app
-```
+Want to experiment first? **Test Circuit** lets you try your build in the editor without opening files or running scripts.
 
-Or open that `.app` in Finder. For regular use, extract the release ZIP in `build/releases`, move `RedstoneDesktop.app` to Applications and double-click it. Quit the app before replacing it with a newer build. Run only one copy at a time: development and release copies use the same saved library. Editing Swift files does not update an already built app; rebuild with Xcode **⌘R** or the commands below when code changes.
+## A world of your own
 
-Current local release builds are unsigned and not notarized. macOS may require you to approve opening them. Signing/distribution instructions are in [RELEASE.md](docs/RELEASE.md).
+Explore winding rivers, forests, deserts and snowy hills. Paint the terrain, clear a spot for a build, and keep different projects in separate worlds. Save favorite places as **Areas** so you can jump back to them and choose one for your desktop.
 
-## Building and testing
+![Original-art world examples: a river through woodland and a snowy forest](docs/media/worlds.png)
 
-Requirements: full Xcode with Swift 6 support, XcodeGen 2.44+ and Python 3 for release verification. Verified development toolchain: Xcode 27.0, Swift 6.4, XcodeGen 2.46.0. The application targets macOS 14+. Older macOS and Intel execution require manual validation.
+Set each world to a day/night cycle, or hold it at your favorite time of day. Torches, lava, powered dust and lamps bring it to life after dark.
 
-```sh
-xcodegen generate
-open RedstoneDesktop.xcodeproj
-```
+![The same original-art circuit by day and at night, with a lit lamp, torches and lava](docs/media/lighting.png)
 
-In Xcode, choose **RedstoneDesktop → My Mac** and press **⌘R**. **⌘U** runs the automated tests. Alternatively:
+These examples use the app’s original artwork, rendered with the same engine as the editor and desktop. Minecraft textures are an optional import from your own game or texture pack; they aren’t included in the download.
 
-```sh
-xcodebuild -project RedstoneDesktop.xcodeproj -scheme RedstoneDesktop -configuration Debug -destination 'platform=macOS' -derivedDataPath build CODE_SIGNING_ALLOWED=NO build
-xcodebuild -project RedstoneDesktop.xcodeproj -scheme RedstoneDesktop -configuration Debug -destination 'platform=macOS' -derivedDataPath build CODE_SIGNING_ALLOWED=NO test
-```
+## More things to try
 
-Create a universal local release with `scripts/release.sh`. The Xcode project and build products are generated and ignored by Git. Test hosts and profiling fixtures isolate app data from the owner’s real saves.
+- **Reusable blueprints:** start with a switch-controlled clock or save a circuit you’ve built.
+- **Desktop sensors:** detect a file on a pressure plate, or look for a particular name or extension.
+- **Build on Desktop:** edit directly beneath your files, then return to normal desktop use.
+- **Make it yours:** adjust textures, sounds, animations and particles in Settings. The `?` buttons explain the options.
 
-## Contributor guides
+Outputs open files by default. Running scripts is optional and asks for your approval. You can export and import your worlds in **Settings → Data**; see [backups and recovery](docs/RECOVERY.md) for restoring or starting over.
 
-- [Architecture](docs/ARCHITECTURE.md): SwiftUI/AppKit/SpriteKit boundaries, coordinates, Finder and action contracts.
-- [Blueprint browser](docs/BLUEPRINTS.md), [Terrain editing](docs/TERRAIN_EDITING.md), [Desktop detectors](docs/DESKTOP_SENSORS.md), [editor tools](docs/EDITOR_TOOLS.md), [Circuit rules](docs/REDSTONE_RULES.md) and [script Outputs](docs/SCRIPT_OUTPUTS.md).
-- [Resource-pack format](docs/RESOURCE_PACKS.md) and [Minecraft Java import](docs/JAVA_TEXTURE_IMPORT.md).
-- [Mac testing checklist](docs/TESTING.md), [known limitations](docs/KNOWN_LIMITATIONS.md), [diagnostics](docs/DIAGNOSTICS.md) and [profiling](docs/PROFILING.md).
-- [Recovery](docs/RECOVERY.md) and [release engineering](docs/RELEASE.md).
+For a closer look, read the [editor guide](docs/EDITOR_TOOLS.md), [circuit guide](docs/REDSTONE_RULES.md), or [Minecraft import guide](docs/JAVA_TEXTURE_IMPORT.md).
 
-The implementation roadmap in `SPEC.md` was retired at the owner’s request once development moved into ongoing polish. Its history remains in Git. Current contracts and outstanding manual checks live in the guides above; automated results do not substitute for physical Mac acceptance.
+---
 
-## Artwork and license
-
-Project code and project artwork use [MIT](LICENSE). The app icon, menu-bar symbol and Dust tool use the owner-provided logo; other tool icons use native SF Symbols. No Minecraft artwork, audio or game-derived toolbar icons are shipped. [Artwork notices](THIRD_PARTY_NOTICES.md) record the logo source and hash. Optional imported images/audio remain local, outside Git and release bundles. No JAR, game code or resource-pack code is bundled or executed.
-
-The identity source is `RedstoneDesktop/Resources/Assets.xcassets/Logo.imageset/logo.png`, preserved unchanged. Regenerate the app/menu icons without a Minecraft install:
-
-```sh
-swiftc -swift-version 6 -parse-as-library RedstoneDesktop/App/AppIdentityArtwork.swift scripts/GenerateAppIcons.swift -o /tmp/redstone-generate-icons
-/tmp/redstone-generate-icons "$PWD"
-```
-
-The generator trims transparent margins only in its derived output, fits the logo without stretching, adds the original app-icon background, and creates a monochrome template menu icon. Both toolbars reuse that template for Dust. Other tool symbols are defined in `RedstoneDesktop/App/HelpButton.swift`; no texture extraction or tool-icon generation is needed. If replacing the logo, update its provenance/hash test and artwork notice, regenerate, then build/test and run the release checks.
-
-Water and rare lava pools animate in the editor and on Desktop; foliage and flowers have gentle glints. Original animations work without Minecraft. Refresh an existing Java import once to use the game’s frame strips. macOS Reduce Motion freezes the ambience. See [Terrain animation](docs/TERRAIN_ANIMATION.md).
-
-Small world particles and local Minecraft sound effects are documented in [SCENE_EFFECTS.md](docs/SCENE_EFFECTS.md) and [JAVA_TEXTURE_IMPORT.md](docs/JAVA_TEXTURE_IMPORT.md). Imported media remains local; original sprites and sounds are always available as fallback.
+Redstone Desktop is an independent project, not affiliated with Mojang or Microsoft. The code and original artwork are [MIT licensed](LICENSE). No Minecraft artwork, audio or game code is bundled. [Artwork notices](THIRD_PARTY_NOTICES.md).

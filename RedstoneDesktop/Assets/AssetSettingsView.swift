@@ -5,8 +5,6 @@ struct AssetSettingsView: View {
     @ObservedObject var appState: AppState
     @ObservedObject var assets: AssetLibrary
     @State private var choosingPack = false
-    @State private var choosingJava = false
-    @State private var selectedVersion: URL?
 
     private func visualBinding(_ key: WritableKeyPath<VisualSettings, Bool>) -> Binding<Bool> {
         Binding(get: { appState.visualSettings[keyPath: key] }, set: { value in
@@ -37,26 +35,10 @@ struct AssetSettingsView: View {
                     Button("Use Original Look") { assets.useBuiltIn() }
                 }
                 Divider()
-                HStack {
-                    Text("Minecraft textures & sounds").font(.headline)
-                    HelpButton(title: "Textures from your game", text: "If Minecraft Java Edition is installed on this Mac, choose a version below. The app copies supported images and short sound effects to its own cache. Sounds come from the selected version’s local asset cache or the chosen pack. It never runs game code or changes your installation. Missing textures use the original look. Missing sounds use original effects. No downloads are required. Your worlds and circuits stay the same.")
-                }
-                Text("Bring Minecraft’s textures, particles and supported sound effects into your desktop.").foregroundStyle(.secondary)
-                Picker("Minecraft version", selection: $selectedVersion) {
-                    Text("Choose a version").tag(Optional<URL>.none)
-                    ForEach(assets.installedVersions) { version in Text(version.name).tag(Optional(version.url)) }
-                }
-                HStack {
-                    Button("Use Minecraft Assets") { if let selectedVersion { Task { await assets.importJava(selectedVersion) } } }
-                        .buttonStyle(.borderedProminent).disabled(selectedVersion == nil || assets.isLoading)
-                    Button("Choose a Texture Pack…") { choosingJava = true }.disabled(assets.isLoading)
-                }
-                if assets.installedVersions.isEmpty { Text("No installed versions found. You can choose a Java texture pack or game JAR instead.").font(.caption).foregroundStyle(.secondary) }
-                if assets.isLoading { ProgressView("Getting your assets ready…") }
-                Text(assets.status).font(.caption).textSelection(.enabled)
+                JavaAssetImportView(assets: assets)
                 DisclosureGroup("More options & custom packs") {
                     VStack(alignment: .leading, spacing: 12) {
-                        Button("Look for Installed Versions Again") { Task { await discover() } }
+                        Button("Look for Installed Versions Again") { Task { await assets.discoverJava() } }
                         Text(assets.discoveryStatus).font(.caption)
                         Divider()
                         HStack {
@@ -82,14 +64,6 @@ struct AssetSettingsView: View {
         .fileImporter(isPresented: $choosingPack, allowedContentTypes: [.folder, .zip], allowsMultipleSelection: false) { result in
             if case let .success(urls) = result, let url = urls.first { Task { await assets.load(url) } }
         }
-        .fileImporter(isPresented: $choosingJava, allowedContentTypes: [UTType(filenameExtension: "jar") ?? .archive, .zip, .folder], allowsMultipleSelection: false) { result in
-            if case let .success(urls) = result, let url = urls.first { Task { await assets.importJava(url) } }
-        }
-        .task { await discover() }
         .frame(minWidth: 620, minHeight: 420)
-    }
-    private func discover() async {
-        await assets.discoverJava()
-        if selectedVersion == nil || !assets.installedVersions.contains(where: { $0.url == selectedVersion }) { selectedVersion = assets.installedVersions.first?.url }
     }
 }

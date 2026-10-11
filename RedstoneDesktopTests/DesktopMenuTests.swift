@@ -275,16 +275,25 @@ final class DesktopMenuTests: XCTestCase {
     func testNativeIconCatalogSizesTemplateAndCompiledBundleMetadata() throws {
         let root = URL(fileURLWithPath: #filePath).deletingLastPathComponent().deletingLastPathComponent()
             .appendingPathComponent("RedstoneDesktop/Resources/Assets.xcassets")
-        let app = root.appendingPathComponent("AppIcon.appiconset")
+        let app = root.appendingPathComponent("AppLogo.imageset")
         let json = try XCTUnwrap(JSONSerialization.jsonObject(with: Data(contentsOf: app.appendingPathComponent("Contents.json"))) as? [String: Any])
-        let entries = try XCTUnwrap(json["images"] as? [[String: String]])
-        XCTAssertEqual(entries.count, 10)
+        let entries = try XCTUnwrap(json["images"] as? [[String: Any]])
+        XCTAssertEqual(entries.count, 4)
+        XCTAssertEqual(entries.filter { $0["appearances"] != nil }.count, 2)
         for entry in entries {
-            let size = try XCTUnwrap(Int(try XCTUnwrap(entry["size"]).components(separatedBy: "x")[0]))
-            let factor = try XCTUnwrap(Int(try XCTUnwrap(entry["scale"]).dropLast()))
-            let bitmap = try XCTUnwrap(NSBitmapImageRep(data: Data(contentsOf: app.appendingPathComponent(try XCTUnwrap(entry["filename"])))))
-            XCTAssertEqual(bitmap.pixelsWide, size * factor); XCTAssertEqual(bitmap.pixelsHigh, size * factor)
+            let factor = try XCTUnwrap(Int(try XCTUnwrap(entry["scale"] as? String).dropLast()))
+            let bitmap = try XCTUnwrap(NSBitmapImageRep(data: Data(contentsOf: app.appendingPathComponent(try XCTUnwrap(entry["filename"] as? String)))))
+            XCTAssertEqual(bitmap.pixelsWide, 256 * factor); XCTAssertEqual(bitmap.pixelsHigh, 256 * factor)
         }
+        let native = root.deletingLastPathComponent().appendingPathComponent("AppIcon.icon")
+        let composition = try XCTUnwrap(JSONSerialization.jsonObject(with: Data(contentsOf: native.appendingPathComponent("icon.json"))) as? [String: Any])
+        let fills = try XCTUnwrap(composition["fill-specializations"] as? [[String: String]])
+        XCTAssertEqual(fills.first { $0["appearance"] == nil }?["value"], "system-light")
+        XCTAssertEqual(fills.first { $0["appearance"] == "dark" }?["value"], "system-dark")
+        XCTAssertEqual((composition["supported-platforms"] as? [String: [String]])?["squares"], ["macOS"])
+        let foreground = try XCTUnwrap(NSBitmapImageRep(data: Data(contentsOf: native.appendingPathComponent("Assets/logo.png"))))
+        XCTAssertEqual(foreground.pixelsWide, 1024); XCTAssertEqual(foreground.pixelsHigh, 1024)
+        XCTAssertEqual(foreground.colorAt(x: 512, y: 32)?.alphaComponent, 0, "System supplies the icon background")
         let menu = root.appendingPathComponent("MenuLogo.imageset")
         let templateJSON = try XCTUnwrap(JSONSerialization.jsonObject(with: Data(contentsOf: menu.appendingPathComponent("Contents.json"))) as? [String: Any])
         XCTAssertEqual((templateJSON["properties"] as? [String: String])?["template-rendering-intent"], "template")
@@ -298,4 +307,28 @@ final class DesktopMenuTests: XCTestCase {
         XCTAssertNotNil(Bundle.main.url(forResource: "AppIcon", withExtension: "icns"))
         XCTAssertNotNil(NSImage(named: "MenuLogo"))
     }
+    @MainActor
+    func testLightAndDarkIdentityChangeOnlyBackgroundAndKeepLogoCentered() throws {
+        let source = URL(fileURLWithPath: #filePath).deletingLastPathComponent().deletingLastPathComponent()
+            .appendingPathComponent("RedstoneDesktop/Resources/Assets.xcassets/Logo.imageset/logo.png")
+        let logo = try XCTUnwrap(NSImage(contentsOf: source))
+        func bitmap(_ appearance: AppIdentityArtwork.Appearance) throws -> NSBitmapImageRep {
+            let image = AppIdentityArtwork.image(pixels: 128, template: false, logo: logo, appearance: appearance)
+            return try XCTUnwrap(NSBitmapImageRep(data: try XCTUnwrap(image.tiffRepresentation)))
+        }
+        let light = try bitmap(.light), dark = try bitmap(.dark)
+        XCTAssertGreaterThan(light.colorAt(x: 64, y: 15)!.redComponent, 0.9)
+        XCTAssertLessThan(dark.colorAt(x: 64, y: 15)!.redComponent, 0.25)
+        for image in [light, dark] {
+            XCTAssertEqual(image.colorAt(x: 0, y: 0)?.alphaComponent, 0)
+            XCTAssertGreaterThan(image.colorAt(x: 64, y: 64)!.redComponent, 0.5)
+        }
+        let lightCenter = try XCTUnwrap(light.colorAt(x: 64, y: 64))
+        let darkCenter = try XCTUnwrap(dark.colorAt(x: 64, y: 64))
+        // Resampling translucent source edges blends slightly with the plate beneath them.
+        XCTAssertEqual(lightCenter.redComponent, darkCenter.redComponent, accuracy: 0.01)
+        XCTAssertEqual(lightCenter.greenComponent, darkCenter.greenComponent, accuracy: 0.01)
+        XCTAssertEqual(lightCenter.blueComponent, darkCenter.blueComponent, accuracy: 0.01)
+    }
+
 }

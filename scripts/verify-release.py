@@ -25,7 +25,7 @@ def validate(path):
         prefix = 'RedstoneDesktop/RedstoneDesktop.app/'
         names = [name[len(prefix):] for name in archive.namelist() if name.startswith(prefix)]
         read = lambda name: archive.read(prefix + name)
-        for name in ['LICENSE', 'THIRD_PARTY_NOTICES.md', 'README.md', 'docs/RELEASE.md', 'docs/RECOVERY.md', 'docs/TESTING.md', 'docs/KNOWN_LIMITATIONS.md']:
+        for name in ['LICENSE', 'THIRD_PARTY_NOTICES.md', 'README.md', 'docs/RELEASE.md', 'docs/RECOVERY.md', 'docs/TESTING.md', 'docs/KNOWN_LIMITATIONS.md', 'docs/media/icon-light.png', 'docs/media/icon-dark.png', 'docs/media/circuit-demo.gif', 'docs/media/worlds.png', 'docs/media/lighting.png']:
             if not archive.read('RedstoneDesktop/' + name):
                 raise ValueError('Missing release guide/notice: ' + name)
     try:
@@ -43,7 +43,12 @@ def validate(path):
             catalog.write_bytes(read('Contents/Resources/Assets.car'))
             entries = json.loads(subprocess.check_output(['xcrun', 'assetutil', '--info', str(catalog)]))
         asset_names = {entry.get('Name') for entry in entries}
-        assert {'Logo', 'MenuLogo'}.issubset(asset_names), 'Owner logo identity missing'
+        assert {'Logo', 'MenuLogo', 'AppLogo'}.issubset(asset_names), 'Owner logo identity missing'
+        icon_stacks = [entry for entry in entries if entry.get('Name') == 'AppIcon' and entry.get('AssetType') == 'IconImageStack']
+        appearances = {entry.get('Appearance') for entry in icon_stacks}
+        assert {'NSAppearanceNameAqua', 'NSAppearanceNameDarkAqua'}.issubset(appearances), 'Native light/dark icon variants missing'
+        logo_appearances = {entry.get('Appearance') for entry in entries if entry.get('Name') == 'AppLogo'}
+        assert 'NSAppearanceNameDarkAqua' in logo_appearances, 'In-app dark logo missing'
         retired = {'RedstoneDust', 'MenuDust', 'ToolDust', 'ToolButton', 'ToolLever', 'ToolRepeater', 'ToolOutput', 'ToolTorch'}
         assert not retired.intersection(asset_names), 'Retired game-derived icons bundled'
         binary = read('Contents/MacOS/' + info['CFBundleExecutable'])

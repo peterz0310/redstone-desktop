@@ -9,7 +9,7 @@ These are physical-Mac checks, separate from automated tests. Report which numbe
 - [ ] Check the menu-bar silhouette in light and dark appearance. Its width should stay the same when stopped, running or in Build Mode.
 - [ ] Check both build toolbars: Dust uses your logo silhouette; Button, Lever, Repeater, Output and R. Torch use native symbols. All tools should still place the same components. Optional locally imported Java world textures/audio should continue working.
 
-Automated checks preserve the supplied PNG byte-for-byte, verify transparent-margin trimming/aspect and monochrome rendering, check every app-icon size and menu resolution, resolve native tool symbols and reject retired game-derived catalogs in the source and compiled app. Release validation also inspects the compiled catalog inside the actual ZIP.
+Automated checks preserve the supplied PNG byte-for-byte, verify transparent-margin trimming/aspect and monochrome rendering, check native light/dark icon composition and menu resolution, resolve native tool symbols and reject retired game-derived catalogs in the source and compiled app. Release validation also inspects the compiled catalog inside the actual ZIP.
 
 ## Desktop Build palette sizing — awaiting owner confirmation
 
@@ -280,3 +280,12 @@ Desktop click investigation remains open: the owner reports missed clicks on the
 - [ ] Under Settings → Sound, enable sound effects at low volume and unmute. In Test Circuit or on a harmless Desktop circuit, press/release Button, toggle Lever and use placement/erase. Hear imported clicks/block sounds. Existing volume, mute and stereo panning should work. No particles produce continuous ambient sound.
 - [ ] Choose Use Original Look: visuals and audio return to originals together. Re-select your import and restart the app: the cache reload should restore both, without rereading/downloading game assets.
 - [ ] Import a Java pack missing sounds or particles: originals fill the gaps. A missing launcher sound cache must not break an otherwise valid texture import. No imported images/audio should appear in exported world data or the release app bundle.
+
+## Setup import, appearance icons and public README (2026-10-11)
+
+- [ ] MANUAL: Rebuild/launch the updated app, open Settings → General → setup, and reach **Choose your look**. Installed Java versions should appear. Choose one and click **Use Minecraft Assets**; wait for completion, finish setup, and check the editor uses that look. Quit/reopen and verify it remains selected. Existing worlds/circuits must be unchanged.
+- [ ] MANUAL: Reopen setup and try **Choose a Texture Pack or JAR…** with a local Java pack/JAR. Cancel once, then import a valid source. The app should remain usable in both cases. Next/Skip must work without Minecraft or an import. The window must fit and the import help button must read clearly.
+- [ ] MANUAL: Check the setup logo in light and dark system appearance. Check menu-bar/Dust-tool visibility in both. On macOS 26+, check the app icon using the system’s light/dark icon styles in System Settings → Appearance (including Automatic if available); both should show the same centered red logo. Quit/reopen or inspect a freshly copied build if macOS is showing a cached icon. On older macOS, check the static fallback in Finder/Dock.
+- [ ] MANUAL: Open README on GitHub and in the extracted review ZIP. Verify its adaptive logo, circuit animation, world examples, day/night image and guide links load, and the first-circuit instructions are understandable. The DMG section must say it is coming, with no pretend download link.
+
+Automated validation: Debug build and all 582 XCTest tests passed. The universal arm64/x86_64 Release app and actual review ZIP passed the release verifier, including compiled light/dark icon appearances and bundled README media. Every README image/relative guide link was checked in source and ZIP. Light/dark variants were previewed in native Icon Composer; the generated static fallback was inspected separately. These checks do not replace the pending Mac acceptance items above.

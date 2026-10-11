@@ -16,8 +16,8 @@ final class ReleaseMetadataTests: XCTestCase {
         let source = URL(fileURLWithPath: #filePath).deletingLastPathComponent().deletingLastPathComponent()
         let catalog = source.appendingPathComponent("RedstoneDesktop/Resources/Assets.xcassets")
         let folders = Set(try FileManager.default.contentsOfDirectory(atPath: catalog.path).filter { $0.hasSuffix(".imageset") || $0.hasSuffix(".appiconset") })
-        XCTAssertEqual(folders, ["Logo.imageset", "MenuLogo.imageset", "AppIcon.appiconset"])
-        XCTAssertNotNil(NSImage(named: "Logo")); XCTAssertNotNil(NSImage(named: "MenuLogo"))
+        XCTAssertEqual(folders, ["Logo.imageset", "MenuLogo.imageset", "AppLogo.imageset"])
+        XCTAssertNotNil(NSImage(named: "AppLogo")); XCTAssertNotNil(NSImage(named: "Logo")); XCTAssertNotNil(NSImage(named: "MenuLogo"))
         for tool in EditorSession.Tool.allCases where tool != .dust {
             XCTAssertNotNil(NSImage(systemSymbolName: ToolIcon.symbol(for: tool.rawValue), accessibilityDescription: nil), tool.rawValue)
         }
