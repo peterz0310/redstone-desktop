@@ -437,6 +437,26 @@ final class AppState: ObservableObject {
     }
 
     @discardableResult
+    func updateWorldLighting(_ id: UUID, settings: WorldLightingSettings) -> Bool {
+        guard !isMaintenanceLocked, !persistenceBlocked,
+              let index = library.worlds.firstIndex(where: { $0.id == id }),
+              (try? settings.validate()) != nil else { libraryStatus = "World settings could not be saved."; return false }
+        library.worlds[index].lighting = settings
+        if selectedWorldID == id { editorWorld.lighting = settings }
+        if activeWorldID == id {
+            desktopWorld.lighting = settings
+            for controller in desktopControllers {
+                controller.scene.updateWorld(desktopWorld, poweredTiles: simulator.poweredTiles,
+                    leverPositions: simulator.activeLevers, powerLevels: simulator.power)
+            }
+            buildController?.update(world: desktopWorld, levers: simulator.activeLevers, assets: assets)
+        }
+        autosaver?.schedule(library)
+        libraryStatus = "World lighting saved."
+        return true
+    }
+
+    @discardableResult
     func renameSelectedWorld(_ name: String) -> Bool {
         renameWorld(selectedWorldID, name: name)
     }

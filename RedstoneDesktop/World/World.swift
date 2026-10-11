@@ -3,6 +3,7 @@
 struct World: Equatable, Codable, Sendable {
     var tiles: [WorldCoordinate: Tile] = [:]
     var circuit = CircuitWorld()
+    var lighting: WorldLightingSettings? = nil
     var generation: WorldGenerationSettings? = nil
     var unspecifiedTiles: Set<WorldCoordinate> = []
 

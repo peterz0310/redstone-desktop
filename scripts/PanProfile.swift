@@ -16,6 +16,10 @@ private struct ProfileStore: WorldLibraryStoring {
         assets.apply(imported.pack)
         let app = AppState(libraryStore: ProfileStore(), assets: assets)
         defer { app.shutdown() }
+        if CommandLine.arguments.contains("--night") {
+            _ = app.updateWorldLighting(app.selectedWorldID, settings: WorldLightingSettings(mode: .night))
+            _ = app.applyTerrain(brush: .lava, tiles: Set((5...7).flatMap { y in (5...7).map { WorldCoordinate(x: $0, y: y) } }))
+        }
         let editor = EditorSession(), renderer = EditorCanvasRenderer(), size = CGSize(width: 1100, height: 700)
         let start = CFAbsoluteTimeGetCurrent()
         _ = renderer.update(appState: app, editor: editor, size: size)
@@ -24,7 +28,7 @@ private struct ProfileStore: WorldLibraryStoring {
             editor.pan(by: CGSize(width: -320, height: 0), size: size)
             let t = CFAbsoluteTimeGetCurrent()
             let scene = renderer.update(appState: app, editor: editor, size: size)!
-            print("step=\(step) ms=\((CFAbsoluteTimeGetCurrent()-t)*1000) textures=\(scene.terrainMetrics.textureBuilds)")
+            print("step=\(step) ms=\((CFAbsoluteTimeGetCurrent()-t)*1000) textures=\(scene.terrainMetrics.textureBuilds) light_masks=\(scene.lightingTextureBuilds)")
         }
     }
 }

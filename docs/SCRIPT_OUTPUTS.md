@@ -31,7 +31,7 @@ Execution uses documented Foundation [Process](https://developer.apple.com/docum
 
 ## Saving and contributor boundaries
 
-`CircuitComponent.outputAction` is an optional-on-decode Codable field with `openOccupant` as its missing-field default (the app’s Default routing mode since 29A); valid values are `openOccupant`, `executeOccupant`, `none`. Explicit null/unknown values fail validation. The library remains format 1; world format 4 adds sparse terrain edits, with no Finder paths or approvals embedded. Simulator/renderers ignore the mode and never launch files; AppState dispatches rising edges to the action adapters.
+`CircuitComponent.outputAction` is an optional-on-decode Codable field with `openOccupant` as its missing-field default (the app’s Default routing mode since 29A); valid values are `openOccupant`, `executeOccupant`, `none`. Explicit null/unknown values fail validation. The library remains format 1; world format 5 includes sparse terrain edits and visual world lighting, with no Finder paths or approvals embedded. Simulator/renderers ignore the mode and never launch files; AppState dispatches rising edges to the action adapters.
 
 - `ScriptTarget.swift`: target validation/resolution/fingerprint and Sendable result.
 - `ScriptAuthorization.swift`: separate preference store and SwiftUI confirmation presenter.

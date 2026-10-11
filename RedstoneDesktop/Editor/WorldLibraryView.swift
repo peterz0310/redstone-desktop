@@ -17,6 +17,8 @@ struct WorldLibraryView: View {
     @ObservedObject var editor: EditorSession
     @Binding var sheet: LibrarySheetRequest?
 
+    @State private var settingsWorld: WorldDocument?
+
     private func areaCount(for world: WorldDocument) -> String {
         let count = appState.library.areas.filter { $0.worldID == world.id }.count
         return "\(count) \(count == 1 ? "area" : "areas")"
@@ -27,6 +29,8 @@ struct WorldLibraryView: View {
             HStack {
                 Text("Worlds").font(.headline)
                 Spacer()
+                Button { settingsWorld = appState.selectedDocument } label: { Image(systemName: "gearshape") }
+                    .help("Settings for this world")
                 Button { sheet = LibrarySheetRequest(kind: .newWorld) } label: { Image(systemName: "plus") }
                     .help("Create a new independent world")
             }
@@ -55,6 +59,7 @@ struct WorldLibraryView: View {
                             .overlay(RoundedRectangle(cornerRadius: 8).stroke(world.id == appState.selectedWorldID ? Color.accentColor : .clear, lineWidth: 2))
                         }.buttonStyle(.plain)
                         .contextMenu {
+                            Button("World Settings…") { settingsWorld = world }
                             Button("Rename World…") { sheet = LibrarySheetRequest(kind: .renameWorld, targetID: world.id) }
                                 .disabled(appState.isDesktopWorldEnabled && world.id == appState.activeWorldID)
                             Button("Delete World…", role: .destructive) { sheet = LibrarySheetRequest(kind: .deleteWorld, targetID: world.id) }
@@ -64,6 +69,7 @@ struct WorldLibraryView: View {
                 }
             }
         }.padding(12).frame(width: 190)
+        .sheet(item: $settingsWorld) { world in WorldLightingSettingsView(appState: appState, world: world) }
     }
 }
 

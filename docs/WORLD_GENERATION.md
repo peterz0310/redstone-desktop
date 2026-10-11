@@ -1,6 +1,6 @@
 # Default landscapes
 
-New worlds automatically use the improved landscape; there are no extra generation controls. A seed still identifies one continuous map, and areas are views into that map rather than separate terrain copies.
+New worlds automatically use the improved landscape; there are no extra generation controls. Each world also has independent [day/night and local lighting settings](WORLD_LIGHTING.md). A seed still identifies one continuous map, and areas are views into that map rather than separate terrain copies.
 
 Climate regions are broader than before. Eight biomes mix large recognizable areas with smaller ground details:
 

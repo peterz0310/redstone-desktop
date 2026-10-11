@@ -104,7 +104,7 @@ final class TerrainEditingTests: XCTestCase {
         var json = try XCTUnwrap(JSONSerialization.jsonObject(with: data) as? [String: Any])
         json["formatVersion"] = 3; json.removeValue(forKey: "terrainOverrides")
         let old = try JSONDecoder().decode(WorldDocument.self, from: JSONSerialization.data(withJSONObject: json))
-        XCTAssertEqual(old.formatVersion, 4); XCTAssertTrue(old.terrainOverrides.isEmpty)
+        XCTAssertEqual(old.formatVersion, WorldDocument.currentFormatVersion); XCTAssertTrue(old.terrainOverrides.isEmpty)
         XCTAssertEqual(try old.restoredWorld(), old.unmodifiedWorld())
         json["formatVersion"] = 99
         XCTAssertThrowsError(try JSONDecoder().decode(WorldDocument.self, from: JSONSerialization.data(withJSONObject: json)))

@@ -4,7 +4,7 @@ enum TerrainProfile: String, Codable, Sendable { case procedural, legacyFixtureV
 
 /// A map owns its components. Camera bookmarks belong to SavedArea, not the map.
 struct WorldDocument: Codable, Equatable, Sendable, Identifiable {
-    static let currentFormatVersion = 4
+    static let currentFormatVersion = 5
     var formatVersion = currentFormatVersion
     var id = UUID()
     var name: String
@@ -12,6 +12,7 @@ struct WorldDocument: Codable, Equatable, Sendable, Identifiable {
     let terrainProfile: TerrainProfile
     var circuit = CircuitWorld()
     var terrainOverrides: [WorldCoordinate: Tile] = [:]
+    var lighting = WorldLightingSettings()
     var activeLevers: Set<WorldCoordinate> = []
 
     init(name: String = "New World", generation: WorldGenerationSettings = WorldGenerationSettings(seed: 2026), terrainProfile: TerrainProfile = .procedural) {
@@ -29,21 +30,23 @@ struct WorldDocument: Codable, Equatable, Sendable, Identifiable {
         activeLevers = legacy.activeLevers
     }
 
-    private enum CodingKeys: String, CodingKey { case formatVersion, id, name, generation, terrainProfile, circuit, activeLevers, terrainOverrides }
+    private enum CodingKeys: String, CodingKey { case formatVersion, id, name, generation, terrainProfile, circuit, activeLevers, terrainOverrides, lighting }
     init(from decoder: any Decoder) throws {
         let values = try decoder.container(keyedBy: CodingKeys.self)
         let version = try values.decode(Int.self, forKey: .formatVersion)
-        guard version == 3 || version == Self.currentFormatVersion else { throw WorldStoreError.unsupportedVersion(version) }
+        guard (3...Self.currentFormatVersion).contains(version) else { throw WorldStoreError.unsupportedVersion(version) }
         formatVersion = Self.currentFormatVersion
         id = try values.decode(UUID.self, forKey: .id); name = try values.decode(String.self, forKey: .name)
         generation = try values.decode(WorldGenerationSettings.self, forKey: .generation)
         terrainProfile = try values.decode(TerrainProfile.self, forKey: .terrainProfile)
         circuit = try values.decode(CircuitWorld.self, forKey: .circuit)
         activeLevers = try values.decode(Set<WorldCoordinate>.self, forKey: .activeLevers)
+        lighting = version < 5 ? try values.decodeIfPresent(WorldLightingSettings.self, forKey: .lighting) ?? WorldLightingSettings() : try values.decode(WorldLightingSettings.self, forKey: .lighting)
         terrainOverrides = try values.decodeIfPresent([WorldCoordinate: Tile].self, forKey: .terrainOverrides) ?? [:]
     }
     func unmodifiedWorld() -> World {
         var world = terrainProfile == .legacyFixtureV1 ? EditorConstructionArea.makeWorld() : World()
+        world.lighting = lighting
         world.generation = generation; world.circuit = CircuitWorld()
         return world
     }
@@ -51,6 +54,7 @@ struct WorldDocument: Codable, Equatable, Sendable, Identifiable {
     func restoredWorld() throws -> World {
         guard formatVersion == Self.currentFormatVersion else { throw WorldStoreError.unsupportedVersion(formatVersion) }
         guard !name.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else { throw WorldStoreError.invalidDocument("World name cannot be empty.") }
+        try lighting.validate()
         _ = try WorldGenerator(settings: generation)
         guard terrainOverrides.count <= TerrainEditing.maximumSavedTiles else { throw WorldStoreError.invalidDocument("Too many edited terrain tiles.") }
         var world = unmodifiedWorld()

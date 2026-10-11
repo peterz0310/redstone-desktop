@@ -29,7 +29,7 @@ Desktop Build Mode currently uses the primary display only. Its brush outline sh
 
 Edits belong to the world, so all its saved areas show the same terrain. They are included in Export Library, Import Library and existing recovery backups. Circuit blueprints and clipboard copies still contain only components, not terrain.
 
-World format **4** stores a sparse `terrainOverrides` dictionary separately from generated terrain and circuit configuration. Format 3 worlds load with no edits; legacy worlds retain their original terrain profile. Older apps cannot read format 4 saves. Keep an exported library before downgrading.
+World format **5** stores a sparse `terrainOverrides` dictionary separately from generated terrain and circuit configuration. Format 3 worlds load with no edits; formats 3/4 default to daytime lighting, while format 5 also saves per-world lighting; legacy worlds retain their original terrain profile. Older apps cannot read format 5 saves. Keep an exported library before downgrading.
 
 Each stroke is limited to 4096 addressed tiles and each world to 8192 saved edited tiles. The existing 2 MB whole-library limit also applies; terrain publication checks that budget before changing saved configuration. Restore Original removes overrides to free the terrain budget. Oversized strokes cancel without publishing partial edits. Ordinary autosave/recovery status still reports disk write failures.
 

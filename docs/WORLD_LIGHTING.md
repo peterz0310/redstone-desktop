@@ -1,0 +1,24 @@
+# World lighting
+
+Open the gear beside **Worlds**, or right-click a world card and choose **World Settings…**. The gear edits the selected world; the context menu edits the world you clicked. Saving takes effect in the editor and on a running Desktop without restarting circuits. Cancel changes nothing.
+
+- **Always Day** keeps the original bright appearance and is the default for new and existing worlds.
+- **Day & Night** gradually moves through daylight, dusk, night and dawn. Choose a full-day duration from 2–120 real minutes (default 20) and a starting time. Save starts the clock at that time.
+- **Always Night** makes lights easy to see without waiting for the cycle.
+- **Light nearby ground with lava and powered redstone** enables local illumination. Turning it off leaves only the world's daylight.
+
+Every area in a world shares its clock and settings. Different worlds are independent. The persisted starting phase and wall-clock anchor keep time moving while the app is closed or the Mac sleeps; reopening resumes the current time rather than replaying elapsed frames. Changing the cycle's starting time/duration and saving deliberately starts a new clock. System clock changes also change world time. Reduce Motion continues to freeze water/scenery animation; this slow daylight cycle follows the world's setting.
+
+Lava lights its surroundings continuously. Powered components, including dust, torches, repeaters and Outputs, light nearby ground according to their current signal strength. In the editor, use **Test Circuit** or view the running assigned world to see live redstone illumination. Unpowered components emit no light. Desktop Build Mode does not run a circuit merely to produce illumination. Lights are most visible at night; they preserve the brighter original artwork near a source and fall off smoothly over five tiles. Overlapping lights take the stronger intensity rather than making the scene overbright. This initial model does not cast shadows or simulate Minecraft block-light propagation, heat or spawning.
+
+Night shades terrain and circuit artwork, with cursor/selection, area outlines, feedback and normal app UI remaining readable. Real Finder icons are separate macOS surfaces and are not darkened. Lighting never changes world tiles, simulation, output thresholds, file routing, action approval or Finder state.
+
+## Persistence and architecture
+
+World document format 5 adds validated lighting settings. Formats 3/4 decode with Always Day when lighting is absent. Settings are included in library saves, exports/imports and backups; old maps need no reset. The terrain generation revision remains unchanged because lighting introduces no obstacles. Nonfinite or out-of-range settings are refused by library validation.
+
+`WorldLightingSettings` and `WorldLightFalloff` are pure domain types. `TerrainChunkRenderer` collects lava positions during existing chunk baking, without scanning terrain every frame. `WorldLightingRenderer` owns one low-resolution, padded illumination texture per visible chunk and a shared daylight uniform. It rebuilds masks when visible emitters change, reuses them for camera movement within retained chunks, and updates daylight at most ten times per second. CoordinateMapper owns all screen/scene conversion. A public SpriteKit fragment shader shades the scene between the circuit and UI layers; no private API, imported shader code, backend or per-frame terrain texture baking is involved.
+
+Automated tests cover phase wrapping, fixed modes, bounds, falloff, document compatibility, per-world independence, preservation of simulation state, actual rendered night/lava/redstone/toggle pixels and mask reuse across time updates. Native sheet fit, real Desktop appearance and panning remain the [Mac acceptance checks](TESTING.md).
+
+For an isolated CPU/panning check with night lighting and a small painted lava pool, run `scripts/pan-profile.sh RedstoneDesktopTests/Fixtures/SyntheticJava.zip --night`. It uses a temporary import cache and an in-memory library, never owner preferences or saves. The output includes terrain texture and light-mask build counts; real display/GPU energy still requires Mac checks.

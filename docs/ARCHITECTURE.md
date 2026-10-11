@@ -10,7 +10,7 @@ All world/screen/scene conversion goes through `CoordinateMapper`. Tile sizes us
 
 Editor test mode owns an independent simulator copy and scheduler; its Output events become local visual feedback and counters only. It never dispatches actions or saves test lever/power state. Group edits validate a complete working copy before publication; per-world, session-only undo uses bounded sparse component deltas. Reusable blueprints are a separately validated, atomic `blueprints.json` file; they are included in full Support reset backups, but excluded from world-library exports. See [EDITOR_TOOLS.md](EDITOR_TOOLS.md) for limits and UI contracts.
 
-Default generation uses global integer climate/elevation/river fields with clustered scenery. Version-1 terrain locations are intentionally replaced by the current landscape; settings default to version 2. New surfaces keep domain capabilities separate from art. See [WORLD_GENERATION.md](WORLD_GENERATION.md).
+Default generation uses global integer climate/elevation/river fields with clustered scenery. Version-1 terrain locations are intentionally replaced by the current landscape; settings default to generation version 4, with backed-up upgrades preserving saved circuit footprints. New surfaces keep domain capabilities separate from art. See [WORLD_GENERATION.md](WORLD_GENERATION.md).
 
 ## Finder and actions
 
@@ -26,7 +26,7 @@ Desktop pressure plates and file sensors consume mapped occupancy snapshots thro
 
 Live pointer, rendering and power updates should not rebuild menu trees. `MenuPresentation` publishes only changes to its equatable menu snapshot. The root app owns the AppState reference without subscribing all scenes to every runtime update; each screen observes the state it needs. Selection loading does not write component settings; user picker changes save immediately.
 
-Terrain editing uses pure bounded plans and transient stroke previews, publishing one sparse override/history operation on release. World format 4 stores terrain overrides; format 3 decodes with no edits. Circuit support validation protects occupied cells, and terrain changes invalidate only affected render chunks. Edits are included in library export/import but not component blueprints. See [TERRAIN_EDITING.md](TERRAIN_EDITING.md) for limits and integration contracts.
+Terrain editing uses pure bounded plans and transient stroke previews, publishing one sparse override/history operation on release. World format 5 stores terrain overrides and independent world lighting settings; format 3 decodes with no edits and formats 3/4 default to daytime lighting. Circuit support validation protects occupied cells, and terrain changes invalidate only affected render chunks. Edits are included in library export/import but not component blueprints. See [TERRAIN_EDITING.md](TERRAIN_EDITING.md) for limits and integration contracts.
 
 Blueprint previews are cached, bounded AppKit images mapped through CoordinateMapper; they do not create per-card SpriteKit loops or query Finder. Native editor menus consume action options and revalidate the current world/locks before execution. Tool descriptions are shared across build modes. The switched clock is an example made from existing ports/delays, not a new simulator special case. See [BLUEPRINTS.md](BLUEPRINTS.md).
 
@@ -35,3 +35,5 @@ Blueprint previews are cached, bounded AppKit images mapped through CoordinateMa
 Original assets provide a complete fallback. Local Java/custom packs are bounded image/audio data, not executable content. Imported world assets remain outside the repository and app bundles. Only explicitly owner-authorized icon artwork is shipped; provenance and MIT exclusions are in [third-party notices](../THIRD_PARTY_NOTICES.md). Do not extend that exception to general world textures or game audio.
 
 Add meaningful automated coverage for behavior changes, build, and run the full suite. Keep physical validation separate in [TESTING.md](TESTING.md), including untested backup/reset, multi-display and distribution gates. Test hosts, reset harnesses and profiling must never use the owner’s production save/preferences. The retired implementation roadmap is available in Git history.
+
+Per-world lighting is presentation only. A persisted phase/clock anchor drives a shared daylight uniform; lava and powered components supply bounded illumination masks. Masks reuse terrain sampling and remain separate from circuit simulation, Finder and actions. Cursor/editor overlays sit above night shading. See [WORLD_LIGHTING.md](WORLD_LIGHTING.md).

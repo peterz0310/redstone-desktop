@@ -3,6 +3,14 @@
 These are physical-Mac checks, separate from automated tests. Report which numbered groups you actually tried and what failed; untested groups remain unverified. Use harmless folders/text files first. Place new test circuits on clear ground **to the right** of your existing builds. Do not use scripts for display-calibration tests.
 
 
+## Per-world day/night and local lights — awaiting owner confirmation
+
+1. Quit with ⌘Q, then run the update with ⌘R in Xcode or open the updated release. Existing worlds should retain their daytime appearance and saved circuits. Click the gear beside Worlds, or right-click a world card → World Settings….
+2. Choose Always Night and Save. Terrain and inactive circuits should dim; cursor, tools, selection and area labels should remain clear. Find or paint a small lava pool to the right of your builds: it should brighten nearby tiles with soft edges. Switch the local-lights toggle off and confirm the light disappears.
+3. Re-enable local lights. In Test Circuit, power a wire/torch/repeater circuit and check nearby ground brightens; switching it off should remove that light. Repeat on running Desktop. Changing lighting while Desktop runs should keep the circuit and assignment running, with no extra file actions.
+4. Choose Day & Night, set Full day to 2 minutes, and Start at noon (12 PM). Watch the scene dim and brighten through a full cycle. Pan across chunk boundaries and zoom during night; lights should remain anchored without seams or recurring stalls. Check an adjacent saved area in the same world shares the time.
+5. Set another world to Always Day: it should stay bright while the first keeps its own settings. Quit/reopen and check settings persist and the cycle resumes the current time. Cancel a settings change and confirm it does not apply. Export/import should preserve lighting settings too.
+
 ## Softer water and clustered forests — awaiting owner confirmation
 
 1. Quit with ⌘Q, then run the update using ⌘R in Xcode or open the updated release app. Revisit that river: shallow water should be a darker blue with a gentler contrast against the deep channel, still visibly different and crisp. Check both Original Look and your existing imported textures; no reimport is needed. Waves should still animate and reeds should retain their colors.

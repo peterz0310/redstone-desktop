@@ -17,6 +17,8 @@ final class TerrainChunkRenderer {
     private var assetRevision: UUID?
     private var ambience: TerrainAmbience?
     private var cache = ChunkCache()
+    private var lavaByChunk: [ChunkCoordinate: Set<WorldCoordinate>] = [:]
+    var lavaTiles: Set<WorldCoordinate> { Set(lavaByChunk.values.flatMap { $0 }) }
     private var nodes: [ChunkCoordinate: SKSpriteNode] = [:]
     private var overrides: [WorldCoordinate: Tile] = [:]
     private var excluded: Set<WorldCoordinate> = []
@@ -41,17 +43,18 @@ final class TerrainChunkRenderer {
         if self.generation != generation || assetRevision != assets.revision {
             if assetRevision != assets.revision { tileRasters.removeAll(); ambience = TerrainAmbience(assets: assets) }
             for node in nodes.values { node.removeFromParent() }
-            nodes.removeAll()
+            nodes.removeAll(); lavaByChunk.removeAll()
         } else if overrides != world.tiles || excluded != world.unspecifiedTiles {
             let changed = Set(overrides.keys).union(world.tiles.keys).filter { overrides[$0] != world.tiles[$0] }
                 .union(excluded.symmetricDifference(world.unspecifiedTiles))
             let chunks = Set(changed.map(ChunkCoordinate.containing))
-            for coordinate in chunks { nodes.removeValue(forKey: coordinate)?.removeFromParent() }
+            for coordinate in chunks { nodes.removeValue(forKey: coordinate)?.removeFromParent(); lavaByChunk.removeValue(forKey: coordinate) }
         }
         assetRevision = assets.revision
         self.generation = generation; overrides = world.tiles; excluded = world.unspecifiedTiles
         for (coordinate, node) in nodes where !requested.contains(coordinate) { node.removeFromParent() }
         nodes = nodes.filter { requested.contains($0.key) }
+        lavaByChunk = lavaByChunk.filter { requested.contains($0.key) }
         do {
             try cache.update(requested, settings: generation)
             for coordinate in requested {
@@ -91,6 +94,7 @@ final class TerrainChunkRenderer {
               let bytes = bitmap.bitmapData else { return nil }
         var maskPixels = [UInt8](repeating: 0, count: dimension * dimension * 4)
         var hasAnimation = false
+        var lava: Set<WorldCoordinate> = []
         let emptyPixels = [UInt8](repeating: 0, count: resolution * resolution * 4)
         let empty = TileRaster(pixels: emptyPixels, mask: emptyPixels, animated: false)
         maskPixels.withUnsafeMutableBufferPointer { destination in
@@ -98,6 +102,7 @@ final class TerrainChunkRenderer {
                 let coordinate = WorldCoordinate(x: origin.x + x, y: origin.y + y)
                 let stored = world.tiles[coordinate] ?? (world.unspecifiedTiles.contains(coordinate) ? nil : chunk.tiles[coordinate])
                 let tile = stored.map { TerrainAppearance.tile($0, generated: world.tiles[coordinate] == nil) }
+                if tile?.terrain == .lava { lava.insert(coordinate) }
                 let appearance = tile?.decoration.map { DecorationAppearance.choose($0, at: coordinate, seed: world.generation?.seed ?? 0, terrain: tile?.terrain) }
                 let raster = tile.map { tileRaster($0, appearance: appearance, resolution: resolution) } ?? empty
                 hasAnimation = hasAnimation || raster.animated
@@ -114,6 +119,7 @@ final class TerrainChunkRenderer {
                 }
             } }
         }
+        lavaByChunk[chunk.coordinate] = lava
         guard let image = bitmap.cgImage else { return nil }
         let texture = SKTexture(cgImage: image)
         texture.filteringMode = .nearest

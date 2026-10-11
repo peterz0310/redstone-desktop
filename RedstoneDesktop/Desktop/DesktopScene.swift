@@ -14,6 +14,10 @@ final class DesktopScene: SKScene {
     private let highlight = SKShapeNode()
     private let clickFlash = SKShapeNode()
     private let tileLayer = SKNode()
+    private let lightingLayer = SKNode()
+    private let lightingRenderer = WorldLightingRenderer()
+    var lightingTextureBuilds: Int { lightingRenderer.textureBuilds }
+    var lightingTimeProviding: () -> Double = { Date().timeIntervalSince1970 }
     private let circuitLayer = SKNode()
     private let outputFlash = SKNode()
     private let circuitRenderer = CircuitRenderer()
@@ -52,6 +56,7 @@ final class DesktopScene: SKScene {
         clickFlash.strokeColor = .systemOrange
         clickFlash.zPosition = 2
         clickFlash.isHidden = true
+        lightingLayer.name = "world-lighting"; lightingLayer.zPosition = 0.9
         tileLayer.name = "world-tiles"
         tileLayer.zPosition = 0.25
         circuitLayer.name = "circuit"
@@ -73,6 +78,7 @@ final class DesktopScene: SKScene {
         // Sample real scene callbacks without publishing to SwiftUI each frame.
         frameRate.record(at: ProcessInfo.processInfo.systemUptime)
         terrainRenderer.advanceAnimation(at: currentTime, reducedMotion: reducedMotion)
+        lightingRenderer.advance(settings: renderedWorld?.lighting ?? WorldLightingSettings(), time: lightingTimeProviding())
     }
 
     func setDiagnosticOverlays(_ settings: DiagnosticOverlaySettings) {
@@ -175,6 +181,9 @@ final class DesktopScene: SKScene {
             }
         }
         rebuildCircuit()
+        lightingRenderer.render(world: world, lava: world.generation == nil ? Set(world.tiles.filter { $0.value.terrain == .lava }.keys) : terrainRenderer.lavaTiles,
+            power: powerLevels ?? Dictionary(uniqueKeysWithValues: poweredTiles.map { ($0, PowerLevel.full) }),
+            mapper: mapper, screen: screen, into: lightingLayer, time: lightingTimeProviding())
         rebuildDiagnostics()
         // Cancel effects for outputs removed from the model; power refreshes keep them.
         for node in outputFlash.children {
@@ -225,6 +234,7 @@ final class DesktopScene: SKScene {
     private func rebuildChecker() {
         removeAllChildren()
         addChild(tileLayer)
+        addChild(lightingLayer)
         addChild(circuitLayer)
         addChild(outputFlash)
         addChild(occupancyLayer)

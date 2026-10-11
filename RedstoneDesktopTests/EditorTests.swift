@@ -173,7 +173,7 @@ final class EditorTests: XCTestCase {
             XCTAssertEqual(actual.redComponent, expected.redComponent, accuracy: 0.00001)
             XCTAssertEqual(outline.path?.boundingBoxOfPath, scene.mapper.sceneRect(forTile: tile, on: scene.screen).insetBy(dx: 1, dy: 1))
             for _ in 0..<30 { _ = renderer.update(appState: state, editor: editor, size: size) }
-            XCTAssertEqual(scene.children.count, 12)
+            XCTAssertEqual(scene.children.count, 13)
             XCTAssertEqual(preview.children.count, 2)
         }
         editor.selectedTile = cell(10)
