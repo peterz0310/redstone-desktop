@@ -62,13 +62,17 @@ final class DesktopBuildController: NSObject, DesktopBuildPresenting, NSWindowDe
         surface.changeDelay = { [weak appState] tile in appState?.editHoveredBuildRepeater(at: tile, rotate: false) }
         surface.exit = exit
 
-        palette = NSPanel(contentRect: CGRect(x: screen.frame.midX - min(760, screen.frame.width - 32) / 2, y: screen.frame.maxY - 460, width: min(760, screen.frame.width - 32), height: 400),
+        let paletteWidth = min(760, screen.frame.width - 32)
+        palette = NSPanel(contentRect: CGRect(x: screen.frame.midX - paletteWidth / 2, y: screen.frame.maxY - 460, width: paletteWidth, height: 400),
                           styleMask: [.titled, .closable, .utilityWindow], backing: .buffered, defer: false)
         palette.title = "Desktop Build Mode — Circuit stopped"
         palette.level = .floating
         palette.isReleasedWhenClosed = false
         palette.hidesOnDeactivate = true
-        palette.contentView = NSHostingView(rootView: DesktopBuildHotbar(session: session, appState: appState))
+        // Host min-size probes otherwise wrap the description at near-zero width,
+        // growing the panel far beyond the controls before the first real layout.
+        palette.contentView = NSHostingView(rootView: DesktopBuildHotbar(session: session, appState: appState)
+            .frame(width: paletteWidth).fixedSize(horizontal: false, vertical: true))
         super.init()
         palette.delegate = self
     }

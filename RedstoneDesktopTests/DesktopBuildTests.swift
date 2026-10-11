@@ -222,6 +222,25 @@ final class DesktopBuildTests: XCTestCase {
     }
 
     @MainActor
+    func testPaletteFitsItsControlsWithoutExpandingDuringDustPreview() async throws {
+        let app = state(BuildPresenterSpy()); defer { app.shutdown() }
+        let mapper = try CoordinateMapper(canvasFrame: screen.frame, camera: app.desktopCamera)
+        let session = DesktopBuildSession(worldID: app.activeWorldID, areaID: app.library.activeAreaID, mapper: mapper, title: "Fixture")
+        let controller = DesktopBuildController(session: session, screen: screen, appState: app)
+        defer { controller.close() }
+        for tool in [DesktopBuildSession.Tool.dust, .terrain, .fileSensor, .dust] {
+            session.tool = tool
+            session.status = "Dust path: 40 new tiles; 2 blocked. Release to save."
+            try await Task.sleep(for: .milliseconds(100))
+            let content = try XCTUnwrap(controller.palette.contentView)
+            content.layoutSubtreeIfNeeded()
+            XCTAssertLessThan(controller.palette.frame.height, 500)
+            XCTAssertEqual(content.frame.height, content.fittingSize.height, accuracy: 2, "Panel should fit its controls without empty space above them")
+            XCTAssertEqual(content.frame.width, 760, accuracy: 1)
+        }
+    }
+
+    @MainActor
     func testNativeCaptureIsTransparentAboveIconsBelowOrdinaryWindowsAndCloseRemovesInput() throws {
         let app = state(BuildPresenterSpy())
         let mapper = try CoordinateMapper(canvasFrame: screen.frame, camera: app.desktopCamera)

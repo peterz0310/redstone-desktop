@@ -3,6 +3,13 @@
 These are physical-Mac checks, separate from automated tests. Report which numbered groups you actually tried and what failed; untested groups remain unverified. Use harmless folders/text files first. Place new test circuits on clear ground **to the right** of your existing builds. Do not use scripts for display-calibration tests.
 
 
+## Desktop Build palette sizing — awaiting owner confirmation
+
+- [ ] Quit the old copy with ⌘Q, run the update with ⌘R in Xcode, then enter Build on Desktop. The palette should open compactly, with its header just below the title bar and no large blank area above the controls.
+- [ ] Switch Dust → Terrain → Sensor → Dust and draw a dust path. The panel should fit the selected tool’s controls, keeping horizontal padding and readable descriptions, without jumping to a huge height. Exit and re-enter Build Mode to check its initial size again.
+
+A native AppKit regression reproduces the oversized initial panel, then verifies the corrected panel fits its SwiftUI content through those tool/status changes.
+
 ## Dust dragging, brighter particles and Test Stop — awaiting owner confirmation
 
 - [ ] Quit the old copy with ⌘Q and run the update with ⌘R in Xcode (or open the updated release). In Settings → Appearance, enable Show particles. Keep macOS Reduce Motion off while checking moving effects.
