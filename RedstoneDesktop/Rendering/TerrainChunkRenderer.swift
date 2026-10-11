@@ -61,7 +61,7 @@ final class TerrainChunkRenderer {
                 else {
                     guard let baked = texture(for: chunk, world: world) else { continue }
                     node = SKSpriteNode(texture: baked.texture)
-                    if let mask = baked.mask { node.shader = ambience?.shader(mask: mask) }
+                    if let mask = baked.mask { node.shader = ambience?.shader(mask: mask, textureSize: baked.texture.size()) }
                     node.anchorPoint = .zero
                     node.name = "chunk:\(coordinate.x),\(coordinate.y)"
                     nodes[coordinate] = node

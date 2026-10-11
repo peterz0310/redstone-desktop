@@ -45,16 +45,22 @@ final class TerrainAmbience {
         }
     }
 
-    func shader(mask: SKTexture) -> SKShader {
+    func shader(mask: SKTexture, textureSize: CGSize = CGSize(width: 1, height: 1)) -> SKShader {
         let shader = SKShader(source: Self.source)
-        shader.uniforms = [atlas, time, motion] + phases + [SKUniform(name: "u_liquidMap", texture: mask)]
+        shader.uniforms = [atlas, time, motion] + phases + [
+            SKUniform(name: "u_liquidMap", texture: mask),
+            SKUniform(name: "u_terrainSize", vectorFloat2: SIMD2(Float(textureSize.width), Float(textureSize.height)))
+        ]
         return shader
     }
 
     static let source = """
     void main() {
-        vec4 color = SKDefaultShading();
-        vec2 mask = texture2D(u_liquidMap, v_tex_coord).rg;
+        // Shader samplers can interpolate despite SKTexture.filteringMode. Sample
+        // exact texel centers for the baked terrain AND its semantic mask.
+        vec2 center = (floor(v_tex_coord * u_terrainSize) + 0.5) / u_terrainSize;
+        vec4 color = texture2D(u_texture, center);
+        vec2 mask = texture2D(u_liquidMap, center).rg;
         if (mask.r > 0.1) {
             float kind = floor(mask.r * 3.0 + 0.5) - 1.0;
             vec3 phase = kind < 0.5 ? u_shallowPhase : (kind < 1.5 ? u_deepPhase : u_lavaPhase);
@@ -67,7 +73,7 @@ final class TerrainAmbience {
             float glint = sin(u_ambienceTime * 1.4 + v_tex_coord.x * 87.0 + v_tex_coord.y * 53.0);
             color.rgb *= 1.0 + glint * 0.035 * u_motion;
         }
-        gl_FragColor = color;
+        gl_FragColor = color * v_color_mix;
     }
     """
 }

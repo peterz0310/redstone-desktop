@@ -3,6 +3,13 @@
 These are physical-Mac checks, separate from automated tests. Report which numbered groups you actually tried and what failed; untested groups remain unverified. Use harmless folders/text files first. Place new test circuits on clear ground **to the right** of your existing builds. Do not use scripts for display-calibration tests.
 
 
+## Terrain sharpness follow-up — awaiting owner confirmation
+
+1. Quit the previous app copy and open the update. Zoom in on grass, stone, sand, leaves and flowers with both Original Look and imported Java textures. Their pixels should be crisp rather than smoothly blurred; water/lava should keep animating.
+2. Pan and zoom across chunk boundaries in the editor, then check Desktop at its normal scale. Look for stable pixel edges and no water/glint bleeding onto adjacent ground. Component icons and labels should retain their usual appearance. Reduce Motion should still freeze the ambience.
+
+The new rendered-pixel test reproduced the shader blur despite nearest texture flags. It now verifies exact pixel-center sampling, unchanged crisp colors and preserved node alpha. Real appearance remains pending owner confirmation.
+
 ## Terrain saving and desktop assignment recovery — awaiting owner confirmation
 
 1. Quit the current copy, then open the update (or run with ⌘R in Xcode). Your saved worlds, areas and circuits should reappear; no reset is required. Settings → Data should show saving available. The older library receives an exact-byte backup beside `library.json` before upgrading.

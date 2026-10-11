@@ -31,12 +31,13 @@ final class TerrainUpgradeTests: XCTestCase {
         XCTAssertEqual(try FileManager.default.contentsOfDirectory(atPath: store.fileURL.deletingLastPathComponent().path).count, 2)
     }
     func testOlderExportsReceiveTheSameUpgradeWithoutChangingSource() throws {
-        let original = oldLibrary(), bytes = try JSONEncoder().encode(original)
-        let decoded = try LibraryImport.decode(bytes)
+        let original = oldLibrary(), bytes = try JSONEncoder().encode(original), source = try store().fileURL
+        try bytes.write(to: source)
+        let decoded = try LibraryImport.read(from: source)
         XCTAssertEqual(decoded.worlds[0].generation.generationVersion, 3)
         XCTAssertEqual(decoded.worlds[0].circuit, original.worlds[0].circuit)
         XCTAssertEqual(decoded.areas, original.areas)
-        XCTAssertEqual(bytes, try JSONEncoder().encode(original))
+        XCTAssertEqual(bytes, try Data(contentsOf: source))
         try decoded.validate()
     }
 

@@ -69,7 +69,7 @@ final class TerrainAnimationTests: XCTestCase {
         assets.apply(LoadedPack(manifest: PackManifest(name: "Original test", assets: [:]), textures: [:], sounds: [:], warnings: [], animations: [.waterShallow: animation]))
         let ambience = TerrainAmbience(assets: assets)
         let mask = SKTexture(cgImage: try XCTUnwrap(RasterAsset(width: 1, height: 1, pixels: [85,0,0,255]).cgImage))
-        let node = SKSpriteNode(color: .blue, size: CGSize(width: 64, height: 64))
+        let node = SKSpriteNode(color: .white, size: CGSize(width: 64, height: 64))
         node.anchorPoint = .zero; node.shader = ambience.shader(mask: mask)
         let view = SKView(frame: CGRect(x: 0, y: 0, width: 64, height: 64))
         func color() throws -> NSColor {
@@ -86,6 +86,36 @@ final class TerrainAnimationTests: XCTestCase {
         XCTAssertGreaterThan(try color().redComponent, 0.9)
         ambience.advance(at: 99, reducedMotion: true)
         XCTAssertGreaterThan(try color().redComponent, 0.9)
+    }
+
+    @MainActor
+    func testAmbiencePreservesNearestNeighborPixelsForStaticTerrain() throws {
+        var pixels: [UInt8] = []
+        for y in 0..<16 { for x in 0..<16 { pixels += (x + y) % 2 == 0 ? [255, 0, 0, 255] : [0, 0, 255, 255] } }
+        let texture = SKTexture(cgImage: try XCTUnwrap(RasterAsset(width: 16, height: 16, pixels: pixels).cgImage))
+        texture.filteringMode = .nearest; texture.usesMipmaps = false
+        let node = SKSpriteNode(texture: texture); node.anchorPoint = .zero; node.size = CGSize(width: 160, height: 160)
+        let view = SKView(frame: CGRect(x: 0, y: 0, width: 160, height: 160))
+        func mixedPixels() throws -> Int {
+            let rendered = try XCTUnwrap(view.texture(from: node, crop: CGRect(x: 0, y: 0, width: 160, height: 160)))
+            let bitmap = NSBitmapImageRep(cgImage: rendered.cgImage())
+            var mixed = 0
+            for y in 5..<155 { for x in 5..<155 {
+                let color = try XCTUnwrap(bitmap.colorAt(x: x, y: y)?.usingColorSpace(.deviceRGB))
+                if color.redComponent > 0.02 && color.blueComponent > 0.02 { mixed += 1 }
+            } }
+            return mixed
+        }
+        let baseline = try mixedPixels()
+        XCTAssertEqual(baseline, 0)
+        let mask = SKTexture(cgImage: try XCTUnwrap(RasterAsset(width: 1, height: 1, pixels: [0,0,0,255]).cgImage))
+        let ambience = TerrainAmbience(assets: BuiltInAssetProvider())
+        node.shader = ambience.shader(mask: mask, textureSize: texture.size())
+        XCTAssertEqual(try mixedPixels(), baseline, "Static terrain must remain as crisp as a nearest-filtered sprite.")
+        node.alpha = 0.5
+        let rendered = try XCTUnwrap(view.texture(from: node, crop: CGRect(x: 0, y: 0, width: 160, height: 160)))
+        let bitmap = NSBitmapImageRep(cgImage: rendered.cgImage())
+        XCTAssertEqual(try XCTUnwrap(bitmap.colorAt(x: 5, y: 5)).alphaComponent, 0.5, accuracy: 0.02)
     }
 
     @MainActor
