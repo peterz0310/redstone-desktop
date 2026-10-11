@@ -32,7 +32,7 @@ Explore winding rivers, forests, deserts and snowy hills. Paint the terrain, cle
 
 ![Original-art world examples: a river through woodland and a snowy forest](docs/media/worlds.png)
 
-Set each world to a day/night cycle, or hold it at your favorite time of day. Torches, lava, powered dust and lamps bring it to life after dark.
+Set each world to a day/night cycle, follow your Mac’s local time, or hold it at your favorite time of day. A custom day can last anywhere from 2 minutes to 24 hours. Torches, lava, powered dust and lamps bring it to life after dark.
 
 ![The same original-art circuit by day and at night, with a lit lamp, torches and lava](docs/media/lighting.png)
 

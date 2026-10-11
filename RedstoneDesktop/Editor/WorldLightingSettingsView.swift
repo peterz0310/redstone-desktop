@@ -19,6 +19,18 @@ struct WorldLightingSettingsView: View {
         let hour = minutes / 60
         return "\(hour % 12 == 0 ? 12 : hour % 12):\(String(format: "%02d", minutes % 60)) \(hour < 12 ? "AM" : "PM")"
     }
+    private var durationLabel: String {
+        let minutes = Int(settings.cycleMinutes)
+        if minutes < 60 { return "\(minutes) minutes" }
+        let hours = minutes / 60, remainder = minutes % 60
+        return remainder == 0 ? "\(hours) \(hours == 1 ? "hour" : "hours")" : "\(hours) hr \(remainder) min"
+    }
+    // A logarithmic slider leaves usable room for short cycles as well as a full real day.
+    private var durationSlider: Binding<Double> {
+        Binding(get: { log(settings.cycleMinutes) }, set: {
+            settings.cycleMinutes = min(1440, max(2, exp($0).rounded()))
+        })
+    }
     var body: some View {
         VStack(alignment: .leading, spacing: 18) {
             Text("World Settings").font(.title2.bold())
@@ -30,10 +42,19 @@ struct WorldLightingSettingsView: View {
                 Text("Day & Night").tag(WorldLightingSettings.Mode.cycle)
                 Text("Always Night").tag(WorldLightingSettings.Mode.night)
                 Text("Fixed Time").tag(WorldLightingSettings.Mode.fixed)
+                Text("Match System Time").tag(WorldLightingSettings.Mode.systemTime)
             }.pickerStyle(.menu)
             if settings.mode == .cycle || settings.mode == .fixed {
                 if settings.mode == .cycle {
-                    Stepper("Full day: \(Int(settings.cycleMinutes)) minutes", value: $settings.cycleMinutes, in: 2...120, step: 1)
+                    HStack { Text("Full day"); Spacer(); Text(durationLabel).monospacedDigit() }
+                    Slider(value: durationSlider, in: log(2)...log(1440))
+                        .accessibilityLabel("Full day duration").accessibilityValue(durationLabel)
+                    HStack { Text("2 minutes"); Spacer(); Text("24 hours") }.font(.caption).foregroundStyle(.secondary)
+                    HStack {
+                        Button("20 minutes") { settings.cycleMinutes = 20 }
+                        Button("1 hour") { settings.cycleMinutes = 60 }
+                        Button("24 hours") { settings.cycleMinutes = 1440 }
+                    }.controlSize(.small)
                 }
                 HStack { Text(settings.mode == .fixed ? "Keep at" : "Start at"); Spacer(); Text(clockLabel).monospacedDigit() }
                 Slider(value: $settings.startPhase, in: 0...1, step: 1.0 / 96)
@@ -46,6 +67,12 @@ struct WorldLightingSettingsView: View {
                 Text(settings.mode == .fixed
                     ? "This world stays at this time, even when you reopen the app."
                     : "Time continues while the app is closed. Areas in this world share the same clock.")
+                    .font(.caption).foregroundStyle(.secondary)
+            }
+            if settings.mode == .systemTime {
+                Text("Follow your Mac’s local clock: noon in real life is noon here, and midnight is night. It stays in sync after sleep or reopening, and follows changes to your time zone.")
+                    .font(.callout).foregroundStyle(.secondary)
+                Text("Dawn is around 6 AM and dusk around 6 PM. No location access is needed.")
                     .font(.caption).foregroundStyle(.secondary)
             }
             Toggle("Light nearby ground with torches, lava and redstone", isOn: $settings.localLights)

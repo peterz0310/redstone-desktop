@@ -47,6 +47,12 @@ def validate(path):
         icon_stacks = [entry for entry in entries if entry.get('Name') == 'AppIcon' and entry.get('AssetType') == 'IconImageStack']
         appearances = {entry.get('Appearance') for entry in icon_stacks}
         assert {'NSAppearanceNameAqua', 'NSAppearanceNameDarkAqua'}.issubset(appearances), 'Native light/dark icon variants missing'
+        stacks_by_appearance = {entry.get('Appearance'): entry for entry in icon_stacks}
+        light = stacks_by_appearance['NSAppearanceNameAqua']
+        dark = stacks_by_appearance['NSAppearanceNameDarkAqua']
+        assert light.get('SHA1Digest') != dark.get('SHA1Digest'), 'Light/dark icon compositions are identical'
+        assert light['Layers'][0]['Name'].endswith('/system-light'), 'Light icon background mismatch'
+        assert dark['Layers'][0]['Name'].endswith('/system-dark'), 'Dark icon background mismatch'
         logo_appearances = {entry.get('Appearance') for entry in entries if entry.get('Name') == 'AppLogo'}
         assert 'NSAppearanceNameDarkAqua' in logo_appearances, 'In-app dark logo missing'
         retired = {'RedstoneDust', 'MenuDust', 'ToolDust', 'ToolButton', 'ToolLever', 'ToolRepeater', 'ToolOutput', 'ToolTorch'}

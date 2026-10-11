@@ -1,4 +1,5 @@
 import SpriteKit
+import SwiftUI
 import XCTest
 @testable import RedstoneDesktop
 
@@ -145,4 +146,76 @@ final class WorldLightingTests: XCTestCase {
         XCTAssertEqual(renderer.textureBuilds, fixedBuilds)
 
     }
+    func testFullRealDayCyclePersistsAndWrapsWithoutDrifting() throws {
+        let clock = WorldLightingSettings(mode: .cycle, cycleMinutes: 1440, startPhase: 0.25, anchorTime: 100)
+        try clock.validate()
+        XCTAssertEqual(clock.phase(at: 100 + 86400), 0.25, accuracy: 0.000001)
+        XCTAssertEqual(clock.daylight(at: 100 + 43200), 0.22, accuracy: 0.000001)
+        let restored = try JSONDecoder().decode(WorldLightingSettings.self, from: JSONEncoder().encode(clock))
+        XCTAssertEqual(restored.phase(at: 100 + 365 * 86400), 0.25, accuracy: 0.000001)
+        XCTAssertThrowsError(try WorldLightingSettings(cycleMinutes: 1441).validate())
+        XCTAssertThrowsError(try WorldLightingSettings(cycleMinutes: .infinity).validate())
+    }
+
+    func testSystemTimeMatchesLocalHoursAndIgnoresCycleAnchor() throws {
+        var calendar = Calendar(identifier: .gregorian)
+        calendar.timeZone = try XCTUnwrap(TimeZone(secondsFromGMT: 0))
+        let clock = WorldLightingSettings(mode: .systemTime, cycleMinutes: 2, startPhase: 0.123, anchorTime: 999)
+        for (hour, expected) in [(0, 0.75), (6, 0.0), (12, 0.25), (18, 0.5), (23, 17.0 / 24)] {
+            let date = try XCTUnwrap(calendar.date(from: DateComponents(year: 2026, month: 10, day: 11, hour: hour)))
+            XCTAssertEqual(clock.phase(at: date.timeIntervalSince1970, calendar: calendar), expected, accuracy: 0.000001)
+            XCTAssertEqual(clock.daylight(at: date.timeIntervalSince1970, calendar: calendar),
+                WorldLightingSettings(mode: .fixed, startPhase: expected).daylight(at: 0), accuracy: 0.000001)
+            XCTAssertEqual(clock.phase(at: date.addingTimeInterval(86400 * 7).timeIntervalSince1970, calendar: calendar), expected, accuracy: 0.000001)
+        }
+        XCTAssertEqual(clock.phase(at: .infinity, calendar: calendar), clock.startPhase)
+        XCTAssertEqual(clock.phase(at: .greatestFiniteMagnitude, calendar: calendar), clock.startPhase)
+    }
+
+    func testSystemTimeFollowsTimeZoneAndBothDaylightSavingTransitions() throws {
+        let clock = WorldLightingSettings(mode: .systemTime)
+        let formatter = ISO8601DateFormatter()
+        func time(_ iso: String) throws -> Double { try XCTUnwrap(formatter.date(from: iso)).timeIntervalSince1970 }
+        var chicago = Calendar(identifier: .gregorian)
+        chicago.timeZone = try XCTUnwrap(TimeZone(identifier: "America/Chicago"))
+        var utc = chicago; utc.timeZone = try XCTUnwrap(TimeZone(secondsFromGMT: 0))
+        let winter = try time("2026-01-11T18:00:00Z")
+        XCTAssertEqual(clock.phase(at: winter, calendar: chicago), 0.25, accuracy: 0.000001)
+        XCTAssertEqual(clock.phase(at: winter, calendar: utc), 0.5, accuracy: 0.000001)
+        let beforeSpring = clock.phase(at: try time("2026-03-08T07:59:00Z"), calendar: chicago)
+        let afterSpring = clock.phase(at: try time("2026-03-08T08:01:00Z"), calendar: chicago)
+        XCTAssertEqual(afterSpring - beforeSpring, 62.0 / 1440, accuracy: 0.000001)
+        let beforeFall = clock.phase(at: try time("2026-11-01T06:59:00Z"), calendar: chicago)
+        let afterFall = clock.phase(at: try time("2026-11-01T07:01:00Z"), calendar: chicago)
+        XCTAssertEqual(afterFall - beforeFall, -58.0 / 1440, accuracy: 0.000001)
+    }
+
+    func testSystemTimeSurvivesLibrarySaveReopenExportAndImport() throws {
+        let root = FileManager.default.temporaryDirectory.appendingPathComponent("SystemTime-\(UUID())")
+        try FileManager.default.createDirectory(at: root, withIntermediateDirectories: true)
+        defer { try? FileManager.default.removeItem(at: root) }
+        let store = WorldLibraryStore(fileURL: root.appendingPathComponent("library.json"), legacyFileURL: root.appendingPathComponent("old.json"))
+        var world = WorldDocument(); world.lighting = WorldLightingSettings(mode: .systemTime, localLights: false)
+        let library = WorldLibraryDocument(world: world)
+        try store.save(library)
+        XCTAssertEqual(try store.load(), library)
+        let imported = try LibraryImport.adding(LibraryImport.read(from: store.fileURL), to: WorldLibraryDocument())
+        XCTAssertEqual(imported.worlds.last?.lighting, world.lighting)
+        XCTAssertEqual(imported.worlds.first?.lighting.mode, .day)
+    }
+
+    @MainActor func testLightingControlsFitEveryModeIncludingFullRealDayWithoutStartingDesktop() {
+        let state = AppState(); defer { state.shutdown() }
+        for mode in WorldLightingSettings.Mode.allCases {
+            var world = state.selectedDocument
+            world.lighting = WorldLightingSettings(mode: mode, cycleMinutes: 1440)
+            let host = NSHostingView(rootView: WorldLightingSettingsView(appState: state, world: world))
+            host.layoutSubtreeIfNeeded()
+            XCTAssertEqual(host.fittingSize.width, 450)
+            XCTAssertLessThan(host.fittingSize.height, 650)
+            XCTAssertEqual(state.finderDiagnostics.readAttempts, 0)
+            XCTAssertFalse(state.isDesktopWorldEnabled)
+        }
+    }
+
 }

@@ -289,3 +289,14 @@ Desktop click investigation remains open: the owner reports missed clicks on the
 - [ ] MANUAL: Open README on GitHub and in the extracted review ZIP. Verify its adaptive logo, circuit animation, world examples, day/night image and guide links load, and the first-circuit instructions are understandable. The DMG section must say it is coming, with no pretend download link.
 
 Automated validation: Debug build and all 582 XCTest tests passed. The universal arm64/x86_64 Release app and actual review ZIP passed the release verifier, including compiled light/dark icon appearances and bundled README media. Every README image/relative guide link was checked in source and ZIP. Light/dark variants were previewed in native Icon Composer; the generated static fallback was inspected separately. These checks do not replace the pending Mac acceptance items above.
+
+## Long days and local system time (2026-10-11)
+
+- [ ] MANUAL: Open World Settings → Day & Night. Drag the Full day slider from 2 minutes to 24 hours; check the duration label and the 20 minutes / 1 hour / 24 hours presets. Save a 24-hour cycle, reopen settings, and verify it is retained. Cancel a subsequent change and verify the saved setting stays unchanged.
+- [ ] MANUAL: Choose Match System Time. Duration/start-time controls should disappear. Save and compare the world lighting with the current local time (noon is bright, midnight is dark, dawn/dusk around 6 AM/PM). Quit/reopen or sleep/wake: it should follow the current time without resetting the world clock. Other worlds keep their own settings; circuits continue normally.
+- [x] MANUAL: Owner confirmed the Dock icon looks good after the dark icon-style check. Read-only diagnosis found Dark window appearance with Default icon style; Dark icon style selects the compiled dark background. Normal Debug builds contain both variants; Release is not required.
+- [ ] MANUAL: Check Icon & widget style → Dark → Auto across both Light and Dark window appearance, and verify the Dock icon follows both transitions. Switching only window appearance while icon style is Default is not a dark-icon test.
+
+Read-only diagnosis found Dark window appearance with Default icon style on the owner’s Mac. Both compiled app-icon variants have distinct compositions and the intended light/dark background layers. The owner confirmed the dark-icon appearance looks good; both automatic transitions remain a separate check.
+
+Automated clock validation: Debug build and all 587 XCTest tests passed, including the five new duration/local-time/persistence/sheet checks. An initial run exited before finishing an unrelated Java-import test; that test passed in isolation and the complete rerun passed. No additional code changes were needed for that interruption.
