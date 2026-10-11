@@ -71,7 +71,16 @@ struct WorldGenerator: Sendable {
         if elevation < 20500 {
             biome = .wetland; terrain = elevation < 16500 ? .deepWater : .shallowWater
         } else if riverDistance < 1500 {
-            biome = .wetland; terrain = riverDistance < 500 ? .deepWater : .shallowWater
+            biome = .wetland
+            let shallow = RiverShore.isShallow(at: coordinate, width: detail > 32768 ? 2 : 1) { neighbor in
+                let contour = abs(SeededNoise.value(seed: seed, at: neighbor, scale: 160, channel: 7) - 32768
+                    + (SeededNoise.value(seed: seed, at: neighbor, scale: 48, channel: 8) - 32768) / 5)
+                if contour < 1500 { return true }
+                let height = (SeededNoise.value(seed: seed, at: neighbor, scale: 128, channel: 1) * 3
+                    + SeededNoise.value(seed: seed, at: neighbor, scale: 48, channel: 2)) / 4
+                return height < 20500 // Confluences meet lake water without a false inner shore.
+            }
+            terrain = shallow ? .shallowWater : .deepWater
         } else if elevation < 22300 || riverDistance < 2300 {
             biome = .wetland; terrain = temperature > 39000 && moisture < 27000 ? .sand : .gravel
         } else if temperature < 20000 || (elevation > 47500 && temperature < 36000) {

@@ -15,7 +15,7 @@ struct TerrainPreview {
         for (index, seed) in seeds.enumerated() {
             let generator = try WorldGenerator(settings: WorldGenerationSettings(seed: seed))
             let offset = 16 + index * 408
-            label("Generation 2 · Seed \(seed)", x: offset, y: 834)
+            label("Generation 3 · Seed \(seed)", x: offset, y: 834)
             var biomes: [String: Int] = [:]
             for y in 0..<192 { for x in 0..<192 {
                 let point = WorldCoordinate(x: (x - 96) * 4, y: (y - 96) * 4)

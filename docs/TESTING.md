@@ -3,6 +3,12 @@
 These are physical-Mac checks, separate from automated tests. Report which numbered groups you actually tried and what failed; untested groups remain unverified. Use harmless folders/text files first. Place new test circuits on clear ground **to the right** of your existing builds. Do not use scripts for display-calibration tests.
 
 
+## Wider deep river channels — awaiting owner confirmation
+
+1. Quit the running copy (⌘Q), then run the updated app with ⌘R in Xcode or open the newly built app. Revisit the river from your screenshot: most of its width should be dark deep water, with a light shallow strip only one or two tiles thick beside each bank. No new world or texture refresh is required.
+2. Follow some bends and river/lake junctions in the editor and on Desktop. Look for continuous water across chunk boundaries, reeds only on shallow tiles, and responsive panning. Very narrow streams can be entirely shallow; lakes keep their existing depth rules.
+3. Confirm your existing circuits and painted terrain remain in place. The river's outer outline and dry banks should stay unchanged; explicitly painted shallow/deep water should retain its chosen type after reopening.
+
 ## Terrain sharpness follow-up — awaiting owner confirmation
 
 1. Quit the previous app copy and open the update. Zoom in on grass, stone, sand, leaves and flowers with both Original Look and imported Java textures. Their pixels should be crisp rather than smoothly blurred; water/lava should keep animating.
