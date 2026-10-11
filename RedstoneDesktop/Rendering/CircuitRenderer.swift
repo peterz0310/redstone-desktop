@@ -17,6 +17,13 @@ final class CircuitRenderer {
             let powered = level > .off
             let brightness: CGFloat = powered ? 0.45 + 0.55 * CGFloat(level.rawValue) / 15 : 1
             guard let textureID = CircuitTextureID.id(for: component.kind, powered: component.kind == .lever ? (leverPositions?.contains(coordinate) ?? powered) : powered) else { continue }
+            if component.kind == .lamp {
+                let icon = SKSpriteNode(texture: textures.texture(for: textureID))
+                icon.name = "component-icon:\(coordinate.x),\(coordinate.y)"
+                icon.size = rect.size; icon.position = center
+                layer.addChild(icon)
+                continue
+            }
             if component.kind == .output {
                 let node = SKShapeNode(rect: rect)
                 node.name = "OUTPUT"
@@ -44,7 +51,7 @@ final class CircuitRenderer {
                 let radius = rect.width / 10
                 wire.addRect(CGRect(x: center.x - radius, y: center.y - radius, width: radius * 2, height: radius * 2))
                 for neighbor in world.occupiedCardinalNeighbors(at: coordinate) {
-                    guard let other = world.components[neighbor] else { continue }
+                    guard let other = world.components[neighbor], other.kind != .lightTorch else { continue }
                     // A repeater has ports only at its rear and front, never at its sides.
                     if other.kind == .repeater,
                        other.direction.neighbor(of: neighbor) != coordinate,
@@ -91,7 +98,8 @@ final class CircuitRenderer {
                     case .output:
                         connects = outgoing || other.emitsPower(from: neighbor, to: coordinate, receiver: component)
                     case .button, .lever, .pressurePlate, .fileSensor: connects = !outgoing
-                    case .empty: connects = false
+                    case .lamp: connects = outgoing
+                    case .empty, .lightTorch: connects = false
                     }
                     guard connects else { continue }
                     let tip = mapper.sceneRect(forTile: neighbor, on: screen)
@@ -137,6 +145,7 @@ final class CircuitRenderer {
             node.addChild(icon)
             let labelText: String
             switch component.kind {
+            case .lightTorch: labelText = "TORCH"
             case .pressurePlate: labelText = powered ? "DOWN" : "PLATE"
             case .fileSensor: labelText = powered ? "FOUND" : "SENSOR"
             case .button: labelText = powered ? "DOWN" : "PRESS"

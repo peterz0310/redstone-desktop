@@ -23,6 +23,9 @@ struct ToolIcon: View {
             if name == "Select" { Image(systemName: "rectangle.dashed") }
             else if name == "Move" { Image(systemName: "cursorarrow") }
             else if name == "Terrain" { Image(systemName: "paintbrush.pointed.fill") }
+            else if name == "Lamp" { Image(systemName: "lightbulb.fill") }
+            else if name == "R. Torch" { Image("ToolTorch").renderingMode(.template).resizable().interpolation(.none).scaledToFit() }
+            else if name == "Torch" { Image(systemName: "flame.fill") }
             else if name == "Plate" { Image(systemName: "square.stack.3d.down.right.fill") }
             else if name == "Sensor" { Image(systemName: "doc.text.magnifyingglass") }
             else if name == "Erase" { Image(systemName: "eraser.fill") }

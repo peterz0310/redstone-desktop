@@ -85,6 +85,8 @@ All IDs below accept **PNG only**. These are the actual format-1 names; examples
 | `redstoneRepeaterOn` | Powered repeater icon, pointing right/east |
 | `redstonePlateOff` / `redstonePlateOn` | Desktop pressure plate; original-art fallback in older packs/Java imports |
 | `redstoneSensorOff` / `redstoneSensorOn` | File sensor; original-art fallback in older packs/Java imports |
+| `redstoneLampOff` / `redstoneLampOn` | Full-block unpowered / powered lamp face |
+| `lightTorch` | Always-lit regular torch icon; no redstone power |
 | `redstoneTorchOff` | Off torch icon |
 | `redstoneTorchOn` | On torch icon |
 | `redstoneOutputOff` | Unpowered output icon |

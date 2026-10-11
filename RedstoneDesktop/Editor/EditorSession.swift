@@ -7,7 +7,7 @@ final class EditorSession: ObservableObject {
     enum Tool: String, CaseIterable {
         case select = "Move", region = "Select", erase = "Erase", terrain = "Terrain"
         case dust = "Dust", button = "Button"
-        case lever = "Lever", repeater = "Repeater", output = "Output", torch = "Torch", pressurePlate = "Plate", fileSensor = "Sensor"
+        case lever = "Lever", repeater = "Repeater", output = "Output", torch = "R. Torch", lamp = "Lamp", lightTorch = "Torch", pressurePlate = "Plate", fileSensor = "Sensor"
 
         var componentKind: CircuitComponentKind? {
             switch self {
@@ -16,6 +16,8 @@ final class EditorSession: ObservableObject {
             case .lever: return .lever
             case .pressurePlate: return .pressurePlate
             case .fileSensor: return .fileSensor
+            case .lamp: return .lamp
+            case .lightTorch: return .lightTorch
             case .torch: return .torch
             case .repeater: return .repeater
             case .output: return .output

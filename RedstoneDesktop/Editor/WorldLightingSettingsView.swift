@@ -48,7 +48,7 @@ struct WorldLightingSettingsView: View {
                     : "Time continues while the app is closed. Areas in this world share the same clock.")
                     .font(.caption).foregroundStyle(.secondary)
             }
-            Toggle("Light nearby ground with lava and powered redstone", isOn: $settings.localLights)
+            Toggle("Light nearby ground with torches, lava and redstone", isOn: $settings.localLights)
             Text("Lights are easiest to see at night. They change the look of your world, not how circuits work.")
                 .font(.caption).foregroundStyle(.secondary)
             if !error.isEmpty { Text(error).foregroundStyle(.red) }

@@ -65,6 +65,9 @@ Modern paths below are relative to `assets/minecraft/textures/block/`. Legacy pa
 | `redstoneLeverOn` | `lever.png` | `lever.png` | On handle recipe |
 | `redstoneRepeaterOff` | `repeater.png` | `repeater_off.png` | East-facing top/indicator recipe |
 | `redstoneRepeaterOn` | `repeater_on.png` | `repeater_on.png` | East-facing top/indicator recipe |
+| `redstoneLampOff` | `redstone_lamp.png` | `redstone_lamp_off.png` | Full square lamp face |
+| `redstoneLampOn` | `redstone_lamp_on.png` | `redstone_lamp_on.png` | Full square lit lamp face |
+| `lightTorch` | `torch.png` | `torch_on.png` | Regular torch; unchanged pixels |
 | `redstoneTorchOff` | `redstone_torch_off.png` | `redstone_torch_off.png` | First square frame, unchanged pixels |
 | `redstoneTorchOn` | `redstone_torch.png` | `redstone_torch_on.png` | First square frame, unchanged pixels |
 | `redstoneDustOff` | `redstone_dust_dot.png` | `redstone_dust_dot.png` | Dark red material recipe |
@@ -131,3 +134,5 @@ Code: `Assets/MinecraftImport/JavaTextureImporter.swift` owns discovery/mapping/
 Tests in `JavaTextureImportTests.swift` use original synthetic PNGs in a real deflated ZIP, isolated preferences and temporary roots. They cover discovery, modern/legacy mappings, tint, liquid frames/timing/cache round trips, static first-frame fallback, ignored unrelated data, partial fallback, rejection/write failure, managed deletion, source preservation, reload/re-import/startup and inactive-cache removal. Extend mappings with original fixtures and explicit fallback expectations. A real local JAR can be validated in a temporary cache without committing its images or changing the owner's active selection.
 
 The animation follow-up was also checked against the locally installed **1.21.8 JAR** in a temporary cache: 37 textures, no import warnings; water has 32 frames at 0.1 seconds each, and lava has 20 frames in a 38-step forward/backward sequence at 0.1 seconds each. Cache reload preserved the sequences. This read did not change the owner’s active pack, save data or source JAR, and its temporary imported images were removed. Other Java versions/packs still need their own validation.
+
+Lamps and regular torches use original art when missing from a pack. Existing imported caches keep their original mappings; choose **Refresh Imported Minecraft Textures** for the Minecraft JAR or Java pack to pick up the three new mappings. They are image data only, never code, models or scripts.

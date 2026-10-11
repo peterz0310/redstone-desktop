@@ -77,3 +77,9 @@ Physical Finder interaction, rendered appearance and these owner checks remain m
 8. Stop while a refresh/action is pending: nothing queued should open afterward. Quit/reopen and confirm placements/delay persist, Desktop starts stopped and existing circuits work.
 
 The renderer draws repeater connections only at its front and rear. Adjacent Outputs/dust do not gain direct broadcast power from this feature. No demonstration circuit is automatically added to existing saved worlds. Manual acceptance of these physical Mac checks remains pending.
+
+## Lamps and regular torches
+
+**Lamp** is a redstone sink: it senses the strongest emitting cardinal neighbor on each tick and lights at positive power. Dust attenuation and repeater front-only output still apply. Lamps do not supply dust, repeaters, other lamps or Outputs; they never emit action events. On/off follows the current tick without an extra decay delay. At night their local illumination follows signal strength, like other powered redstone components.
+
+**Torch** is an always-lit light source. It supplies no redstone power, has no directional ports and never triggers an action. **R. Torch** remains the rear-input redstone inverter described above. Both are saved as ordinary world components and use the usual terrain placement, erase, selection, undo and blueprint rules. The new serialized kinds are `lamp` and `lightTorch`; older app builds cannot decode worlds/blueprints containing them. No terrain or world reset is required.

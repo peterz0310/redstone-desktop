@@ -55,7 +55,7 @@ final class DesktopBuildTests: XCTestCase {
         session.selectTool(number: DesktopBuildSession.Tool.allCases.count); session.cycleTool(forward: true)
         XCTAssertEqual(session.tool, .dust)
         session.cycleTool(forward: false)
-        XCTAssertEqual(session.tool, .terrain)
+        XCTAssertEqual(session.tool, .lightTorch)
         for _ in 0..<4 { session.rotateDirection() }
         XCTAssertEqual(session.direction, .east)
     }

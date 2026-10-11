@@ -21,7 +21,7 @@ import AppKit
                     NSColor(calibratedRed: 0.65, green: 0.10, blue: 0.13, alpha: 1).setFill()
                     let path = NSBezierPath(); path.lineWidth = max(1, scale / 5)
                     for neighbor in blueprint.circuit.occupiedCardinalNeighbors(at: tile) {
-                        guard let other = blueprint.circuit.components[neighbor] else { continue }
+                        guard let other = blueprint.circuit.components[neighbor], other.kind != .lightTorch else { continue }
                         if other.kind == .repeater, other.direction.neighbor(of: neighbor) != tile, other.direction.opposite.neighbor(of: neighbor) != tile { continue }
                         let next = mapper.screenRect(forTile: neighbor)
                         path.move(to: center); path.line(to: CGPoint(x: (center.x + next.midX) / 2, y: (center.y + next.midY) / 2))

@@ -10,6 +10,8 @@ enum ToolDescriptions {
         case .lever: "A switch that holds power until you turn it off. Useful for enabling circuits and clocks."
         case .dust: "Carries power between neighboring components. Longer wire runs gradually lose signal strength."
         case .repeater: "Delays the signal and restores full power. Its arrow points forward; it accepts power only from behind."
+        case .lamp: "Lights up when a neighboring wire or component supplies power. Brightens the surrounding ground at night without sending power onward."
+        case .lightTorch: "An always-lit torch that brightens its surroundings at night. It does not send redstone power."
         case .torch: "An inverter: on when its rear input is off, and off when that input is powered. Its arrow points forward."
         case .output: "Opens or runs the desktop item on its tile when power first turns on. Choose Do Nothing for a visual-only circuit."
         case .pressurePlate: "Holds power while any Finder item occupies its tile. Move the item away to turn it off."

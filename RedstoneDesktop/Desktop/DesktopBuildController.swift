@@ -261,11 +261,11 @@ private struct DesktopBuildHotbar: View {
                 Spacer()
                 Button("Exit Build Mode") { appState.exitDesktopBuildMode() }.keyboardShortcut(.cancelAction)
             }
-            ForEach(0..<2) { row in
+            ForEach(0..<((DesktopBuildSession.Tool.allCases.count + 4) / 5), id: \.self) { row in
                 HStack(spacing: 5) {
                     ForEach(Array(DesktopBuildSession.Tool.allCases.enumerated()).filter { $0.offset / 5 == row }, id: \.element) { index, tool in
                         Button { session.tool = tool } label: {
-                            Label { Text("\(index == 9 ? 0 : index + 1) \(tool.rawValue)") } icon: { ToolIcon(name: tool.rawValue) }
+                            Label { Text((index < 10 ? "\(index == 9 ? 0 : index + 1) " : "") + tool.rawValue) } icon: { ToolIcon(name: tool.rawValue) }
                         }.tint(session.tool == tool ? .accentColor : .secondary).help(tool.description)
                     }
                 }

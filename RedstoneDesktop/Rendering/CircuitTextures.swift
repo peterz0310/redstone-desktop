@@ -5,10 +5,14 @@ enum CircuitTextureID: String, CaseIterable {
     case dustOff, dustOn, buttonUp, buttonDown, leverOff, leverOn
     case repeaterOff, repeaterOn, outputOff, outputOn, torchOff, torchOn
 
+    case lampOff, lampOn, lightTorch
     case plateOff, plateOn, sensorOff, sensorOn
 
     var assetID: TextureAssetID {
         switch self {
+        case .lampOff: .redstoneLampOff
+        case .lampOn: .redstoneLampOn
+        case .lightTorch: .lightTorch
         case .plateOff: .redstonePlateOff
         case .plateOn: .redstonePlateOn
         case .sensorOff: .redstoneSensorOff
@@ -30,6 +34,8 @@ enum CircuitTextureID: String, CaseIterable {
 
     static func id(for kind: CircuitComponentKind, powered: Bool) -> CircuitTextureID? {
         switch kind {
+        case .lamp: return powered ? .lampOn : .lampOff
+        case .lightTorch: return .lightTorch
         case .pressurePlate: return powered ? .plateOn : .plateOff
         case .fileSensor: return powered ? .sensorOn : .sensorOff
         case .dust: return powered ? .dustOn : .dustOff
@@ -72,6 +78,20 @@ final class CircuitTextures {
             let hot = NSColor(calibratedRed: 1, green: 0.09, blue: 0.12, alpha: 1)
             let red = NSColor(calibratedRed: 0.42, green: 0.05, blue: 0.07, alpha: 1)
             switch id {
+            case .lampOff, .lampOn:
+                fill(CGRect(x: 0, y: 0, width: 32, height: 32), dark)
+                let lit = id == .lampOn
+                let glass = lit ? NSColor(calibratedRed: 1, green: 0.82, blue: 0.35, alpha: 1) : NSColor(calibratedRed: 0.35, green: 0.24, blue: 0.12, alpha: 1)
+                for x in [3, 17] { for y in [3, 17] {
+                    fill(CGRect(x: x, y: y, width: 12, height: 12), glass)
+                    fill(CGRect(x: x + 2, y: y + 2, width: 8, height: 8), lit ? .yellow : .brown)
+                } }
+            case .lightTorch:
+                fill(CGRect(x: 13, y: 3, width: 6, height: 19), .brown)
+                fill(CGRect(x: 14, y: 5, width: 2, height: 15), rim)
+                fill(CGRect(x: 10, y: 20, width: 12, height: 7), .orange)
+                fill(CGRect(x: 13, y: 23, width: 6, height: 7), .yellow)
+                fill(CGRect(x: 14, y: 24, width: 4, height: 3), .white)
             case .plateOff, .plateOn:
                 fill(CGRect(x: 2, y: 5, width: 28, height: 22), dark)
                 fill(CGRect(x: 4, y: 7, width: 24, height: 18), id == .plateOn ? hot : rim)

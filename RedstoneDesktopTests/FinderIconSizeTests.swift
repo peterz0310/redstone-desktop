@@ -183,6 +183,29 @@ final class FinderIconSizeTests: XCTestCase {
     }
 
     @MainActor
+    func testClickDuringFinderLayoutSettlingReportsWhyItWasBlocked() async {
+        let provider = IconSnapshotProvider()
+        provider.responses = [snapshot(64)]
+        let model = FinderDiagnosticsModel(provider: provider, layoutSettleDelay: .milliseconds(20))
+        let app = state(model)
+        defer { app.shutdown() }
+        await model.readItems(); app.toggleDesktopWorld()
+        provider.responses = [snapshot(128), snapshot(128)]
+        let settling = expectation(description: "Finder layout is settling")
+        let observer = model.$isLayoutSettling.filter { $0 }.prefix(1).sink { _ in settling.fulfill() }
+        let task = Task { await model.readItems() }
+        await fulfillment(of: [settling], timeout: 2)
+        app.handleCircuitClick(DemoCircuit.button)
+        XCTAssertEqual(app.observedPressCount, 1)
+        XCTAssertTrue(app.lastActionResult.contains("Click received"))
+        XCTAssertTrue(app.lastActionResult.contains("Finder is updating"))
+        XCTAssertNil(app.activationTask)
+        XCTAssertTrue(app.simulator.power.isEmpty)
+        _ = await task.value
+        observer.cancel()
+    }
+
+    @MainActor
     func testInputReadDetectingResizeCannotPressCircuitAndFreshRetryWorks() async {
         let provider = IconSnapshotProvider()
         provider.responses = [snapshot(64)]

@@ -206,3 +206,17 @@ Backup/reset testing remains deferred; the polish changes do not require Start O
 4. Inspect the GitHub Actions run after pushing: build, tests and Release archive must actually pass there. A local successful build is not a hosted-CI result. Signing/notarization remains optional and requires your credentials/asset distribution decision.
 
 Please report acceptance by group/substep, e.g. “1, 2, 4 passed; 3 skipped (one screen); 5 not attempted.” That keeps the testing record accurate without claiming untested destructive, permission or multi-display behavior.
+
+## Lamps and regular torches — Mac validation pending
+
+- [ ] Quit the previous app with ⌘Q, then run the updated app from Xcode with ⌘R.
+- [ ] Stop Desktop, open the selected world's gear and choose Always Night. Leave “Light nearby ground with torches, lava and redstone” enabled.
+- [ ] In Build, place a Torch on clear ground to the right of your existing circuits. Its surroundings brighten immediately, without Test Circuit. Place dust/Output next to it: it must not power them or open anything.
+- [ ] Place Lever → Dust → Lamp, start Test Circuit and click the lever. Lamp becomes a full lit block and brightens its surroundings; switching off darkens both. Lamp does not pass power into another dust wire or repeater behind it.
+- [ ] Turn local lights off in World Settings: night stays dark around Torch and powered Lamp. Turn them back on; illumination returns. Day and Fixed Time still behave normally.
+- [ ] Save/reopen and check that both components remain. Copy them into a blueprint and stamp it elsewhere; undo/redo and erase work normally.
+- [ ] Reimport your Minecraft textures (older caches do not acquire new mappings automatically); lamps and regular torches use their Java artwork. Built-In still provides distinct original art for each.
+- [ ] In Desktop Build Mode, use the third palette row to place Lamp and Torch. Exit Build Mode, start Desktop and test the lever/lamp circuit. Existing number shortcuts and all palette tools still work.
+- [ ] Try exposed Desktop button and lever clicks during Day and Night. Record Last action in Advanced → Desktop Details if an input does not respond. Confirm no file opens merely from a torch/lamp placement.
+
+Desktop click investigation remains open: the owner reports missed clicks on the running Desktop. Inputs blocked during Finder/display settling now report the reason and count the received press; this is diagnostic feedback, not a verified fix for the reported missed clicks. Capture Last action and event metadata from Desktop Details when reproducing. Automated input gates, queued reads, fresh-output routing and polling tests continue to pass.

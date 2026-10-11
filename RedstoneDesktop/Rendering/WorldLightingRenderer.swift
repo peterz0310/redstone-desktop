@@ -25,6 +25,7 @@ import SpriteKit
         var sources: [WorldCoordinate: Double] = [:]
         if settings.localLights {
             for tile in lava { sources[tile] = 1 }
+            for (tile, component) in world.circuit.components where component.kind == .lightTorch { sources[tile] = 1 }
             for (tile, level) in power where level > .off && world.circuit.components[tile] != nil {
                 sources[tile] = max(sources[tile] ?? 0, Double(level.rawValue) / 15)
             }

@@ -1436,10 +1436,18 @@ final class AppState: ObservableObject {
     }
 
     func handleCircuitClick(_ tile: WorldCoordinate, identity: MouseEventIdentity = MouseEventIdentity()) {
-        guard isDesktopWorldEnabled, !isDisplaySettling, !isFinderLayoutSettling, desktopController != nil,
+        guard isDesktopWorldEnabled, desktopController != nil,
               let kind = desktopWorld.circuit.components[tile]?.kind,
               kind == .button || kind == .lever else { return }
         observedPressCount += 1
+        if isDisplaySettling {
+            lastActionResult = "Click received; the display layout is updating. Try again when it finishes."
+            return
+        }
+        if isFinderLayoutSettling {
+            lastActionResult = "Click received; Finder is updating its icon layout. Try again when it finishes."
+            return
+        }
         guard !isSimulationPaused else { lastActionResult = "Simulation paused; Resume before using an input."; return }
         let inputTitle = kind == .button ? "PRESS" : "LEVER"
         let assessment = desktopInteractionAssessment(identity)

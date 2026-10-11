@@ -3,10 +3,10 @@ enum OutputActionMode: String, CaseIterable, Codable, Sendable {
 }
 
 enum CircuitComponentKind: String, CaseIterable, Codable, Sendable {
-    case empty, dust, button, lever, repeater, output, torch, pressurePlate, fileSensor
+    case empty, dust, button, lever, repeater, output, torch, pressurePlate, fileSensor, lamp, lightTorch
 
     var title: String {
-        switch self { case .pressurePlate: "Pressure plate"; case .fileSensor: "File sensor"; default: rawValue.capitalized }
+        switch self { case .torch: "Redstone torch"; case .lightTorch: "Torch"; case .pressurePlate: "Pressure plate"; case .fileSensor: "File sensor"; default: rawValue.capitalized }
     }
     var isDesktopSensor: Bool { self == .pressurePlate || self == .fileSensor }
 }
@@ -37,7 +37,7 @@ struct CircuitComponent: Equatable, Codable, Sendable {
         case .output:
             // Only a directed repeater rear can pick up a powered Output block.
             return receiver?.kind == .repeater && receiver?.direction.opposite.neighbor(of: target) == source
-        case .empty: return false
+        case .empty, .lamp, .lightTorch: return false
         }
     }
 

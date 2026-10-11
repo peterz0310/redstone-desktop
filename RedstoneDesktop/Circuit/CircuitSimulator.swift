@@ -82,14 +82,14 @@ struct CircuitSimulator: Equatable, Sendable {
             }
         }
         var events: [CircuitEvent] = []
-        for coordinate in coordinates where world.components[coordinate]?.kind == .output {
+        for coordinate in coordinates where [.output, .lamp].contains(world.components[coordinate]!.kind) {
             // Outputs sense emitting neighbors without enqueueing dust or feeding other Outputs.
             let strength = world.occupiedCardinalNeighbors(at: coordinate).reduce(PowerLevel.off) { level, neighbor in
                 max(level, deliveredPower(from: neighbor, to: coordinate, snapshot: next))
             }
             if strength > .off {
                 next[coordinate] = strength
-                if power(at: coordinate) == .off { events.append(.outputActivated(coordinate)) }
+                if world.components[coordinate]?.kind == .output && power(at: coordinate) == .off { events.append(.outputActivated(coordinate)) }
             }
         }
         // Sample all repeater/torch rear inputs from the completed snapshot. No delayed component can

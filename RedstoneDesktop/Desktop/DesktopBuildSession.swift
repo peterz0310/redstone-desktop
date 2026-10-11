@@ -6,7 +6,7 @@ import Foundation
 final class DesktopBuildSession: ObservableObject {
     enum Tool: String, CaseIterable {
         case dust = "Dust", button = "Button", lever = "Lever"
-        case repeater = "Repeater", output = "Output", erase = "Erase", torch = "Torch", pressurePlate = "Plate", fileSensor = "Sensor", terrain = "Terrain"
+        case repeater = "Repeater", output = "Output", erase = "Erase", torch = "R. Torch", pressurePlate = "Plate", fileSensor = "Sensor", terrain = "Terrain", lamp = "Lamp", lightTorch = "Torch"
 
         var description: String { kind.map(ToolDescriptions.component) ?? (self == .terrain ? ToolDescriptions.terrain : ToolDescriptions.erase) }
         var kind: CircuitComponentKind? {
@@ -16,6 +16,8 @@ final class DesktopBuildSession: ObservableObject {
             case .lever: .lever
             case .pressurePlate: .pressurePlate
             case .fileSensor: .fileSensor
+            case .lamp: .lamp
+            case .lightTorch: .lightTorch
             case .torch: .torch
             case .repeater: .repeater
             case .output: .output
