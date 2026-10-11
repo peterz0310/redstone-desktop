@@ -3,6 +3,15 @@
 These are physical-Mac checks, separate from automated tests. Report which numbered groups you actually tried and what failed; untested groups remain unverified. Use harmless folders/text files first. Place new test circuits on clear ground **to the right** of your existing builds. Do not use scripts for display-calibration tests.
 
 
+## Terrain saving and desktop assignment recovery — awaiting owner confirmation
+
+1. Quit the current copy, then open the update (or run with ⌘R in Xcode). Your saved worlds, areas and circuits should reappear; no reset is required. Settings → Data should show saving available. The older library receives an exact-byte backup beside `library.json` before upgrading.
+2. Stop Desktop, choose Terrain and paint a few tiles to the right of existing builds. Release: the terrain should stay. Undo/Redo should work; quit/reopen and confirm the saved edits remain.
+3. Select another saved area and choose Activate on Desktop. The desktop target should change. Start Desktop and check the assigned view; choose another area using the menu bar and check running Desktop switches and resumes.
+4. Confirm your existing repeater and wires still exist and work. Only obstructing scenery underneath saved components should be cleared; other scenery and your painted ground should remain.
+
+Owner reported that the animations look good. Terrain saving and assignment failed because older saved builds conflicted with expanded terrain/fixture decorations; the upgrade and these checks address that issue. Other animation checks below remain pending where not explicitly confirmed.
+
 ## Water, lava and scenery animation — awaiting owner confirmation
 
 1. Quit the old copy and open the updated app. With **Use Original Look**, find water (seed **42** starts near a lake), zoom in and watch for gentle waves. Start Desktop and check it animates there too. Trees, flowers and reeds should have a slight glint, while ground, ores, circuits and Finder items stay steady.

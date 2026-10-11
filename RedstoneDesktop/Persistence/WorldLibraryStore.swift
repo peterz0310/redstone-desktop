@@ -27,8 +27,16 @@ struct WorldLibraryStore: WorldLibraryStoring {
             return library
         }
         guard data.count <= Self.maximumBytes else { throw WorldStoreError.invalidDocument("Library document is too large.") }
-        let library = try JSONDecoder().decode(WorldLibraryDocument.self, from: data)
-        try library.validate()
+        let decoded = try JSONDecoder().decode(WorldLibraryDocument.self, from: data)
+        let library = try decoded.upgradingTerrain()
+        if library != decoded {
+            // Exact source bytes are retained before an atomic, validated replacement.
+            let encoder = JSONEncoder(); encoder.outputFormatting = [.prettyPrinted, .sortedKeys]
+            guard try encoder.encode(library).count <= Self.maximumBytes else { throw WorldStoreError.invalidDocument("Upgraded library exceeds the 2 MB limit.") }
+            let backup = fileURL.deletingLastPathComponent().appendingPathComponent("library-before-terrain-upgrade-\(UUID().uuidString).json")
+            try data.write(to: backup, options: .atomic)
+            try save(library)
+        }
         return library
     }
 

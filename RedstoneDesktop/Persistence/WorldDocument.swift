@@ -8,7 +8,7 @@ struct WorldDocument: Codable, Equatable, Sendable, Identifiable {
     var formatVersion = currentFormatVersion
     var id = UUID()
     var name: String
-    let generation: WorldGenerationSettings
+    var generation: WorldGenerationSettings
     let terrainProfile: TerrainProfile
     var circuit = CircuitWorld()
     var terrainOverrides: [WorldCoordinate: Tile] = [:]

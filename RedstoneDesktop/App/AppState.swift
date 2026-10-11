@@ -35,9 +35,10 @@ final class AppState: ObservableObject {
     var activeWorldName: String { library.world(id: activeWorldID)!.name }
     var selectedArea: SavedArea { library.areas.first { $0.id == selectedAreaID }! }
     var selectedAreaCamera: CameraState { selectedArea.camera }
-    var isEditorConfigurationLocked: Bool { isMaintenanceLocked || ((isDesktopWorldEnabled || isDesktopBuildMode) && isEditingActiveWorld) }
+    var isEditorConfigurationLocked: Bool { persistenceBlocked || isMaintenanceLocked || ((isDesktopWorldEnabled || isDesktopBuildMode) && isEditingActiveWorld) }
     var editorConfigurationLockMessage: String {
-        isDesktopBuildMode ? "Exit Build Mode before editing this world in the editor." : "Disable Desktop World before editing."
+        persistenceBlocked ? "Editing is unavailable because the saved library could not be restored. Check the save message below."
+            : isDesktopBuildMode ? "Exit Build Mode before editing this world in the editor." : "Disable Desktop World before editing."
     }
     @Published private(set) var buildSession: DesktopBuildSession?
     var isDesktopBuildMode: Bool { buildSession != nil }
@@ -419,7 +420,7 @@ final class AppState: ObservableObject {
 
     @discardableResult
     func createWorld(name: String, generation: WorldGenerationSettings) -> Bool {
-        guard !isMaintenanceLocked else { return false }
+        guard !isMaintenanceLocked, !persistenceBlocked else { libraryStatus = editorConfigurationLockMessage; return false }
         let document = WorldDocument(name: name, generation: generation)
         guard let world = try? document.restoredWorld() else { libraryStatus = "Enter a nonempty name and a supported seed."; return false }
         var next = library
@@ -552,6 +553,7 @@ final class AppState: ObservableObject {
 
     private func activateArea(_ id: UUID, resetRuntime: Bool) -> Bool {
         guard !isMaintenanceLocked else { return false }
+        guard !persistenceBlocked else { areaStatus = "Desktop assignment is unavailable because the saved library could not be restored. Check the save message below."; return false }
         guard !isDesktopBuildMode else { areaStatus = "Exit Build Mode before changing the desktop assignment."; return false }
         guard let area = library.areas.first(where: { $0.id == id }),
               let document = library.world(id: area.worldID) else {

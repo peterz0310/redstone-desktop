@@ -51,6 +51,37 @@ struct WorldLibraryDocument: Codable, Equatable, Sendable {
         return next
     }
 
+    /// Older landscapes can grow scenery/liquids beneath saved circuits. Preserve
+    /// their footprints explicitly once, without accepting invalid painted terrain.
+    func upgradingTerrain() throws -> Self {
+        var next = self
+        for index in next.worlds.indices {
+            var document = next.worlds[index]
+            guard [1, 2].contains(document.generation.generationVersion) else { continue }
+            _ = try WorldGenerator(settings: document.generation)
+            let base = document.unmodifiedWorld()
+            for (coordinate, component) in document.circuit.components {
+                guard document.terrainOverrides[coordinate] == nil,
+                      !base.unspecifiedTiles.contains(coordinate), var tile = base.tile(at: coordinate) else { continue }
+                // Later feasibility-fixture additions also occupied previously generated cells.
+                let addedFixture = document.terrainProfile == .legacyFixtureV1 &&
+                    (tile.decoration == .treeLeaves || tile.decoration == .pineLeaves || tile.terrain == .lava)
+                guard base.tiles[coordinate] == nil || addedFixture else { continue }
+                let result = PlacementRules().canPlace(component: component, at: coordinate, in: base)
+                switch result {
+                case .rejected(.liquid), .rejected(.blockedByDecoration), .rejected(.unsupportedSurface):
+                    tile = tile.terrain.definition.isLiquid ? Tile(terrain: .grass) : Tile(terrain: tile.terrain)
+                    document.terrainOverrides[coordinate] = tile
+                default: break // Invalid components, original fixture obstacles and painted tiles still fail validation.
+                }
+            }
+            document.generation.generationVersion = 3
+            next.worlds[index] = document
+        }
+        try next.validate()
+        return next
+    }
+
     func validate() throws {
         guard formatVersion == Self.currentFormatVersion else { throw WorldStoreError.unsupportedVersion(formatVersion) }
         let worldIDs = Set(worlds.map(\.id))

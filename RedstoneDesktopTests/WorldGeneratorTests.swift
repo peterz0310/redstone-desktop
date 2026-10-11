@@ -124,7 +124,7 @@ final class WorldGeneratorTests: XCTestCase {
         let settings = WorldGenerationSettings(seed: .max)
         XCTAssertEqual(try JSONDecoder().decode(WorldGenerationSettings.self, from: JSONEncoder().encode(settings)), settings)
         XCTAssertThrowsError(try WorldGenerator(settings: WorldGenerationSettings(generationVersion: 0, seed: 1)))
-        XCTAssertThrowsError(try WorldGenerator(settings: WorldGenerationSettings(generationVersion: 3, seed: 1)))
+        XCTAssertThrowsError(try WorldGenerator(settings: WorldGenerationSettings(generationVersion: 4, seed: 1)))
     }
 
     func testRiversCrossHighGroundWithBanksAndLeaveMostLandBuildable() throws {
@@ -156,7 +156,7 @@ final class WorldGeneratorTests: XCTestCase {
 
     func testPreviousGenerationSettingsUseCurrentLandscapeWithoutHistoricalPromise() throws {
         let previous = try WorldGenerator(settings: WorldGenerationSettings(generationVersion: 1, seed: 42))
-        XCTAssertEqual(WorldGenerationSettings(seed: 42).generationVersion, 2)
+        XCTAssertEqual(WorldGenerationSettings(seed: 42).generationVersion, 3)
         XCTAssertEqual(try previous.chunk(at: ChunkCoordinate(x: -2, y: 3)), try generator().chunk(at: ChunkCoordinate(x: -2, y: 3)))
     }
 

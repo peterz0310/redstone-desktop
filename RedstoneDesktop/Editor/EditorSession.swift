@@ -49,7 +49,8 @@ final class EditorSession: ObservableObject {
     func cancelTerrainStroke() { terrainStroke = nil }
     func terrainInput(at point: CGPoint, size: CGSize, phase: TerrainStrokePhase, appState: AppState) {
         guard phase != .cancel else { cancelTerrainStroke(); status = "Terrain stroke cancelled."; return }
-        guard circuitTest == nil, !isPreviewing(appState), !appState.isEditorConfigurationLocked,
+        if appState.isEditorConfigurationLocked { cancelTerrainStroke(); status = appState.editorConfigurationLockMessage; return }
+        guard circuitTest == nil, !isPreviewing(appState),
               let mapper = mapper(size: size), mapper.canvasFrame.contains(point),
               let tile = mapper.tile(atScreen: point) else { cancelTerrainStroke(); return }
         if phase == .begin { cancelPlacement(); terrainStroke = TerrainStroke(document: appState.selectedDocument, brush: terrainBrush, size: terrainBrushSize) }
@@ -379,7 +380,8 @@ final class EditorSession: ObservableObject {
         delay = value; saveSelectedConfiguration(appState, delay: value)
     }
     private func saveSelectedConfiguration(_ appState: AppState, direction: Direction? = nil, delay: RepeaterDelay? = nil) {
-        guard circuitTest == nil, !isPreviewing(appState), !appState.isEditorConfigurationLocked,
+        if appState.isEditorConfigurationLocked { cancelTerrainStroke(); status = appState.editorConfigurationLockMessage; return }
+        guard circuitTest == nil, !isPreviewing(appState),
               let selectedTile, let component = browsingWorld(appState).circuit.components[selectedTile] else { return }
         if component.kind == .repeater { appState.configureRepeater(at: selectedTile, direction: direction ?? component.direction, delay: delay ?? component.repeaterDelay) }
         if component.kind == .torch { appState.configureTorch(at: selectedTile, direction: direction ?? component.direction) }

@@ -15,8 +15,7 @@ struct LibraryImport {
     static func decode(_ data: Data) throws -> WorldLibraryDocument {
         guard data.count <= WorldLibraryStore.maximumBytes else { throw WorldStoreError.invalidDocument("This library is too large to import (2 MB maximum).") }
         let document = try JSONDecoder().decode(WorldLibraryDocument.self, from: data)
-        try document.validate()
-        return document
+        return try document.upgradingTerrain()
     }
     /// Imports are independent copies. Current builds, desktop assignment and permissions stay owned by this app.
     static func adding(_ incoming: WorldLibraryDocument, to existing: WorldLibraryDocument) throws -> WorldLibraryDocument {

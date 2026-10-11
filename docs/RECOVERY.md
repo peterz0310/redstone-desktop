@@ -10,7 +10,17 @@ Finder access is requested by **Connect to Finder…** or subsequent explicit tr
 2. Choose a location and save the JSON. This contains all worlds, seeds, terrain overrides, circuits, lever positions, named areas and desktop assignment.
 3. Keep it somewhere outside the app's Application Support folder. It excludes Finder files/positions, scripts, permissions/approvals, imported texture contents and runtime power.
 
-There is no in-app Import button yet. To restore an export: quit the app, preserve the current `library.json` elsewhere, then copy the export to `~/Library/Application Support/RedstoneDesktop/library.json` and reopen. A malformed/version-incompatible library is refused and writes are blocked; preserve both copies rather than overwriting a rejected library. Restoring always starts Desktop stopped.
+Use **Settings → Data → Import Library…** to add independent copies of exported worlds and areas while preserving the current desktop assignment. To replace the library instead: quit the app, preserve the current `library.json` elsewhere, then copy the export to `~/Library/Application Support/RedstoneDesktop/library.json` and reopen. A malformed/version-incompatible library is refused and writes are blocked; preserve both copies rather than overwriting a rejected library. Restoring always starts Desktop stopped.
+
+## Terrain upgrades and blocked editing
+
+Older generation-version-1/2 libraries can become invalid when new scenery appears under an existing component. Startup upgrades those libraries to generation version 3, clearing only conflicting scenery or providing dry support beneath saved circuits. It preserves component configuration, saved lever positions, worlds, areas and assignment, and never changes your painted terrain. A later leaf/lava addition to the old test fixture can be reconciled too. The exact pre-upgrade library is backed up beside the active file:
+
+```
+~/Library/Application Support/RedstoneDesktop/library-before-terrain-upgrade-<UUID>.json
+```
+
+This is separate from Start Over backups; it does not reset preferences or data. Validation happens before publication; a failed backup/save leaves the source library intact. It runs once, while current-version invalid data remains refused. If loading is still blocked, the editor explains that its saved library could not be restored and disallows terrain previews/edits and desktop assignment. Check the save message in the editor footer. Do not delete your worlds to work around this problem.
 
 ## Start Over
 
@@ -54,3 +64,5 @@ Do not run multiple independent app copies against the same save directory durin
 ## Contributor checks
 
 XCTest fixtures use temporary directories, isolated preference suites, fake Finder/opener/script adapters and silent/offline audio. The test host never loads the owner's store. After a Debug build, `scripts/maintenance-smoke.sh` uses public relaunch with paired Debug-only `REDSTONE_DESKTOP_DATA_ROOT` / `REDSTONE_DESKTOP_PREFERENCES_SUITE` settings and a temporary store. It checks a distinct native app PID, actual Setup appearance, empty/stopped state, no Finder read and no old shutdown write. The isolated child quits automatically; the harness cleans its own temporary data. These environment settings are developer-only, not a production data-location feature.
+
+The terrain-upgrade regression suite covers source-byte backups, one-time upgrades, painted-ground protection, old exports, strict damaged-save rejection, mouse-release terrain saving and desktop assignment. A rehearsal against a temporary copy of the owner’s saved library preserved all three worlds, four areas, circuit settings and lever states while adding five support overrides; both operations then persisted successfully. The rehearsal did not write to the owner’s active library. Physical-Mac acceptance remains in [TESTING.md](TESTING.md).

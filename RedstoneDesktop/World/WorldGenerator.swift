@@ -1,7 +1,7 @@
-/// Generation 2 is the default landscape. Version 1 saves use the improved
-/// landscape too; historical terrain positions are intentionally not preserved.
+/// Generation 3 records circuit-preserving terrain upgrades. Older settings use
+/// the current landscape; the library store reconciles their saved footprints.
 struct WorldGenerationSettings: Equatable, Codable, Sendable {
-    var generationVersion = 2
+    var generationVersion = 3
     var seed: UInt64
 }
 
@@ -30,7 +30,7 @@ struct WorldGenerator: Sendable {
     let settings: WorldGenerationSettings
 
     init(settings: WorldGenerationSettings) throws {
-        guard (1...2).contains(settings.generationVersion) else { throw WorldGenerationError.unsupportedVersion(settings.generationVersion) }
+        guard (1...3).contains(settings.generationVersion) else { throw WorldGenerationError.unsupportedVersion(settings.generationVersion) }
         self.settings = settings
     }
 
