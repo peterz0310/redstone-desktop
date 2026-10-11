@@ -1,12 +1,12 @@
 {
   "images" : [
     {
-      "filename" : "dust-1x.png",
+      "filename" : "logo-1x.png",
       "idiom" : "mac",
       "scale" : "1x"
     },
     {
-      "filename" : "dust-2x.png",
+      "filename" : "logo-2x.png",
       "idiom" : "mac",
       "scale" : "2x"
     }

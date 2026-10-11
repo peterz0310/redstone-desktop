@@ -1,23 +1,20 @@
-# Third-party artwork
+# Artwork and third-party notices
 
-The project's MIT license applies to its own code and original artwork. It does **not** license the Minecraft artwork below or the portions of generated icons containing that artwork.
+No Minecraft artwork, audio, game code or game-derived toolbar icons are shipped in this repository’s current app or release bundle.
 
-## Minecraft redstone dust item
+## Owner-provided identity
 
-- Owner: Mojang/Microsoft; original source rights apply.
-- Source: the owner's local Minecraft Java Edition **1.21.11** installation, version JAR `1.21.11.jar`.
-- Archive entry: `assets/minecraft/textures/item/redstone.png`.
-- Committed file: `RedstoneDesktop/Resources/Assets.xcassets/RedstoneDust.imageset/redstone.png`.
-- Original PNG: 16 × 16 pixels, 179 bytes, copied unchanged.
-- SHA-256: `6d0e6a1fd54142cd3de649e1100c428733512b322a0b0a530f62eae9f86881ec`.
-- Derived files: the PNGs in `AppIcon.appiconset` and `MenuDust.imageset`. The generator scales the item with nearest-neighbor interpolation, adds an original app-icon background, and renders the item's alpha silhouette in monochrome for the template menu icon.
+The repository owner supplied `logo.png` on 2026-10-11 to replace the previously bundled game artwork. The source is preserved unchanged at `RedstoneDesktop/Resources/Assets.xcassets/Logo.imageset/logo.png`.
 
-The repository owner explicitly requested committing and shipping this one graphic on 2026-10-08. That request is a narrow exception to the project’s previous no-bundled-game-assets rule, not a license grant from the artwork’s owner or a conclusion that distribution is permitted. The owner additionally requested derived toolbar icons on 2026-10-09, as identified below. No game audio, model or executable is included. Optional world-texture, particle and sound imports still stay local and outside Git/release bundles.
+- Source PNG: 1254 × 1254 pixels, RGBA.
+- SHA-256: `2e2cc646437e3d992546e5b32df44ac12d1908875c1d10a15e847febf321f533`.
+- Derived assets: `AppIcon.appiconset` and `MenuLogo.imageset`.
+- Generation: trim transparent margins only in the generated images, preserve proportions, render a colored app icon on the original app background, and render a monochrome alpha silhouette for the menu bar and Dust tool. The source PNG is never modified.
 
-Regeneration instructions are in README.md. Replacing the source PNG and regenerating the catalogs replaces this icon artwork; update this notice and its provenance test at the same time.
+Project code and project artwork use the repository’s MIT license. Other toolbar icons use native SF Symbols from the system; they are not extracted from Minecraft. SwiftUI, AppKit, SpriteKit and AVFoundation are system frameworks. No third-party runtime packages or backend are bundled.
 
-## Monochrome build-tool icons
+## Optional local imports
 
-At the owner’s explicit request on 2026-10-09, six template icons are bundled in `ToolDust`, `ToolButton`, `ToolLever`, `ToolRepeater`, `ToolOutput` and `ToolTorch` image sets. They derive from the local Minecraft Java 1.21.11 textures listed in `scripts/tool-icon-sources.json`, with source entry paths and SHA-256 hashes. Mojang/Microsoft’s original source rights apply; these icons are excluded from MIT.
+Users may import supported textures, particle sprites and short audio from their own Minecraft installation or resource packs. Those files remain in the user’s Application Support cache and are excluded from Git, app bundles, release archives and exported world data. Import support grants no rights to that material; original source rights apply. No resource-pack or game code is executed. See `docs/JAVA_TEXTURE_IMPORT.md` and `docs/RESOURCE_PACKS.md`.
 
-`scripts/generate-tool-icons.swift` retains item/torch alpha silhouettes, rotates the lever handle and adds a mounting base, makes an inset stone-button shape, and derives a monochrome command-block outline/pattern. Only these small derived PNGs are shipped; the game JAR and general world textures are not bundled. The source/hash manifest and generation instructions allow contributors to replace the artwork without distributing the JAR. This icon exception is not permission to add other game artwork.
+Regeneration instructions for the owner-provided identity are in README.md. The previous game-derived identity/tool sources and their generation manifest have been removed from the current tree.

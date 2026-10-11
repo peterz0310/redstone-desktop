@@ -244,29 +244,31 @@ final class DesktopMenuTests: XCTestCase {
     }
 
     @MainActor
-    func testCommittedDustSourceAndTemplatePreserveActualItemSilhouette() throws {
+    func testOwnerLogoIsPreservedAndTemplateFitsItsAlphaSilhouette() throws {
         let root = URL(fileURLWithPath: #filePath).deletingLastPathComponent().deletingLastPathComponent()
-        let url = root.appendingPathComponent("RedstoneDesktop/Resources/Assets.xcassets/RedstoneDust.imageset/redstone.png")
+        let url = root.appendingPathComponent("RedstoneDesktop/Resources/Assets.xcassets/Logo.imageset/logo.png")
         let data = try Data(contentsOf: url)
         let hash = SHA256.hash(data: data).map { String(format: "%02x", $0) }.joined()
-        XCTAssertEqual(hash, "6d0e6a1fd54142cd3de649e1100c428733512b322a0b0a530f62eae9f86881ec")
+        XCTAssertEqual(hash, "2e2cc646437e3d992546e5b32df44ac12d1908875c1d10a15e847febf321f533", "Owner-provided source must remain unchanged")
         let source = try XCTUnwrap(NSBitmapImageRep(data: data))
-        XCTAssertEqual(source.pixelsWide, 16); XCTAssertEqual(source.pixelsHigh, 16)
-        let dust = try XCTUnwrap(NSImage(data: data))
-        let template = AppIdentityArtwork.image(pixels: 16, template: true, dust: dust)
+        XCTAssertEqual(source.pixelsWide, 1254); XCTAssertEqual(source.pixelsHigh, 1254)
+        let logo = try XCTUnwrap(NSImage(data: data))
+        let cropped = AppIdentityArtwork.trimmedLogo(logo)
+        XCTAssertEqual(cropped.size.width, 828); XCTAssertEqual(cropped.size.height, 491)
+        let template = AppIdentityArtwork.image(pixels: 128, template: true, logo: logo)
         XCTAssertTrue(template.isTemplate)
         let rendered = try XCTUnwrap(NSBitmapImageRep(data: try XCTUnwrap(template.tiffRepresentation)))
-        for y in 0..<16 {
-            for x in 0..<16 {
-                let color = try XCTUnwrap(rendered.colorAt(x: x, y: y))
-                XCTAssertEqual(color.alphaComponent, source.colorAt(x: x, y: y)?.alphaComponent)
-                if color.alphaComponent > 0 {
-                    XCTAssertEqual(color.redComponent, 0)
-                    XCTAssertEqual(color.greenComponent, 0)
-                    XCTAssertEqual(color.blueComponent, 0)
-                }
+        var opaque = 0
+        for y in 0..<128 { for x in 0..<128 {
+            let color = try XCTUnwrap(rendered.colorAt(x: x, y: y))
+            if color.alphaComponent > 0.01 {
+                opaque += 1
+                XCTAssertEqual(color.redComponent, 0); XCTAssertEqual(color.greenComponent, 0); XCTAssertEqual(color.blueComponent, 0)
             }
-        }
+        } }
+        XCTAssertGreaterThan(opaque, 2000); XCTAssertLessThan(opaque, 9000)
+        XCTAssertEqual(rendered.colorAt(x: 0, y: 0)?.alphaComponent, 0)
+        XCTAssertGreaterThan(rendered.colorAt(x: 64, y: 64)?.alphaComponent ?? 0, 0)
     }
 
     @MainActor
@@ -283,17 +285,17 @@ final class DesktopMenuTests: XCTestCase {
             let bitmap = try XCTUnwrap(NSBitmapImageRep(data: Data(contentsOf: app.appendingPathComponent(try XCTUnwrap(entry["filename"])))))
             XCTAssertEqual(bitmap.pixelsWide, size * factor); XCTAssertEqual(bitmap.pixelsHigh, size * factor)
         }
-        let menu = root.appendingPathComponent("MenuDust.imageset")
+        let menu = root.appendingPathComponent("MenuLogo.imageset")
         let templateJSON = try XCTUnwrap(JSONSerialization.jsonObject(with: Data(contentsOf: menu.appendingPathComponent("Contents.json"))) as? [String: Any])
         XCTAssertEqual((templateJSON["properties"] as? [String: String])?["template-rendering-intent"], "template")
         for factor in [1, 2] {
-            let bitmap = try XCTUnwrap(NSBitmapImageRep(data: Data(contentsOf: menu.appendingPathComponent("dust-\(factor)x.png"))))
+            let bitmap = try XCTUnwrap(NSBitmapImageRep(data: Data(contentsOf: menu.appendingPathComponent("logo-\(factor)x.png"))))
             XCTAssertEqual(bitmap.pixelsWide, 18 * factor); XCTAssertEqual(bitmap.pixelsHigh, 18 * factor)
             XCTAssertEqual(bitmap.colorAt(x: 0, y: 0)?.alphaComponent, 0)
             XCTAssertGreaterThan(bitmap.colorAt(x: 9 * factor, y: 9 * factor)?.alphaComponent ?? 0, 0)
         }
         XCTAssertEqual(Bundle.main.object(forInfoDictionaryKey: "CFBundleIconName") as? String, "AppIcon")
         XCTAssertNotNil(Bundle.main.url(forResource: "AppIcon", withExtension: "icns"))
-        XCTAssertNotNil(NSImage(named: "MenuDust"))
+        XCTAssertNotNil(NSImage(named: "MenuLogo"))
     }
 }

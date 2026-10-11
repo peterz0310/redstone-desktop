@@ -39,7 +39,7 @@ macOS chooses prompt timing and stores privacy decisions across reinstall/reset.
 
 Project code/original world art/sound: [MIT](../LICENSE). No third-party runtime packages/backend are bundled; SwiftUI/AppKit/SpriteKit/AVFoundation are system frameworks. XcodeGen is a development tool, not part of the app.
 
-The committed Minecraft dust item and derived app/menu/build-tool icons is excluded from MIT; [THIRD_PARTY_NOTICES.md](../THIRD_PARTY_NOTICES.md) records original owner/source/hash and the user's explicit exception. That instruction is not a rightsholder license grant. The owner must resolve those assets’ public-distribution status or replace it with original art before publishing. World textures remain optional local imports and are absent from releases. Pack data is validated images/PCM/metadata; no resource-pack code executes. Both MIT/license and notices are embedded inside the app and included in the review ZIP.
+App/menu/Dust-tool identity uses the owner-provided logo; all other toolbar icons use native SF Symbols. No Minecraft artwork/audio or game-derived icons are shipped. [Artwork notices](../THIRD_PARTY_NOTICES.md) record the unchanged source PNG, hash and derivation. World textures, particles and audio remain optional local imports and are absent from releases. Pack data is validated images/PCM/metadata; no resource-pack code executes. MIT/license and notices are embedded inside the app and included in the review ZIP. The release verifier inspects the actual compiled Assets.car with the macOS developer tool `assetutil`, in both the app and ZIP, and rejects the retired game-derived image sets. Optional asset imports must never be added to a release to make a demo work.
 
 ## Local Release archive
 

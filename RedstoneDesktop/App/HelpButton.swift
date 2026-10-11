@@ -18,18 +18,29 @@ struct HelpButton: View {
 
 struct ToolIcon: View {
     let name: String
+    static func symbol(for name: String) -> String {
+        switch name {
+        case "Select": "rectangle.dashed"
+        case "Move": "cursorarrow"
+        case "Terrain": "paintbrush.pointed.fill"
+        case "Lamp": "lightbulb.fill"
+        case "R. Torch": "bolt.fill"
+        case "Torch": "flame.fill"
+        case "Plate": "square.stack.3d.down.right.fill"
+        case "Sensor": "doc.text.magnifyingglass"
+        case "Erase": "eraser.fill"
+        case "Button": "circle.inset.filled"
+        case "Lever": "switch.2"
+        case "Repeater": "arrow.right"
+        case "Output": "terminal"
+        default: "square"
+        }
+    }
     var body: some View {
         Group {
-            if name == "Select" { Image(systemName: "rectangle.dashed") }
-            else if name == "Move" { Image(systemName: "cursorarrow") }
-            else if name == "Terrain" { Image(systemName: "paintbrush.pointed.fill") }
-            else if name == "Lamp" { Image(systemName: "lightbulb.fill") }
-            else if name == "R. Torch" { Image("ToolTorch").renderingMode(.template).resizable().interpolation(.none).scaledToFit() }
-            else if name == "Torch" { Image(systemName: "flame.fill") }
-            else if name == "Plate" { Image(systemName: "square.stack.3d.down.right.fill") }
-            else if name == "Sensor" { Image(systemName: "doc.text.magnifyingglass") }
-            else if name == "Erase" { Image(systemName: "eraser.fill") }
-            else { Image("Tool" + name).renderingMode(.template).resizable().interpolation(.none).scaledToFit() }
+            if name == "Dust" {
+                Image("MenuLogo").renderingMode(.template).resizable().interpolation(.high).scaledToFit()
+            } else { Image(systemName: Self.symbol(for: name)) }
         }.frame(width: 18, height: 18).accessibilityHidden(true)
     }
 }

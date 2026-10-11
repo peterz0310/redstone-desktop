@@ -3,6 +3,14 @@
 These are physical-Mac checks, separate from automated tests. Report which numbered groups you actually tried and what failed; untested groups remain unverified. Use harmless folders/text files first. Place new test circuits on clear ground **to the right** of your existing builds. Do not use scripts for display-calibration tests.
 
 
+## Owner-provided logo — awaiting owner confirmation
+
+- [ ] Quit the old app with ⌘Q and run the update with ⌘R in Xcode (or open the updated release). Check the new colored logo in Dock, Finder and ⌘Tab. macOS can cache old icons; quit/reopen the updated copy before judging a stale Dock image. No world reset is needed.
+- [ ] Check the menu-bar silhouette in light and dark appearance. Its width should stay the same when stopped, running or in Build Mode.
+- [ ] Check both build toolbars: Dust uses your logo silhouette; Button, Lever, Repeater, Output and R. Torch use native symbols. All tools should still place the same components. Optional locally imported Java world textures/audio should continue working.
+
+Automated checks preserve the supplied PNG byte-for-byte, verify transparent-margin trimming/aspect and monochrome rendering, check every app-icon size and menu resolution, resolve native tool symbols and reject retired game-derived catalogs in the source and compiled app. Release validation also inspects the compiled catalog inside the actual ZIP.
+
 ## Desktop Build palette sizing — awaiting owner confirmation
 
 - [ ] Quit the old copy with ⌘Q, run the update with ⌘R in Xcode, then enter Build on Desktop. The palette should open compactly, with its header just below the title bar and no large blank area above the controls.
@@ -178,7 +186,7 @@ Backup/reset testing remains deferred; the polish changes do not require Start O
 
 1. Quit the previous Redstone Desktop app using its dust menu → Quit. Keep your usual Finder desktop intact.
 2. From the repo, run `xcodegen generate`, then open `RedstoneDesktop.xcodeproj`. Select **RedstoneDesktop → My Mac**, then **⌘R**. If Xcode asks about signing for local development, the unsigned Terminal build/run commands in README also work.
-3. Confirm existing worlds/areas/circuits remain. New Setup should appear once after this update, without resetting them. Desktop must start stopped. Move/close windows and open the menu: status spacing should stay constant in Stopped, Running, Paused and Build Mode. Check the real dust icon in Dock/Finder/⌘Tab; restart after building if macOS cached the old icon.
+3. Confirm existing worlds/areas/circuits remain. New Setup should appear once after this update, without resetting them. Desktop must start stopped. Move/close windows and open the menu: status spacing should stay constant in Stopped, Running, Paused and Build Mode. Check the owner-provided logo in Dock/Finder/⌘Tab; restart after building if macOS cached the old icon.
 4. In the dust menu, verify Start/Stop, assigned-world/area checkmarks, Open Editor, Show Assigned Area, Build Mode, Settings, Mute and Tools. Browsing an editor area should not change the desktop assignment. Choosing a menu area automatically resumes Desktop if it was running; a stopped desktop stays stopped.
 
 ## 2. Setup and Settings (Slice 33)

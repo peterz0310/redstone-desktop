@@ -1,6 +1,9 @@
 #!/usr/bin/env python3
-"""Read-only checks of the actual Release .app or review ZIP; never extract/run it."""
+"""Read-only Release checks; inspect catalog data in temporary storage and never launch the app."""
 import plistlib
+import json
+import subprocess
+import tempfile
 from pathlib import Path, PurePosixPath
 import struct
 import sys
@@ -33,7 +36,16 @@ def validate(path):
         assert 'Finder' in info['NSAppleEventsUsageDescription'], 'Finder permission explanation'
         assert 'script' in info['NSDesktopFolderUsageDescription'].lower(), 'Script folder explanation'
         assert 'MIT License' in read('Contents/Resources/LICENSE').decode(), 'Embedded MIT license'
-        assert 'Mojang/Microsoft' in read('Contents/Resources/THIRD_PARTY_NOTICES.md').decode(), 'Embedded asset notice'
+        assert 'No Minecraft artwork' in read('Contents/Resources/THIRD_PARTY_NOTICES.md').decode(), 'Embedded artwork notice'
+        # Inspect the actual compiled catalog, including the one inside the review ZIP.
+        with tempfile.TemporaryDirectory(prefix='redstone-release-assets-') as temporary:
+            catalog = Path(temporary) / 'Assets.car'
+            catalog.write_bytes(read('Contents/Resources/Assets.car'))
+            entries = json.loads(subprocess.check_output(['xcrun', 'assetutil', '--info', str(catalog)]))
+        asset_names = {entry.get('Name') for entry in entries}
+        assert {'Logo', 'MenuLogo'}.issubset(asset_names), 'Owner logo identity missing'
+        retired = {'RedstoneDust', 'MenuDust', 'ToolDust', 'ToolButton', 'ToolLever', 'ToolRepeater', 'ToolOutput', 'ToolTorch'}
+        assert not retired.intersection(asset_names), 'Retired game-derived icons bundled'
         binary = read('Contents/MacOS/' + info['CFBundleExecutable'])
         magic, count = struct.unpack_from('>II', binary)
         assert magic == 0xCAFEBABE and 1 <= count <= 8, 'Universal Mach-O header'
@@ -55,5 +67,5 @@ if __name__ == '__main__':
         raise SystemExit('Usage: scripts/verify-release.py PATH.app|PATH.zip')
     try:
         validate(sys.argv[1])
-    except (AssertionError, ValueError, KeyError, OSError, zipfile.BadZipFile, struct.error) as error:
+    except (AssertionError, ValueError, KeyError, OSError, zipfile.BadZipFile, struct.error, subprocess.SubprocessError) as error:
         raise SystemExit('Release validation failed: ' + str(error)) from error

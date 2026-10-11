@@ -32,7 +32,7 @@ Blueprint previews are cached, bounded AppKit images mapped through CoordinateMa
 
 ## Assets and verification
 
-Original assets provide a complete fallback. Local Java/custom packs are bounded image/audio data, not executable content. Imported world assets remain outside the repository and app bundles. Only explicitly owner-authorized icon artwork is shipped; provenance and MIT exclusions are in [third-party notices](../THIRD_PARTY_NOTICES.md). Do not extend that exception to general world textures or game audio.
+Original assets provide a complete fallback. Local Java/custom packs are bounded image/audio data, not executable content. Imported world assets remain outside the repository and app bundles. App/menu/Dust-tool identity comes from the owner-provided logo; other toolbar icons use native system symbols. No game-derived artwork is shipped. Logo provenance is in [artwork notices](../THIRD_PARTY_NOTICES.md). Keep all imported world textures, particles and audio local.
 
 Add meaningful automated coverage for behavior changes, build, and run the full suite. Keep physical validation separate in [TESTING.md](TESTING.md), including untested backup/reset, multi-display and distribution gates. Test hosts, reset harnesses and profiling must never use the owner’s production save/preferences. The retired implementation roadmap is available in Git history.
 

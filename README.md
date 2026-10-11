@@ -18,7 +18,7 @@ Build little redstone circuits underneath your real Mac desktop files. A button 
 - **Settings → Data** exports every world, area and circuit. **Import Library** adds independent copies, preserving your existing builds and desktop assignment. The separate blueprint shelf, texture packs, desktop files and script approvals are excluded.
 - **Start Over** creates a recovery backup before resetting app data. Read [the recovery guide](docs/RECOVERY.md) first. Backup/reset acceptance is still awaiting the owner’s manual testing.
 
-The dust menu in the macOS menu bar provides Start/Stop, area selection, editor, build mode, Settings and sound controls. Choosing an area automatically resumes Desktop when it was running; a stopped desktop stays stopped. Setup can be reopened from Settings → General. Connect to Finder when asked; script access is a separate optional permission.
+The logo menu in the macOS menu bar provides Start/Stop, area selection, editor, build mode, Settings and sound controls. Choosing an area automatically resumes Desktop when it was running; a stopped desktop stays stopped. Setup can be reopened from Settings → General. Connect to Finder when asked; script access is a separate optional permission.
 
 ## Launching without Xcode
 
@@ -64,9 +64,16 @@ The implementation roadmap in `SPEC.md` was retired at the owner’s request onc
 
 ## Artwork and license
 
-Project code and original art use [MIT](LICENSE). The owner explicitly requested the shipped Minecraft dust graphic and derived monochrome tool icons; those assets are excluded from MIT and identified in [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md). Optional imported world textures remain local, outside Git and release bundles. No JAR, game code or resource-pack code is bundled or executed.
+Project code and project artwork use [MIT](LICENSE). The app icon, menu-bar symbol and Dust tool use the owner-provided logo; other tool icons use native SF Symbols. No Minecraft artwork, audio or game-derived toolbar icons are shipped. [Artwork notices](THIRD_PARTY_NOTICES.md) record the logo source and hash. Optional imported images/audio remain local, outside Git and release bundles. No JAR, game code or resource-pack code is bundled or executed.
 
-Regenerate app/menu dust icons by compiling `scripts/GenerateAppIcons.swift` alongside `RedstoneDesktop/App/AppIdentityArtwork.swift` with `swiftc -swift-version 6 -parse-as-library`, then running the resulting executable with the repository root as its argument. Tool icons are generated with `swift scripts/generate-tool-icons.swift SOURCE_DIRECTORY RedstoneDesktop/Resources/Assets.xcassets`; extract only the sources listed in `scripts/tool-icon-sources.json` from your local Java 1.21.11 JAR into files named Dust.png, Button.png, Lever.png, Repeater.png, Output.png and Torch.png. Do not commit the JAR or unrelated game assets.
+The identity source is `RedstoneDesktop/Resources/Assets.xcassets/Logo.imageset/logo.png`, preserved unchanged. Regenerate the app/menu icons without a Minecraft install:
+
+```sh
+swiftc -swift-version 6 -parse-as-library RedstoneDesktop/App/AppIdentityArtwork.swift scripts/GenerateAppIcons.swift -o /tmp/redstone-generate-icons
+/tmp/redstone-generate-icons "$PWD"
+```
+
+The generator trims transparent margins only in its derived output, fits the logo without stretching, adds the original app-icon background, and creates a monochrome template menu icon. Both toolbars reuse that template for Dust. Other tool symbols are defined in `RedstoneDesktop/App/HelpButton.swift`; no texture extraction or tool-icon generation is needed. If replacing the logo, update its provenance/hash test and artwork notice, regenerate, then build/test and run the release checks.
 
 Water and rare lava pools animate in the editor and on Desktop; foliage and flowers have gentle glints. Original animations work without Minecraft. Refresh an existing Java import once to use the game’s frame strips. macOS Reduce Motion freezes the ambience. See [Terrain animation](docs/TERRAIN_ANIMATION.md).
 

@@ -110,7 +110,7 @@ struct DesktopMenuView: View {
 struct MenuBarIdentityLabel: View {
     static let side: CGFloat = 18
     var body: some View {
-        Image("MenuDust").renderingMode(.template).resizable().interpolation(.none)
+        Image("MenuLogo").renderingMode(.template).resizable().interpolation(.high)
             .frame(width: Self.side, height: Self.side)
             .accessibilityLabel("Redstone Desktop")
             .help("Redstone Desktop")

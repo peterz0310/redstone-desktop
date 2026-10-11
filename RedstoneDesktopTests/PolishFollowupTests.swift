@@ -135,7 +135,7 @@ final class PolishFollowupTests: XCTestCase {
     }
     @MainActor func testBothToolbarsHaveRecognizableTemplateIcons() throws {
         for name in ["Dust", "Button", "Lever", "Repeater", "Output", "Torch"] {
-            let image = try XCTUnwrap(NSImage(named: "Tool" + name))
+            let image = try XCTUnwrap(name == "Dust" ? NSImage(named: "MenuLogo") : NSImage(systemSymbolName: ToolIcon.symbol(for: name), accessibilityDescription: nil))
             XCTAssertTrue(image.isTemplate)
             XCTAssertGreaterThan(image.size.width, 0)
         }
