@@ -61,7 +61,7 @@ final class DesktopScene: SKScene {
         clickFlash.strokeColor = .systemOrange
         clickFlash.zPosition = 2
         clickFlash.isHidden = true
-        particleLayer.name = "world-particles"; particleLayer.zPosition = 0.85
+        particleLayer.name = "world-particles"; particleLayer.zPosition = 0.95
         lightingLayer.name = "world-lighting"; lightingLayer.zPosition = 0.9
         tileLayer.name = "world-tiles"
         tileLayer.zPosition = 0.25

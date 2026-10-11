@@ -44,11 +44,30 @@ final class EditorSession: ObservableObject {
     }
     func requestBlueprintSave() { sidebarTab = .blueprints; isSavingBlueprint = true }
     @Published private(set) var camera = CameraState(worldOrigin: WorldPoint(x: 0, y: 0), pointsPerTile: 40)
-    @Published var tool = Tool.select
+    @Published var tool = Tool.select { didSet { if tool != oldValue { dustStroke = nil } } }
+    @Published private(set) var dustStroke: DustStroke?
+    func dustInput(at point: CGPoint, size: CGSize, phase: TerrainStrokePhase, appState: AppState) {
+        guard phase != .cancel else { dustStroke = nil; status = "Dust path cancelled."; return }
+        guard tool == .dust, pendingPlacement == nil, circuitTest == nil, !isPreviewing(appState),
+              !appState.isEditorConfigurationLocked, let mapper = mapper(size: size),
+              mapper.canvasFrame.contains(point), let tile = mapper.tile(atScreen: point) else { dustStroke = nil; return }
+        if phase == .begin { dustStroke = DustStroke(document: appState.selectedDocument) }
+        guard var stroke = dustStroke else { return }
+        guard stroke.document == appState.selectedDocument else { dustStroke = nil; status = "World changed. Dust path cancelled."; return }
+        do {
+            try stroke.extend(to: tile); dustStroke = stroke
+            status = "Dust path: \(stroke.placed) new tiles; \(stroke.blocked) blocked. Release to save."
+            if phase == .end {
+                dustStroke = nil
+                _ = appState.applyDustStroke(stroke, audioMapper: mapper)
+                status = appState.developerPlacementStatus
+            }
+        } catch { dustStroke = nil; status = error.localizedDescription }
+    }
     @Published var terrainBrush = TerrainBrush.grass
     @Published var terrainBrushSize = 3
     @Published private(set) var terrainStroke: TerrainStroke?
-    func cancelTerrainStroke() { terrainStroke = nil }
+    func cancelTerrainStroke() { terrainStroke = nil; dustStroke = nil }
     func terrainInput(at point: CGPoint, size: CGSize, phase: TerrainStrokePhase, appState: AppState) {
         guard phase != .cancel else { cancelTerrainStroke(); status = "Terrain stroke cancelled."; return }
         if appState.isEditorConfigurationLocked { cancelTerrainStroke(); status = appState.editorConfigurationLockMessage; return }
@@ -282,7 +301,7 @@ final class EditorSession: ObservableObject {
 
     func browsingWorld(_ appState: AppState) -> World {
         if let previewGeneration { return World(generation: previewGeneration) }
-        return terrainStroke?.plan?.world ?? appState.editorWorld
+        return dustStroke?.world ?? terrainStroke?.plan?.world ?? appState.editorWorld
     }
 
     func proposedDesktopCamera(_ appState: AppState) -> CameraState {

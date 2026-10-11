@@ -8,7 +8,7 @@ enum ToolDescriptions {
         switch kind {
         case .button: "A press sends a brief power pulse. Connect it to dust or a repeater to trigger an Output."
         case .lever: "A switch that holds power until you turn it off. Useful for enabling circuits and clocks."
-        case .dust: "Carries power between neighboring components. Longer wire runs gradually lose signal strength."
+        case .dust: "Click or drag to draw a connected wire path. Carries power between neighboring components. Longer wire runs gradually lose signal strength."
         case .repeater: "Delays the signal and restores full power. Its arrow points forward; it accepts power only from behind."
         case .lamp: "Lights up when a neighboring wire or component supplies power. Brightens the surrounding ground at night without sending power onward."
         case .lightTorch: "An always-lit torch that brightens its surroundings at night. It does not send redstone power."

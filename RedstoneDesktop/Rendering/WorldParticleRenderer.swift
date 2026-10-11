@@ -46,6 +46,7 @@ import SpriteKit
         previousPositions = previousPositions.filter { keys.contains($0.key) }
         for (key, strength) in requested {
             let rect = mapper.sceneRect(forTile: key.tile, on: screen)
+            let isNew = emitters[key] == nil
             let emitter: SKEmitterNode
             if let existing = emitters[key] { emitter = existing }
             else {
@@ -56,7 +57,7 @@ import SpriteKit
                 emitter.targetNode = layer
                 emitter.particleLifetime = key.texture == .particleSmoke ? 2.5 : 1.6
                 emitter.particleLifetimeRange = 0.3
-                emitter.particleAlpha = key.texture == .particleSmoke ? 0.22 : (key.texture == .particleDust ? 0.45 : 0.65)
+                emitter.particleAlpha = key.texture == .particleSmoke ? 0.45 : (key.texture == .particleDust ? 0.95 : 0.9)
                 emitter.particleAlphaSpeed = -emitter.particleAlpha / emitter.particleLifetime
                 emitter.particleScaleRange = 0.2
                 emitter.particleScaleSpeed = key.texture == .particleSmoke ? 0.1 : -0.08
@@ -70,12 +71,16 @@ import SpriteKit
             if previousPositions[key] != position { emitter.resetSimulation() }
             previousPositions[key] = position
             emitter.position = position
-            emitter.particleSize = CGSize(width: rect.width * (key.texture == .particleDust ? 0.05 : 0.10), height: rect.height * (key.texture == .particleDust ? 0.05 : 0.10))
+            emitter.particleSize = CGSize(width: rect.width * (key.texture == .particleDust ? 0.12 : 0.18), height: rect.height * (key.texture == .particleDust ? 0.12 : 0.18))
             emitter.particleSpeed = rect.width * (key.texture == .particleDust ? 0.04 : 0.10)
             emitter.particleSpeedRange = rect.width * 0.025
             emitter.yAcceleration = key.texture == .particleLava ? -rect.width * 0.12 : 0
             emitter.particlePositionRange = CGVector(dx: rect.width * (key.texture == .particleLava ? 0.5 : 0.15), dy: rect.height * 0.10)
-            emitter.particleBirthRate = CGFloat((key.texture == .particleSmoke ? 0.18 : key.texture == .particleDust ? 0.30 : 0.55) * strength)
+            emitter.particleBirthRate = CGFloat((key.texture == .particleSmoke ? 0.7 : key.texture == .particleDust ? 2.4 : 1.8) * (key.texture == .particleDust ? max(0.35, strength) : strength))
+            if isNew && !reducedMotion {
+                // Short powered pulses must be visible before the next sparse birth interval.
+                emitter.advanceSimulationTime(0.65)
+            }
         }
         advance(into: layer, reducedMotion: reducedMotion)
     }

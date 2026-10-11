@@ -4,9 +4,13 @@
 
 Click **Test Circuit** above the editor viewport. The editor runs a temporary copy of the selected world's circuit. Click its buttons and levers to watch power travel. Click plates and file sensors to toggle simulated detection; their filters are bypassed in test mode and no Finder read occurs. Outputs flash and the toolbar counts Output pulses, but test mode never opens a Finder item, requests script approval or executes a script. Your running desktop remains independent.
 
-**Pause** freezes the test. **Step** advances one simulation tick (50 milliseconds of circuit time); a repeater's redstone tick is two simulation ticks. Inputs clicked while paused take effect as you step. **Play** resumes at 20 simulation ticks per second. **Reset** returns to the saved component configuration and saved lever positions, clears pulse counts and keeps your play/pause choice. **Done Testing** returns to building without saving test power or lever changes.
+**Pause** freezes the test. **Step** advances one simulation tick (50 milliseconds of circuit time); a repeater's redstone tick is two simulation ticks. Inputs clicked while paused take effect as you step. **Play** resumes at 20 simulation ticks per second. **Reset** returns to the saved component configuration and saved lever positions, clears pulse counts and keeps your play/pause choice. **Stop** on the left or **Done Testing** on the right returns to building without saving test power or lever changes.
 
 Building and inspector changes are disabled during testing. Switching worlds/areas, previewing another seed or closing the editor ends the test. External changes to the source circuit also invalidate it. Testing does not start or stop Desktop.
+
+## Draw redstone dust
+
+Choose **Dust**, then click once for a tile or hold and drag for a wire path in the editor or Desktop Build Mode. The live path is a preview until you release. Fast movement fills skipped tiles; diagonal movement includes small elbows so the dust stays connected through cardinal neighbors. Existing dust is reused. Other components, liquid, decorations and invalid ground are preserved and skipped, so obstacles can still leave a gap in the circuit. One release saves one edit, with a single placement sound; undo/redo treats the whole path as one edit. Press Escape while dragging to cancel without saving. Switching tools or changing worlds cancels the draft. Long paths are bounded to 4096 tiles per stroke; release and draw another section for larger builds.
 
 ## Select, copy, move and rotate
 

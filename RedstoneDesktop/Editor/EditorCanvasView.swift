@@ -27,6 +27,7 @@ final class EditorCanvasSurface: SKView {
     var editor: EditorSession?
     let renderer = EditorCanvasRenderer()
     private var tracking: NSTrackingArea?
+    private var drawingDust = false
     private var downPoint: CGPoint?
     private var lastDragPoint: CGPoint?
     private var draggingPan = false
@@ -82,6 +83,12 @@ final class EditorCanvasSurface: SKView {
         selectingRegion = editor?.pendingPlacement == nil && (editor?.tool == .region || event.modifierFlags.contains(.shift)) && editor?.circuitTest == nil
         if selectingRegion, let downPoint { editor?.beginRegion(at: downPoint, size: bounds.size, additive: event.modifierFlags.contains(.shift)) }
         draggingPan = false
+        drawingDust = false
+        if editor?.tool == .dust, editor?.pendingPlacement == nil, editor?.circuitTest == nil, !selectingRegion, let appState, let downPoint {
+            drawingDust = true
+            editor?.dustInput(at: downPoint, size: bounds.size, phase: .begin, appState: appState)
+            refresh()
+        }
         if editor?.tool == .terrain, let appState, let downPoint {
             selectingRegion = false
             editor?.terrainInput(at: downPoint, size: bounds.size, phase: .begin, appState: appState)
@@ -91,6 +98,11 @@ final class EditorCanvasSurface: SKView {
 
     override func mouseDragged(with event: NSEvent) {
         let point = convert(event.locationInWindow, from: nil)
+        if drawingDust {
+            if let appState { editor?.dustInput(at: point, size: bounds.size, phase: .drag, appState: appState) }
+            editor?.hover(at: point, size: bounds.size, appState: appState)
+            refresh(); return
+        }
         if editor?.tool == .terrain {
             if let appState { editor?.terrainInput(at: point, size: bounds.size, phase: .drag, appState: appState) }
             editor?.hover(at: point, size: bounds.size, appState: appState)
@@ -111,8 +123,12 @@ final class EditorCanvasSurface: SKView {
 
     override func mouseUp(with event: NSEvent) {
         guard downPoint != nil else { return }
-        defer { editor?.endRegion(); downPoint = nil; lastDragPoint = nil; draggingPan = false; navigating = false; selectingRegion = false }
+        defer { editor?.endRegion(); downPoint = nil; lastDragPoint = nil; draggingPan = false; navigating = false; selectingRegion = false; drawingDust = false }
         let point = convert(event.locationInWindow, from: nil)
+        if drawingDust {
+            if let appState { editor?.dustInput(at: point, size: bounds.size, phase: .end, appState: appState) }
+            refresh(); return
+        }
         if editor?.tool == .terrain {
             if let appState { editor?.terrainInput(at: point, size: bounds.size, phase: .end, appState: appState) }
             refresh(); return

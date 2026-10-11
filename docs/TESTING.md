@@ -3,6 +3,18 @@
 These are physical-Mac checks, separate from automated tests. Report which numbered groups you actually tried and what failed; untested groups remain unverified. Use harmless folders/text files first. Place new test circuits on clear ground **to the right** of your existing builds. Do not use scripts for display-calibration tests.
 
 
+## Dust dragging, brighter particles and Test Stop — awaiting owner confirmation
+
+- [ ] Quit the old copy with ⌘Q and run the update with ⌘R in Xcode (or open the updated release). In Settings → Appearance, enable Show particles. Keep macOS Reduce Motion off while checking moving effects.
+- [ ] Power a Dust path with a lever in Test Circuit. Red flecks should be clearly visible within a second, including weaker dust near the end. Try a short button pulse and a lit R. Torch. Turning power off stops particles. Check at night too: flecks should retain their brightness.
+- [ ] Look at lava and a regular Torch for a few seconds. Pops, flames and smoke should be larger and more frequent. Test both original and your installed Java assets. Toggle Show particles off: all particles disappear while circuits, terrain animation and lighting continue.
+- [ ] On clear ground to the right of existing builds, choose Dust and drag slowly, then quickly and diagonally. The preview should fill skipped tiles and connect diagonal steps with elbows. Release: it persists. Retrace a diagonal path: it should reuse the same elbows. Undo/redo should remove/restore the entire stroke in one step. Single clicks should still place one tile.
+- [ ] Drag across an existing repeater and water: neither should be overwritten. The path skips blocked ground; you may need to route around obstacles to reconnect it. Press Escape during another drag, then release: none of that stroke should save.
+- [ ] Repeat dust dragging in Desktop Build Mode, exit, and confirm the path appears in the editor and can be undone there. Changing tools during a stroke must not save it. Starting Desktop should run the saved circuit normally.
+- [ ] Enter Test Circuit. **Stop** is on the left beside the playback controls and returns to editing. **Done Testing** still works on the right. Pause/Play, Step and Reset remain available. Stopping must not save test lever states or open desktop files.
+
+Automated checks cover bounded/cardinal paths, retracing, obstacle protection, native editor and Desktop mouse dispatch, preview/release persistence, single undo/redo, cancellation and stale-session/world rejection, plus minimum particle visibility parameters. Final Mac appearance and toolbar placement still need the checks above.
+
 ## Visual preferences — awaiting owner confirmation
 
 1. Quit the old copy with ⌘Q, then run the update with ⌘R in Xcode (or open the updated release). Open **Settings → Appearance → Animation & effects**. All three switches start enabled unless you have already changed them.
@@ -245,11 +257,11 @@ Desktop click investigation remains open: the owner reports missed clicks on the
 ## Particles and imported Java sounds — Mac validation pending
 
 - [ ] Quit the app with ⌘Q, then run the updated app from Xcode with ⌘R. Under Settings → Appearance, select an installed version and choose Use Minecraft Assets, or refresh your previous import with More options & custom packs → Refresh Imported Minecraft Assets. Check the status shows an image count and sound count. The development Mac’s 1.21.11 installation supplies all ten mapped effects.
-- [ ] Place a regular Torch on clear ground to the right of existing circuits. Watch for 5–10 seconds for tiny flames and very faint rising smoke. Nearby lava pools produce occasional small pops across the pool, rather than particles on every tile.
+- [ ] Place a regular Torch on clear ground to the right of existing circuits. Watch for a few seconds for flames and faint rising smoke. Nearby lava pools produce occasional small pops across the pool, rather than particles on every tile.
 - [ ] In Test Circuit, power a short Dust path. It should emit occasional red flecks; switching off removes them. Longer/weaker powered wire runs should be quieter. A lit R. Torch emits red sparks and stops when inhibited. Particles must appear in both day and night; existing night illumination remains intact.
 - [ ] Start Desktop and confirm the same effects. Finder icons remain usable; particles must not intercept button/lever or normal desktop clicks. Desktop Build Mode shows regular torch/lava particles while its simulation is stopped.
 - [ ] Pan, zoom and return to your area repeatedly. Old trails should clear as the camera moves, emitters should follow tiles, and the map should stay responsive. A dense group of torches must remain bounded rather than filling the screen.
 - [ ] Toggle macOS System Settings → Accessibility → Display → Reduce Motion. Particles disappear and pause; turning it off restores them. Existing water/scenery animation and desktop build border still obey their documented Reduce Motion behavior.
-- [ ] Under Settings → Audio, enable sound effects at low volume and unmute. In Test Circuit or on a harmless Desktop circuit, press/release Button, toggle Lever and use placement/erase. Hear imported clicks/block sounds. Existing volume, mute and stereo panning should work. No particles produce continuous ambient sound.
+- [ ] Under Settings → Sound, enable sound effects at low volume and unmute. In Test Circuit or on a harmless Desktop circuit, press/release Button, toggle Lever and use placement/erase. Hear imported clicks/block sounds. Existing volume, mute and stereo panning should work. No particles produce continuous ambient sound.
 - [ ] Choose Use Original Look: visuals and audio return to originals together. Re-select your import and restart the app: the cache reload should restore both, without rereading/downloading game assets.
 - [ ] Import a Java pack missing sounds or particles: originals fill the gaps. A missing launcher sound cache must not break an otherwise valid texture import. No imported images/audio should appear in exported world data or the release app bundle.

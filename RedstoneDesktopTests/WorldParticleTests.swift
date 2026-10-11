@@ -5,6 +5,21 @@ import XCTest
 final class WorldParticleTests: XCTestCase {
     private let screen = ScreenDescriptor(id: "particles", frame: CGRect(x: -200, y: -100, width: 640, height: 640), backingScale: 2)
     private func p(_ x: Int, _ y: Int) -> WorldCoordinate { WorldCoordinate(x: x, y: y) }
+    @MainActor func testEvenWeakPoweredDustUsesVisibleSizeOpacityAndBirthRate() throws {
+        let mapper = try CoordinateMapper(canvasFrame: screen.frame, camera: CameraState(worldOrigin: WorldPoint(x: 0, y: 0), pointsPerTile: 64))
+        let renderer = WorldParticleRenderer(), layer = SKNode()
+        var world = World()
+        world.circuit.components[p(2,2)] = CircuitComponent(kind: .dust)
+        renderer.render(world: world, lava: [], power: [p(2,2): PowerLevel(1)], mapper: mapper, screen: screen, into: layer, reducedMotion: false)
+        let dust = try XCTUnwrap(layer.children.first as? SKEmitterNode)
+        XCTAssertGreaterThanOrEqual(dust.particleAlpha, 0.9)
+        XCTAssertGreaterThanOrEqual(dust.particleSize.width, 7)
+        XCTAssertGreaterThanOrEqual(dust.particleBirthRate, 0.8)
+        renderer.render(world: world, lava: [], power: [p(2,2): .full], mapper: mapper, screen: screen, into: layer, reducedMotion: false)
+        XCTAssertGreaterThan(dust.particleBirthRate, 2)
+        renderer.render(world: world, lava: [], power: [:], mapper: mapper, screen: screen, into: layer, reducedMotion: false)
+        XCTAssertTrue(layer.children.isEmpty)
+    }
     @MainActor func testOnlyLitTorchesPoweredDustAndVisibleLavaEmitAndReuseNodes() throws {
         let mapper = try CoordinateMapper(canvasFrame: screen.frame, camera: CameraState(worldOrigin: WorldPoint(x: 0, y: 0), pointsPerTile: 32))
         let renderer = WorldParticleRenderer(), layer = SKNode()
@@ -76,7 +91,8 @@ final class WorldParticleTests: XCTestCase {
         scene.updateViewport(screen: screen, mapper: mapper)
         let layer = try XCTUnwrap(scene.childNode(withName: "world-particles"))
         XCTAssertEqual(layer.children.count, 2)
-        XCTAssertLessThan(layer.zPosition, try XCTUnwrap(scene.childNode(withName: "world-lighting")).zPosition)
+        XCTAssertGreaterThan(layer.zPosition, try XCTUnwrap(scene.childNode(withName: "world-lighting")).zPosition, "Glowing particles remain visible above night shading")
+        XCTAssertLessThan(layer.zPosition, try XCTUnwrap(scene.childNode(withName: "cursor-highlight")).zPosition)
         let builtIn = BuiltInAssetProvider()
         for id in [TextureAssetID.particleFlame, .particleSmoke, .particleLava, .particleDust] {
             XCTAssertEqual(builtIn.texture(for: id)?.filteringMode, .nearest)

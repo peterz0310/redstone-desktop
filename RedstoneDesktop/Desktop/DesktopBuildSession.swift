@@ -31,9 +31,10 @@ final class DesktopBuildSession: ObservableObject {
     let areaID: UUID
     let mapper: CoordinateMapper
     let title: String
-    @Published var tool = Tool.dust
+    @Published var tool = Tool.dust { didSet { if tool != oldValue { dustStroke = nil } } }
     @Published var terrainBrush = TerrainBrush.grass
     @Published var terrainBrushSize = 3
+    @Published var dustStroke: DustStroke?
     @Published var terrainStroke: TerrainStroke?
     @Published var sensorFilter = FileSensorFilter()
     @Published var direction = Direction.east

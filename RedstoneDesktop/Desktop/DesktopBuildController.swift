@@ -50,6 +50,10 @@ final class DesktopBuildController: NSObject, DesktopBuildPresenting, NSWindowDe
             guard let session else { return }
             appState?.buildClick(at: point, erase: erase, sessionID: session.id)
         }
+        surface.dustInput = { [weak appState, weak session] point, phase in
+            guard let session else { return }
+            appState?.buildDust(at: point, phase: phase, sessionID: session.id)
+        }
         surface.terrainInput = { [weak appState, weak session] point, phase in
             guard let session else { return }
             appState?.buildTerrain(at: point, phase: phase, sessionID: session.id)
@@ -91,6 +95,7 @@ final class DesktopBuildController: NSObject, DesktopBuildPresenting, NSWindowDe
         inputWindow.orderOut(nil)
         surface.stopFeedback()
         surface.appState = nil
+        surface.dustInput = nil
         surface.click = nil; surface.rotate = nil; surface.changeDelay = nil; surface.exit = nil
         inputWindow.close()
         palette.delegate = nil
@@ -111,6 +116,7 @@ final class DesktopBuildSurface: SKView {
     let session: DesktopBuildSession
     weak var appState: AppState?
     let screen: ScreenDescriptor
+    var dustInput: ((CGPoint, TerrainStrokePhase) -> Void)?
     var terrainInput: ((CGPoint, TerrainStrokePhase) -> Void)?
     var click: ((CGPoint, Bool) -> Void)?
     var rotate: ((WorldCoordinate?) -> Void)?
@@ -217,21 +223,25 @@ final class DesktopBuildSurface: SKView {
 
     override func mouseDown(with event: NSEvent) {
         window?.makeFirstResponder(self)
-        if session.tool == .terrain { terrainInput?(point(event), .begin) }
+        if session.tool == .dust { dustInput?(point(event), .begin) }
+        else if session.tool == .terrain { terrainInput?(point(event), .begin) }
         else { click?(point(event), false) }
         refreshHighlight()
     }
 
     override func mouseDragged(with event: NSEvent) {
+        if session.dustStroke != nil { dustInput?(point(event), .drag) }
         if session.terrainStroke != nil { terrainInput?(point(event), .drag) }
         session.hoveredTile = session.tile(at: point(event)); refreshHighlight()
     }
     override func mouseUp(with event: NSEvent) {
+        if session.dustStroke != nil { dustInput?(point(event), .end) }
         if session.terrainStroke != nil { terrainInput?(point(event), .end) }
         refreshHighlight()
     }
 
     override func rightMouseDown(with event: NSEvent) {
+        if session.dustStroke != nil { dustInput?(point(event), .cancel) }
         if let menu = menu(for: event) { NSMenu.popUpContextMenu(menu, with: event, for: self); return }
         window?.makeFirstResponder(self)
         if session.tool == .terrain { terrainInput?(point(event), .cancel) }
@@ -284,14 +294,18 @@ final class DesktopBuildSurface: SKView {
 
     override func scrollWheel(with event: NSEvent) {
         guard event.scrollingDeltaY != 0 else { return }
+        if session.dustStroke != nil { dustInput?(point(event), .cancel) }
         session.cycleTool(forward: event.scrollingDeltaY < 0)
     }
 
     override func keyDown(with event: NSEvent) {
         guard event.modifierFlags.intersection([.command, .control, .option]).isEmpty else { super.keyDown(with: event); return }
-        switch event.charactersIgnoringModifiers?.lowercased() {
+        let key = event.charactersIgnoringModifiers?.lowercased()
+        if key != "\u{1b}", session.dustStroke != nil { dustInput?(point(event), .cancel) }
+        switch key {
         case "\u{1b}":
-            if session.terrainStroke != nil { terrainInput?(point(event), .cancel) } else { exit?() }
+            if session.dustStroke != nil { dustInput?(point(event), .cancel) }
+            else if session.terrainStroke != nil { terrainInput?(point(event), .cancel) } else { exit?() }
         case "0": session.selectTool(number: 10)
         case "r": rotate?(session.hoveredTile)
         case "t", "d": changeDelay?(session.hoveredTile)
@@ -318,7 +332,7 @@ private struct DesktopBuildHotbar: View {
             ForEach(0..<((DesktopBuildSession.Tool.allCases.count + 4) / 5), id: \.self) { row in
                 HStack(spacing: 5) {
                     ForEach(Array(DesktopBuildSession.Tool.allCases.enumerated()).filter { $0.offset / 5 == row }, id: \.element) { index, tool in
-                        Button { session.tool = tool } label: {
+                        Button { appState.buildDust(at: .zero, phase: .cancel, sessionID: session.id); session.tool = tool } label: {
                             Label { Text((index < 10 ? "\(index == 9 ? 0 : index + 1) " : "") + tool.rawValue) } icon: { ToolIcon(name: tool.rawValue) }
                         }.tint(session.tool == tool ? .accentColor : .secondary).help(tool.description)
                     }

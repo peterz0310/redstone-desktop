@@ -292,6 +292,8 @@ struct EditorView: View {
     private var testControls: some View {
         HStack(spacing: 10) {
             if let test = editor.circuitTest {
+                Button { editor.stopTesting() } label: { Label("Stop", systemImage: "stop.fill") }
+                    .help("Stop testing and return to editing")
                 Label("Test mode", systemImage: "testtube.2").foregroundStyle(.teal)
                 Button { editor.toggleTestPlayback(appState) } label: { Label(test.isPlaying ? "Pause" : "Play", systemImage: test.isPlaying ? "pause.fill" : "play.fill") }
                 Button("Step") { editor.stepTest(appState) }.disabled(test.isPlaying).help("Advance one simulation tick (50 ms)")

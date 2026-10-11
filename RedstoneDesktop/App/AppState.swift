@@ -906,7 +906,7 @@ final class AppState: ObservableObject {
     private func refreshBuildRenderer() {
         guard buildSession != nil else { return }
         buildController?.setVisualSettings(visualSettings)
-        buildController?.update(world: buildSession?.terrainStroke?.plan?.world ?? desktopWorld, levers: savedLevers, assets: assets)
+        buildController?.update(world: buildSession?.dustStroke?.world ?? buildSession?.terrainStroke?.plan?.world ?? desktopWorld, levers: savedLevers, assets: assets)
     }
 
     func buildTerrain(at point: CGPoint, phase: TerrainStrokePhase, sessionID: UUID) {
@@ -926,6 +926,39 @@ final class AppState: ObservableObject {
                 _ = applyTerrain(brush: stroke.brush, tiles: stroke.tiles, buildSessionID: session.id)
             }
         } catch { session.terrainStroke = nil; session.status = "Nothing changed: \(error.localizedDescription)" }
+        refreshBuildRenderer()
+    }
+
+    @discardableResult
+    func applyDustStroke(_ stroke: DustStroke, buildSessionID: UUID? = nil, audioMapper: CoordinateMapper? = nil) -> Bool {
+        guard !isMaintenanceLocked, !persistenceBlocked, let world = stroke.world else { return false }
+        if let buildSessionID {
+            guard let session = buildSession, session.id == buildSessionID, session.worldID == activeWorldID,
+                  session.areaID == library.activeAreaID, library.world(id: session.worldID) == stroke.document else { return false }
+            commitCircuit(world, worldID: session.worldID)
+            session.status = "Placed \(stroke.placed) dust tiles; skipped \(stroke.blocked) blocked tiles."
+            refreshBuildRenderer()
+        } else {
+            guard selectedDocument == stroke.document, replaceEditorCircuit(world.circuit) else { return false }
+        }
+        if stroke.placed > 0, let tile = stroke.last { playSound(.placeCircuit, at: tile, mapper: audioMapper ?? buildSession?.mapper) }
+        developerPlacementStatus = "Placed \(stroke.placed) dust tiles; skipped \(stroke.blocked) blocked tiles."
+        return true
+    }
+
+    func buildDust(at point: CGPoint, phase: TerrainStrokePhase, sessionID: UUID) {
+        guard let session = buildSession, session.id == sessionID else { return }
+        guard phase != .cancel else { session.dustStroke = nil; session.status = "Dust path cancelled."; refreshBuildRenderer(); return }
+        guard session.tool == .dust, session.worldID == activeWorldID, session.areaID == library.activeAreaID,
+              !isMaintenanceLocked, let document = library.world(id: session.worldID), let tile = session.tile(at: point) else { session.dustStroke = nil; refreshBuildRenderer(); return }
+        if phase == .begin { session.dustStroke = DustStroke(document: document) }
+        guard var stroke = session.dustStroke else { return }
+        guard stroke.document == document else { session.dustStroke = nil; session.status = "World changed. Dust path cancelled."; refreshBuildRenderer(); return }
+        do {
+            try stroke.extend(to: tile); session.dustStroke = stroke
+            session.status = "Dust path: \(stroke.placed) new tiles; \(stroke.blocked) blocked. Release to save."
+            if phase == .end { session.dustStroke = nil; _ = applyDustStroke(stroke, buildSessionID: session.id) }
+        } catch { session.dustStroke = nil; session.status = error.localizedDescription }
         refreshBuildRenderer()
     }
 
