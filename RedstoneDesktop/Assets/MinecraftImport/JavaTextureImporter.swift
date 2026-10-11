@@ -33,6 +33,7 @@ struct JavaImportRecord: Codable, Sendable {
     let importedAt: Date
     let mappings: [String: String]
     let warnings: [String]
+    var soundMappings: [String: String]? = nil
 }
 
 struct JavaImportResult: Sendable {
@@ -54,6 +55,10 @@ enum JavaTextureImporter {
             .appendingPathComponent("RedstoneDesktop/ImportedTextures", isDirectory: true)
     }
     static let mappings: [JavaTextureMapping] = [
+        JavaTextureMapping(id: .particleFlame, paths: ["assets/minecraft/textures/particle/flame.png"], tint: nil, art: nil),
+        JavaTextureMapping(id: .particleSmoke, paths: ["assets/minecraft/textures/particle/generic_7.png", "assets/minecraft/textures/particle/smoke_0.png"], tint: nil, art: nil),
+        JavaTextureMapping(id: .particleLava, paths: ["assets/minecraft/textures/particle/lava.png"], tint: nil, art: nil),
+        JavaTextureMapping(id: .particleDust, paths: ["assets/minecraft/textures/particle/generic_0.png"], tint: nil, art: nil),
         mapping(.terrainGrass, "grass_block_top", old: "grass_top", tint: [108,160,62]),
         mapping(.terrainDryGrass, "grass_block_top", old: "grass_top", tint: [181,168,69]),
         mapping(.terrainSnow, "snow"), mapping(.terrainGravel, "gravel"),
@@ -102,10 +107,11 @@ enum JavaTextureImporter {
             source = try PackSource(url: sourceURL); archive = nil; prefix = ""
         } else {
             let zip = try SafeZIP(url: sourceURL)
-            let candidates = Set(mappings.flatMap(\.paths).flatMap { path in
+            let supported = mappings.flatMap(\.paths) + JavaAudioImporter.mappings.flatMap { $0.1.map { "assets/minecraft/sounds/\($0).ogg" } }
+            let candidates = Set(supported.flatMap { path in
                 zip.entries.keys.filter { $0.hasSuffix(path) }.map { String($0.dropLast(path.count)) }
             })
-            guard candidates.count == 1, let found = candidates.first else { throw PackError("No supported Minecraft Java textures, or ambiguous archive roots. Choose a vanilla version JAR or Java texture pack.") }
+            guard candidates.count == 1, let found = candidates.first else { throw PackError("No supported Minecraft Java assets, or ambiguous archive roots. Choose a vanilla version JAR or Java texture pack.") }
             source = nil; archive = zip; prefix = found
         }
         var images: [TextureAssetID: RasterAsset] = [:], used: [String: String] = [:], warnings: [String] = []
@@ -150,8 +156,33 @@ enum JavaTextureImporter {
             }
             if !accepted { warnings.append("\(mapping.id.rawValue): no valid supported source texture; built-in fallback.") }
         }
-        guard !images.isEmpty else { throw PackError("No supported valid Java PNG textures were found. Previous pack preserved.") }
-        let id = UUID(), record = JavaImportRecord(id: id, sourcePath: sourceURL.path, importedAt: Date(), mappings: used, warnings: warnings)
+        var sounds: [SoundID: [Float]] = [:], soundPaths: [String: String] = [:]
+        let installed: (PackSource, JavaAudioImporter.Index)?
+        do { installed = try JavaAudioImporter.installedAssets(for: sourceURL) }
+        catch { installed = nil; warnings.append("Minecraft sound cache unavailable: \(error.localizedDescription) Original sounds retained.") }
+        for (sound, names) in JavaAudioImporter.mappings {
+            var lastError: (any Error)?
+            for name in names {
+                let path = "assets/minecraft/sounds/\(name).ogg"
+                do {
+                    let data: Data
+                    let provenance: String
+                    if let archive, archive.entries[prefix + path] != nil {
+                        data = try archive.read(prefix + path, limit: 2 * 1024 * 1024); provenance = prefix + path
+                    } else if let source, let local = try? source.read(path, limit: 2 * 1024 * 1024) {
+                        data = local; provenance = path
+                    } else if let installed {
+                        data = try JavaAudioImporter.readObject(name, assets: installed); provenance = "launcher:minecraft/sounds/\(name).ogg"
+                    } else { continue }
+                    sounds[sound] = try JavaAudioImporter.decode(data); soundPaths[sound.rawValue] = provenance
+                    break
+                } catch { lastError = error }
+            }
+            if sounds[sound] == nil, let lastError { warnings.append("\(sound.rawValue): invalid/unavailable Java sound; original fallback. \(lastError.localizedDescription)") }
+        }
+        if sounds.isEmpty { warnings.append("No supported Java sounds found locally. Original sound effects retained; no files downloaded.") }
+        guard !images.isEmpty || !sounds.isEmpty else { throw PackError("No supported valid Java images or sounds were found. Previous pack preserved.") }
+        let id = UUID(), record = JavaImportRecord(id: id, sourcePath: sourceURL.path, importedAt: Date(), mappings: used, warnings: warnings, soundMappings: soundPaths.isEmpty ? nil : soundPaths)
         let root = cacheRoot.resolvingSymlinksInPath().standardizedFileURL
         try FileManager.default.createDirectory(at: root, withIntermediateDirectories: true)
         let staging = root.appendingPathComponent(".staging-\(id.uuidString)", isDirectory: true)
@@ -164,7 +195,12 @@ enum JavaTextureImporter {
             try image.pngData().write(to: staging.appendingPathComponent(filename), options: .atomic)
             assets[id.rawValue] = filename
         }
-        let manifest = PackManifest(name: "Java textures · \(String(sourceURL.deletingPathExtension().lastPathComponent.prefix(100)))", author: "Local import; original source rights apply", assets: assets, animations: animations.isEmpty ? nil : Dictionary(uniqueKeysWithValues: animations.map { ($0.key.rawValue, $0.value.spec) }))
+        for (id, samples) in sounds {
+            let filename = id.rawValue + ".wav"
+            try JavaAudioImporter.wav(samples).write(to: staging.appendingPathComponent(filename), options: .atomic)
+            assets[id.rawValue] = filename
+        }
+        let manifest = PackManifest(name: "Java assets · \(String(sourceURL.deletingPathExtension().lastPathComponent.prefix(100)))", author: "Local import; original source rights apply", assets: assets, animations: animations.isEmpty ? nil : Dictionary(uniqueKeysWithValues: animations.map { ($0.key.rawValue, $0.value.spec) }))
         try JSONEncoder().encode(manifest).write(to: staging.appendingPathComponent("pack.json"), options: .atomic)
         try JSONEncoder().encode(record).write(to: staging.appendingPathComponent("import.json"), options: .atomic)
         let validated = try ResourcePackLoader.load(staging) // Validate the generated format-1 pack before publishing its directory.

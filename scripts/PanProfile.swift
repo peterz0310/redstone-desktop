@@ -14,6 +14,7 @@ private struct ProfileStore: WorldLibraryStoring {
         defer { try? FileManager.default.removeItem(at: root) }
         let imported = try JavaTextureImporter.importTextures(from: URL(fileURLWithPath: CommandLine.arguments[1]), cacheRoot: root)
         assets.apply(imported.pack)
+        print("imported textures=\(imported.pack.textures.count) sounds=\(imported.pack.sounds.count) warnings=\(imported.record.warnings.count)")
         let app = AppState(libraryStore: ProfileStore(), assets: assets)
         defer { app.shutdown() }
         if CommandLine.arguments.contains("--night") {
@@ -28,7 +29,7 @@ private struct ProfileStore: WorldLibraryStoring {
             editor.pan(by: CGSize(width: -320, height: 0), size: size)
             let t = CFAbsoluteTimeGetCurrent()
             let scene = renderer.update(appState: app, editor: editor, size: size)!
-            print("step=\(step) ms=\((CFAbsoluteTimeGetCurrent()-t)*1000) textures=\(scene.terrainMetrics.textureBuilds) light_masks=\(scene.lightingTextureBuilds)")
+            print("step=\(step) ms=\((CFAbsoluteTimeGetCurrent()-t)*1000) textures=\(scene.terrainMetrics.textureBuilds) light_masks=\(scene.lightingTextureBuilds) particles=\(scene.particleEmitterCount)")
         }
     }
 }

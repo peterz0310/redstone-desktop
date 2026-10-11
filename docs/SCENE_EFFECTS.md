@@ -1,0 +1,13 @@
+# Small world particles
+
+Lava emits occasional small upward pops. Regular torches emit tiny flames and faint smoke. Lit redstone torches emit red sparks; active dust emits gentle red flecks at a rate proportional to power. Off dust/redstone torches stop emitting. Lamps illuminate without particles. Effects work in the editor, Test Circuit, Desktop and Desktop Build Mode; regular torches and lava need no running simulation, while redstone uses the displayed power snapshot.
+
+Particles use original sprites by default. Minecraft imports can supply flame, smoke, lava and dust sprites; missing images keep originals. Refresh an existing Minecraft import in **Settings → Appearance → More options & custom packs → Refresh Imported Minecraft Assets** to pick up newly supported assets. Custom packs can supply `particleFlame`, `particleSmoke`, `particleLava` and `particleDust` PNGs. [Java asset import](JAVA_TEXTURE_IMPORT.md) documents paths and audio support.
+
+These are quiet visual details rather than Minecraft's full particle engine. Lava effects are spread across roughly one in four lava tiles. Each scene has at most 64 visible emitters, prioritizing circuit components. Each emitter produces less than one particle per second and particles last a few seconds. Dense scenes stop adding emitters at the cap. No light, power, terrain, file actions or Finder state is changed by particles.
+
+macOS **System Settings → Accessibility → Display → Reduce Motion** hides and pauses particles, and clears their previous trails. Turning it off resumes them. Panning/zooming resets old particle trails rather than leaving them floating at stale screen positions. Texture changes replace emitter textures; unchanged circuit snapshots reuse existing nodes. Particles do not add ambient audio; imported short effects follow the existing app sound settings and events.
+
+`WorldParticleRenderer` is a SpriteKit presentation adapter, consuming existing terrain/lava and circuit-power snapshots. It shares cached lava positions with lighting, filters to the visible viewport through CoordinateMapper and retains keyed SKEmitterNodes between updates. A separate layer sits above circuit art and below night shading/UI; all emitters use public SpriteKit APIs and validated semantic textures. It neither reads Finder nor changes simulation or launches files. No imported emitter definitions, shaders or executable code are accepted.
+
+Automated tests cover on/off sources, viewport filtering/remapping, persistent node reuse, emitter caps, Reduce Motion pausing, scene rebuild ownership, complete original fallback, Java sprite mapping, native Ogg decoding and portable WAV publication. Mac/GPU appearance and speaker playback remain manual checks in [TESTING.md](TESTING.md).

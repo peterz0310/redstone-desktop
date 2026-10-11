@@ -26,7 +26,8 @@ final class BuiltInAssetProvider: AssetProvider {
     func texture(for id: TextureAssetID) -> SKTexture? {
         if let existing = textures[id] { return existing }
         let texture: SKTexture
-        if let circuit = id.circuitID { texture = SKTexture(image: CircuitTextures.image(for: circuit)) }
+        if id.isParticle { texture = SKTexture(image: WorldParticleRenderer.originalImage(for: id)) }
+        else if let circuit = id.circuitID { texture = SKTexture(image: CircuitTextures.image(for: circuit)) }
         else {
             let terrain = TerrainID.allCases.first { TextureAssetID.terrain($0) == id }
             let appearance: DecorationAppearance? = id == .decorationTree ? .treeLeaves : id == .decorationPine ? .pineLeaves : id.decorationAppearance
@@ -117,7 +118,7 @@ final class AssetLibrary: ObservableObject, AssetProvider {
         defer { activeImports -= 1 }
         guard let root = importCacheRoot else { status = "Local import cache is unavailable."; return }
         generation = UUID(); let request = generation
-        isLoading = true; status = "Importing supported Java textures…"
+        isLoading = true; status = "Importing Minecraft textures and sounds…"
         let result = await Task.detached(priority: .userInitiated) { Result { try JavaTextureImporter.importTextures(from: url, cacheRoot: root) } }.value
         guard generation == request else {
             if case let .success(value) = result { try? JavaTextureImporter.remove(value.folder, cacheRoot: root) }
@@ -128,7 +129,7 @@ final class AssetLibrary: ObservableObject, AssetProvider {
             let previous = importFolder
             importFolder = value.folder; importRecord = value.record; source = value.folder
             apply(value.pack); warnings += value.record.warnings
-            status = "Imported \(value.pack.textures.count) Java textures. Missing mappings and all sounds use built-in assets."
+            status = "Imported \(value.pack.textures.count) textures and \(value.pack.sounds.count) sounds. Missing assets use originals."
             preferences?.set(value.folder.path, forKey: "assetPackPath")
             preferences?.set(value.record.id.uuidString, forKey: "lastJavaImportID")
             if let previous, previous != value.folder {

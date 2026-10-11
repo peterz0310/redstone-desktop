@@ -32,7 +32,7 @@ final class WorldRendererTests: XCTestCase {
         scene.updateWorld(World())
         XCTAssertTrue(layer.children.isEmpty)
         XCTAssertTrue(terrain.children.isEmpty)
-        XCTAssertEqual(scene.children.count, 10)
+        XCTAssertEqual(scene.children.count, 11)
     }
 
     @MainActor

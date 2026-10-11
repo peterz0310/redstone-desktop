@@ -58,6 +58,8 @@ All IDs below accept **PNG only**. These are the actual format-1 names; examples
 | `terrainGravel` | Gravel riverbank / rocky surface |
 | `waterShallow` | Shallow-water surface |
 | `waterDeep` | Deep-water surface |
+| `particleFlame` / `particleSmoke` | Torch flame / smoke sprites |
+| `particleLava` / `particleDust` | Lava pop / red-tinted powered dust sprites |
 | `lavaStill` | Lava-pool surface |
 | `decorationTree` | Oak leaf-block overlay, reused across the canopy |
 | `decorationOakLog` | Solid log top beneath central oak leaves |
@@ -157,3 +159,5 @@ Existing static packs need no changes. To animate `waterShallow`, `waterDeep` or
 Indices are zero-based, from the top of the PNG. Durations are seconds, one per sequence entry; `interpolate` defaults to false. Limits: 1–64 stored frames, 1–256 sequence steps, finite 0.05–10 second durations, at most the three liquid IDs. An animation ID must have a matching `assets` entry; other animation IDs refuse the pack. Invalid per-image animation data warns and uses original fallback for that image. PNG/manifest/archive bounds and safe-path rules remain unchanged. Custom packs without animation declarations remain static; Java imports convert `.png.mcmeta` into these declarations. No user-supplied shader code is accepted.
 
 See [Terrain animation](TERRAIN_ANIMATION.md) for implementation and testing. Liquid alpha is composited over an opaque liquid color, keeping the diagnostic grid from showing through. World/area preview cards remain static thumbnails; the editor and Desktop animate.
+
+Particle PNG IDs use the app’s bounded [scene effects](SCENE_EFFECTS.md); packs supply images only. No pack-supplied emitter/shader/model code is accepted. Java imports may decode supported local Ogg effects into these packs’ existing semantic WAV IDs; custom format-1 manifests still accept WAV only, as specified above. See [Java asset import](JAVA_TEXTURE_IMPORT.md) for supported paths and cache provenance.

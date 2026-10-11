@@ -1,14 +1,14 @@
-# Local Minecraft Java texture import
+# Local Minecraft Java assets import
 
-This optional importer reads a **local** Java Edition version JAR or Java texture-pack folder/ZIP and converts supported PNGs into a Redstone Desktop format-1 pack. Minecraft is not required to run the app. The app does not download assets, run Java, invoke a launcher, load mods, execute pack code or import Minecraft audio.
+This optional importer reads a **local** Java Edition version JAR or Java texture-pack folder/ZIP and converts supported PNGs and short Ogg sound effects into a Redstone Desktop format-1 pack. Minecraft is not required to run the app. The app does not download assets, run Java, invoke a launcher, load mods, or execute pack code.
 
 For packs made specifically for Redstone Desktop, use [RESOURCE_PACKS.md](RESOURCE_PACKS.md). A Java pack has `assets/minecraft/textures/...`; a Redstone Desktop pack has `pack.json` with semantic asset IDs. Use the corresponding picker in Appearance & Packs.
 
 ## Import an installed version
 
 1. Open **Settings → Appearance** (or Advanced → Appearance & Packs).
-2. Under **Use your Minecraft textures**, choose a **Minecraft version**, then **Use Minecraft Textures**. The first discovered version is selected automatically. **More options & custom packs → Look for Installed Versions Again** refreshes the list.
-3. Wait for the imported texture count. Inspect **Import details** for missing mappings. Browse the generated world in the editor, or Start Desktop to see the assigned area.
+2. Under **Minecraft textures & sounds**, choose a **Minecraft version**, then **Use Minecraft Assets**. The first discovered version is selected automatically. **More options & custom packs → Look for Installed Versions Again** refreshes the list.
+3. Wait for the imported texture and sound counts. Inspect **Import details** for missing mappings. Browse the generated world in the editor, or Start Desktop to see the assigned area.
 
 Discovery checks up to 512 version folders under:
 
@@ -18,17 +18,17 @@ Discovery checks up to 512 version folders under:
 
 It lists readable, regular, bounded-size JARs; discovery does not import or validate their contents. Version names sort numerically descending, with names starting `1.` first. The importer validates the selected archive when you press Import. Alternative launcher locations are supported through the manual picker.
 
-For this development Mac, read-only discovery found 29 versions, and a temporary import of **1.21.8** successfully produced all 26 mappings with no warnings after the appearance follow-up. Select that version for the first visual check. This observation is local validation, not a promise that every installed/version/modded JAR is supported. The repository now includes owner-requested dust and derived toolbar-icon exceptions; see [THIRD_PARTY_NOTICES.md](../THIRD_PARTY_NOTICES.md). World-texture imports remain local and are not committed or shipped.
+On this development Mac, the current temporary import of **1.21.11** produced all 48 image mappings and 10 sound effects with no warnings. Select an installed version with its launcher asset cache available for a first visual/audio check. This observation is local validation, not a promise that every installed/version/modded JAR is supported. The repository now includes owner-requested dust and derived toolbar-icon exceptions; see [THIRD_PARTY_NOTICES.md](../THIRD_PARTY_NOTICES.md). World-texture, particle and audio imports remain local and are not committed or shipped.
 
 ## Import a JAR or Java pack manually
 
 Choose **Choose a Texture Pack…**, then select a version `.jar`, Java pack `.zip`, or unpacked Java pack folder. If navigating to Library is awkward, press **⌘⇧G** in the picker and paste `~/Library/Application Support/minecraft/versions/`.
 
-A folder must contain `assets/minecraft/textures/` directly. An archive may have those paths directly or under one unambiguous wrapper root. If matching textures occur under multiple roots, the archive is refused. `pack.mcmeta` is not interpreted: only the mappings below are used. Bedrock packs, launcher asset indexes, custom model definitions and mod-specific namespaces are not supported.
+A folder must contain `assets/minecraft/textures/` and/or supported `assets/minecraft/sounds/` paths directly. An archive may have those paths directly or under one unambiguous wrapper root. If matching supported assets occur under multiple roots, the archive is refused. `pack.mcmeta` is not interpreted: only the mappings below are used. Bedrock packs, standalone launcher indexes, custom model definitions and mod-specific namespaces are not supported. Installed version imports resolve only that version’s declared launcher audio index; `sounds.json` event graphs and pitch/variant rules are not interpreted.
 
 ## Supported mappings
 
-There are 37 optional mappings, including landscape surface/scenery mappings and two log tops. Current automated imports use original synthetic assets. Reimport an installed version to add the new textures to an existing cache. Torch direction/NOT labels stay app UI; pack pixels never affect the documented [circuit rules](REDSTONE_RULES.md).
+Optional image mappings cover landscape/scenery, circuit components and particles. Current automated imports use original synthetic assets. Reimport an installed version to add the new textures to an existing cache. Torch direction/NOT labels stay app UI; pack pixels never affect the documented [circuit rules](REDSTONE_RULES.md).
 
 Modern paths below are relative to `assets/minecraft/textures/block/`. Legacy paths are relative to `assets/minecraft/textures/blocks/`. Modern paths are tried first, then the legacy alternative. Each semantic ID can independently fall back.
 
@@ -81,7 +81,7 @@ For rows with numeric tint, each decoded RGB channel is multiplied by the listed
 
 Square PNGs are accepted. Water and lava retain vertical square-frame strips with up to 64 frames. Their adjacent `.png.mcmeta` files contribute frame order, integer frame times (1–200 ticks, 20 ticks/second), and optional interpolation. Missing metadata uses sequential 1-tick frames; malformed metadata warns and uses that default. Unreadable/oversized metadata uses the missing-metadata default. Only bounded JSON data is read; pack shaders, models and code are never executed. Other animated textures still contribute only the first, top square frame. Other nonsquare images are skipped. Source PNG dimensions remain 1–1024 on each axis and encoded size at most 4 MiB. All terrain is sampled at 16 pixels per tile, with nearest filtering. See [terrain animation](TERRAIN_ANIMATION.md) for rendering, limits and Reduce Motion.
 
-Tree/flower/reed images are 2D decoration overlays, not 3D models. Dust uses the existing connected wire geometry with the imported material. Selection overlays and all sounds retain original built-in assets. Outputs use the command-block face with a small original red indicator when powered; soft occupancy glow remains app UI; Output art covers a full tile with no text or colored backing. Cacti crop the central top face into a transparent 16×16 overlay. Missing individual mappings also use original fallback. Importing textures does not change terrain rules, circuits, Finder targets, world data or cameras.
+Tree/flower/reed images are 2D decoration overlays, not 3D models. Dust uses the existing connected wire geometry with the imported material. Selection overlays remain app UI; supported sounds use the optional mappings below and otherwise retain originals. Outputs use the command-block face with a small original red indicator when powered; soft occupancy glow remains app UI; Output art covers a full tile with no text or colored backing. Cacti crop the central top face into a transparent 16×16 overlay. Missing individual mappings also use original fallback. Importing textures does not change terrain rules, circuits, Finder targets, world data or cameras.
 
 ### Circuit and decoration appearance
 
@@ -91,7 +91,7 @@ Dust converts source-dot luminance into an **opaque** textured material, dark re
 
 The existing generator's flower and legacy rock positions are preserved. Stable seed/coordinate selection chooses poppy/dandelion/blue orchid/allium/oxeye daisy, with cactus on sand (including sandy shores) and coal/iron elsewhere. Generated dirt is presented with the imported grass-block top; explicit saved dirt overrides remain dirt. Ore art replaces loose rock art; deposits remain placement-blocking decorations, not mineable resources. This is appearance variety, not a generation/save migration.
 
-**After upgrading an existing import, use More options & custom packs → Refresh Imported Minecraft Textures once.** Reload only reads the generated cache; it cannot recover discarded animation frames or add new mappings. Reimport reads the original local source and creates the current 37-mapping pack, including water/lava strips and log tops. No automatic rewrite of user caches occurs.
+**After upgrading an existing import, use More options & custom packs → Refresh Imported Minecraft Assets once.** Reload only reads the generated cache; it cannot recover discarded animation frames or add new mappings. Reimport reads the original local source and creates the current 37-mapping pack, including water/lava strips and log tops. No automatic rewrite of user caches occurs.
 
 ## Cache, reload and removal
 
@@ -102,17 +102,17 @@ An import creates one managed directory:
   pack.json
   import.json
   terrainGrass.png
-  ...only successfully mapped semantic PNGs...
+  ...only successfully mapped semantic PNGs and WAVs...
 ```
 
-`pack.json` is an ordinary format-1 manifest consumed by the shared resource-pack loader. `import.json` records format version 1, cache UUID, absolute source path, import date, successful semantic-to-source-path mappings and missing-mapping warnings. No source archive, executable, audio or unrelated asset is copied. Imported PNGs are decoded, optionally cropped/tinted, then re-encoded; they are not byte-identical copies of source PNGs.
+`pack.json` is an ordinary format-1 manifest consumed by the shared resource-pack loader. `import.json` records format version 1, cache UUID, absolute source path, import date, successful semantic-to-source-path mappings and missing-mapping warnings. No source archive, executable, source Ogg file or unrelated asset is copied. Supported audio is decoded and stored as normalized PCM WAV. The optional `soundMappings` field records audio provenance; old format-1 records without it remain valid. Imported PNGs are decoded, optionally cropped/tinted, then re-encoded; they are not byte-identical copies of source PNGs.
 
 There is **one active pack**, shared by editor and desktop. Importing Java textures replaces the current custom pack; unspecified assets resolve to built-in defaults rather than stacking packs. The app retains one last managed import for the controls below. Successful re-import/replacement publishes a new UUID directory, then removes the previous managed import. If old-cache removal fails, a warning reports the retained directory.
 
 | Control | Behavior |
 | --- | --- |
 | **Reload Current Pack** | Re-read the currently selected pack. For a Java import, this reads the generated cache, not the original JAR. |
-| **Refresh Imported Minecraft Textures** | Read the last original JAR/folder/ZIP again and build a fresh cache. Requires that source to remain readable at its recorded path. |
+| **Refresh Imported Minecraft Assets** | Read the last original JAR/folder/ZIP again and build a fresh cache. Requires that source to remain readable at its recorded path. |
 | **Show Imported Textures in Finder** | Show the last managed import directory in Finder. |
 | **Use Original Look** | Restore original appearance and clear the active selection preference. Keep the last import cache available for re-import/reveal/removal. |
 | **Remove Imported Textures** | Delete the last managed cache and clear its record. If active, restore built-in assets; if another custom pack is active, preserve it. Never delete or modify the original source. |
@@ -121,7 +121,7 @@ Selection and the last import UUID are app preferences, separate from `library.j
 
 ## Failure and security boundaries
 
-Missing or invalid individual mappings warn and use original fallback. At least one supported, valid PNG is required. A failed Java import preserves the previous active appearance and cache; generic pack-load failures instead activate built-in fallback, as documented in the format guide.
+Missing or invalid individual mappings warn and use original fallback. At least one supported, valid image or sound is required. A failed Java import preserves the previous active appearance and cache; generic pack-load failures instead activate built-in fallback, as documented in the format guide.
 
 Archives use the same bounded [SafeZIP contract](RESOURCE_PACKS.md#archive-contract-and-limits): no shell extraction, unsafe paths, symlink entries, encryption, ZIP64, multi-disk or unsupported compression. Limits apply to the whole archive's declared metadata, including entries not selected for import. Some large/modded exports may therefore be refused even if a useful texture exists. Recreate a smaller ordinary Java texture pack rather than disabling validation.
 
@@ -131,12 +131,50 @@ Decode/validation happens before cache publication. Writes use fixed semantic fi
 
 The source, original built-in assets and original examples use the repository license. That license does **not** grant rights to imported Minecraft or third-party pack art. Keep local imported assets out of commits, release bundles, shared screenshots/assets where rights do not permit use, and exported world data. Import paths are always Application Support, never the repository or app bundle. Do not add downloads or bundle world assets to make a demo work. The separately owner-authorized app/menu/tool icon artwork is documented in THIRD_PARTY_NOTICES.md; it does not extend to world textures.
 
-Code: `Assets/MinecraftImport/JavaTextureImporter.swift` owns discovery/mapping/cache records; `JavaCircuitArt.swift` owns fixed raster recipes and `World/DecorationAppearance.swift` chooses stable variants; `Assets/AssetProvider.swift` owns asynchronous selection and lifecycle; `Assets/AssetSettingsView.swift` exposes controls. Renderer consumers only see semantic validated assets; simulation never sees pack paths or depends on SpriteKit.
+Code: `Assets/MinecraftImport/JavaTextureImporter.swift` owns discovery/mapping/cache records; `JavaAudioImporter.swift` owns declared-index lookup, object verification and native Ogg-to-PCM conversion; `JavaCircuitArt.swift` owns fixed raster recipes and `World/DecorationAppearance.swift` chooses stable variants; `Assets/AssetProvider.swift` owns asynchronous selection and lifecycle; `Assets/AssetSettingsView.swift` exposes controls. Renderer consumers only see semantic validated assets; simulation never sees pack paths or depends on SpriteKit.
 
 Tests in `JavaTextureImportTests.swift` use original synthetic PNGs in a real deflated ZIP, isolated preferences and temporary roots. They cover discovery, modern/legacy mappings, tint, liquid frames/timing/cache round trips, static first-frame fallback, ignored unrelated data, partial fallback, rejection/write failure, managed deletion, source preservation, reload/re-import/startup and inactive-cache removal. Extend mappings with original fixtures and explicit fallback expectations. A real local JAR can be validated in a temporary cache without committing its images or changing the owner's active selection.
 
 The animation follow-up was also checked against the locally installed **1.21.8 JAR** in a temporary cache: 37 textures, no import warnings; water has 32 frames at 0.1 seconds each, and lava has 20 frames in a 38-step forward/backward sequence at 0.1 seconds each. Cache reload preserved the sequences. This read did not change the owner’s active pack, save data or source JAR, and its temporary imported images were removed. Other Java versions/packs still need their own validation.
 
-Lamps and regular torches use original art when missing from a pack. Existing imported caches keep their original mappings; choose **Refresh Imported Minecraft Textures** for the Minecraft JAR or Java pack to pick up the three new mappings. They are image data only, never code, models or scripts.
+Lamps and regular torches use original art when missing from a pack. Existing imported caches keep their original mappings; choose **Refresh Imported Minecraft Assets** for the Minecraft JAR or Java pack to pick up the three new mappings. They are image data only, never code, models or scripts.
 
 Pressure-plate recipes sample the material into a transparent 16×16 plate, with a shaded rim and a depressed powered variant. An Any item Sensor uses the wooden plate IDs just like a Plate; filtered Sensors use the stone IDs. No nonexistent standalone Java pressure-plate PNG or model execution is required. Refresh an existing Minecraft import to acquire the new mappings.
+
+## Particle images
+
+These paths are relative to `assets/minecraft/textures/particle/`. They may be overridden in a Java folder/ZIP or the equivalent semantic custom-pack ID. Particle JSON/model definitions are not executed or interpreted; the app owns behavior. Each image uses a square PNG or the first square frame of a strip.
+
+| Semantic ID | Java PNG |
+| --- | --- |
+| `particleFlame` | `flame.png` |
+| `particleSmoke` | `generic_7.png`, with `smoke_0.png` as an alternative |
+| `particleLava` | `lava.png` |
+| `particleDust` | `generic_0.png`; renderer tints the sprite bright red |
+
+Missing art uses original code-drawn sprites. See [scene effects](SCENE_EFFECTS.md) for emission limits, Reduce Motion and lifetime behavior.
+
+## Java sound effects
+
+Installed version JARs normally contain no game sound files. The importer reads the selected version's sibling `<version>.json`, resolves its declared `assetIndex.id` (or legacy `assets` ID), and reads only matching objects from `<minecraft>/assets/indexes/<id>.json` and `assets/objects/<first-two-hash-digits>/<hash>`. It verifies object sizes and SHA-1 content addresses. It does not scan other indexes, download assets, run the launcher or modify the installation. Versions installed without their asset cache retain original effects; launching that version through Minecraft to finish its normal installation may make its assets available for a later refresh.
+
+Java folders/ZIPs may supply files at `assets/minecraft/sounds/<path>.ogg`. Fixed supported mappings are:
+
+| App sound IDs | Java path(s), without `.ogg` |
+| --- | --- |
+| `buttonPress`, `buttonRelease` | `random/click`, alternative `random/wood_click` |
+| `leverToggleOn`, `leverToggleOff` | `random/click` |
+| `repeaterTick` | `random/wood_click`, alternative `random/click` |
+| `torchToggle` | `fire/ignite` |
+| `placeCircuit` | `dig/stone1` |
+| `removeCircuit` | `dig/stone2`, alternative `dig/stone1` |
+| `invalidPlacement` | `note/bass` |
+| `outputActivate` | `note/pling` |
+
+This is a semantic app mapping, not Minecraft's complete sound-event engine. Music, ambient loops, randomized variants, `sounds.json` remapping, Java event pitch and mod namespaces are not imported. Particles are silent. Existing circuit events control playback; lava/torch visuals do not add continuous ambient audio. Imported effects use the existing volume, mute, sound-effects switch, stereo panning and eight-voice playback limit.
+
+Native AVFoundation decodes local Ogg data on the background import worker. Inputs are limited to 2 MiB, one/two channels, 8–96 kHz and two seconds. Output is mono float PCM at 44.1 kHz, resampled and clamped to a 0.11 peak, then cached as format-1 WAV. Missing, malformed, excessive-duration or unsupported-by-the-OS audio falls back to original effects without failing an otherwise valid image import. The app requires no FFmpeg, third-party decoder, microphone permission or backend. Audio-only Java folders/ZIPs with supported paths are valid.
+
+Choose **Use Minecraft Assets**, or **Refresh Imported Minecraft Assets** for an existing selection. Old caches stay valid but do not gain new sounds or particle images until refreshed. The refreshed count reports both images and sounds; **Use Original Look** also restores original audio. Exported worlds contain no imported assets. Game images/audio stay in the local managed cache and are never bundled or committed to Git.
+
+The particles/audio follow-up was verified against the owner’s local **1.21.11** installation in a temporary cache: **48 image mappings, all 10 short sound effects, zero import warnings**. Audio playback was checked through an offline AVAudioEngine render, not through the owner’s speakers. Original game files, active selection and world data were untouched; the temporary cache was removed. Panning in the isolated unoptimized night profile reused cached views in roughly 0.3–0.6 ms, with three newly exposed terrain chunks taking roughly 17–19 ms. GPU/speaker feel and older supported Macs remain manual checks.

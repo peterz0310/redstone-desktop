@@ -18,21 +18,21 @@ struct AssetSettingsView: View {
                 }
                 Divider()
                 HStack {
-                    Text("Use your Minecraft textures").font(.headline)
-                    HelpButton(title: "Textures from your game", text: "If Minecraft Java Edition is installed on this Mac, choose a version below. The app copies supported images to its own cache. It never runs game code or changes your installation. Missing textures use the original look. Your worlds and circuits stay the same.")
+                    Text("Minecraft textures & sounds").font(.headline)
+                    HelpButton(title: "Textures from your game", text: "If Minecraft Java Edition is installed on this Mac, choose a version below. The app copies supported images and short sound effects to its own cache. Sounds come from the selected version’s local asset cache or the chosen pack. It never runs game code or changes your installation. Missing textures use the original look. Missing sounds use original effects. No downloads are required. Your worlds and circuits stay the same.")
                 }
-                Text("Bring the look of your installed Java Edition into your desktop.").foregroundStyle(.secondary)
+                Text("Bring Minecraft’s textures, particles and supported sound effects into your desktop.").foregroundStyle(.secondary)
                 Picker("Minecraft version", selection: $selectedVersion) {
                     Text("Choose a version").tag(Optional<URL>.none)
                     ForEach(assets.installedVersions) { version in Text(version.name).tag(Optional(version.url)) }
                 }
                 HStack {
-                    Button("Use Minecraft Textures") { if let selectedVersion { Task { await assets.importJava(selectedVersion) } } }
+                    Button("Use Minecraft Assets") { if let selectedVersion { Task { await assets.importJava(selectedVersion) } } }
                         .buttonStyle(.borderedProminent).disabled(selectedVersion == nil || assets.isLoading)
                     Button("Choose a Texture Pack…") { choosingJava = true }.disabled(assets.isLoading)
                 }
                 if assets.installedVersions.isEmpty { Text("No installed versions found. You can choose a Java texture pack or game JAR instead.").font(.caption).foregroundStyle(.secondary) }
-                if assets.isLoading { ProgressView("Getting your textures ready…") }
+                if assets.isLoading { ProgressView("Getting your assets ready…") }
                 Text(assets.status).font(.caption).textSelection(.enabled)
                 DisclosureGroup("More options & custom packs") {
                     VStack(alignment: .leading, spacing: 12) {
@@ -45,7 +45,7 @@ struct AssetSettingsView: View {
                         }
                         Button("Choose Custom Pack Folder or ZIP…") { choosingPack = true }
                         Button("Reload Current Pack") { if let source = assets.source { Task { await assets.load(source) } } }.disabled(assets.source == nil || assets.isLoading)
-                        Button("Refresh Imported Minecraft Textures") { Task { await assets.reimportJava() } }.disabled(assets.importRecord == nil || assets.isLoading)
+                        Button("Refresh Imported Minecraft Assets") { Task { await assets.reimportJava() } }.disabled(assets.importRecord == nil || assets.isLoading)
                         Button("Show Imported Textures in Finder") { if let folder = assets.importFolder { NSWorkspace.shared.activateFileViewerSelecting([folder]) } }.disabled(assets.importFolder == nil)
                         Button("Remove Imported Textures", role: .destructive) { assets.removeImportedAssets() }.disabled(assets.importFolder == nil || assets.isLoading)
                         if let source = assets.source { Text(source.path).font(.caption).textSelection(.enabled) }

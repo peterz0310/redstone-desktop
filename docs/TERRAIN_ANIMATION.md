@@ -2,7 +2,7 @@
 
 Water and lava animate in both the editor and Desktop. Trees, leaves, shrubs, mushrooms, flowers and reeds have a subtle light glint; their shape, position and terrain capabilities never change. Original procedural liquid artwork is included, so the feature works without any game installation. Java imports use local `water_still.png` and `lava_still.png` strips and their frame metadata. No new game artwork is bundled.
 
-To enable the game's animation for an older import, open Appearance & Packs → More options & custom packs → Refresh Imported Minecraft Textures. Previous caches retained only frame zero, so Reload cannot recover the rest. Missing lava art or animation falls back to original artwork. A deliberately static custom liquid texture stays static. macOS Accessibility → Display → Reduce motion freezes liquids on their first sequence frame and disables glints; changes apply while the app runs. Library thumbnails and the old diagnostic fixture terrain remain static; generated worlds and their painted terrain animate.
+To enable the game's animation for an older import, open Appearance & Packs → More options & custom packs → Refresh Imported Minecraft Assets. Previous caches retained only frame zero, so Reload cannot recover the rest. Missing lava art or animation falls back to original artwork. A deliberately static custom liquid texture stays static. macOS Accessibility → Display → Reduce motion freezes liquids on their first sequence frame and disables glints; changes apply while the app runs. Library thumbnails and the old diagnostic fixture terrain remain static; generated worlds and their painted terrain animate.
 
 ## Renderer ownership and cost
 

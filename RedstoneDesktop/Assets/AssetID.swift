@@ -2,6 +2,7 @@ import Foundation
 
 enum TextureAssetID: String, Codable, CaseIterable, Sendable {
     case terrainGrass, terrainDirt, terrainStone, terrainSand, waterShallow, waterDeep
+    case particleFlame, particleSmoke, particleLava, particleDust
     case lavaStill
     case terrainDryGrass, terrainSnow, terrainGravel
     case decorationOakLog, decorationSpruceLog
@@ -43,6 +44,7 @@ enum TextureAssetID: String, Codable, CaseIterable, Sendable {
         case .reed: .decorationReed
         }
     }
+    var isParticle: Bool { [.particleFlame, .particleSmoke, .particleLava, .particleDust].contains(self) }
     var isAnimatedLiquid: Bool { [.waterShallow, .waterDeep, .lavaStill].contains(self) }
 
     var circuitID: CircuitTextureID? {

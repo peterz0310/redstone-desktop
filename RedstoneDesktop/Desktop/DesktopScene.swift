@@ -14,6 +14,9 @@ final class DesktopScene: SKScene {
     private let highlight = SKShapeNode()
     private let clickFlash = SKShapeNode()
     private let tileLayer = SKNode()
+    private let particleLayer = SKNode()
+    private let particleRenderer = WorldParticleRenderer()
+    var particleEmitterCount: Int { particleRenderer.emitterCount }
     private let lightingLayer = SKNode()
     private let lightingRenderer = WorldLightingRenderer()
     var lightingTextureBuilds: Int { lightingRenderer.textureBuilds }
@@ -56,6 +59,7 @@ final class DesktopScene: SKScene {
         clickFlash.strokeColor = .systemOrange
         clickFlash.zPosition = 2
         clickFlash.isHidden = true
+        particleLayer.name = "world-particles"; particleLayer.zPosition = 0.85
         lightingLayer.name = "world-lighting"; lightingLayer.zPosition = 0.9
         tileLayer.name = "world-tiles"
         tileLayer.zPosition = 0.25
@@ -78,6 +82,7 @@ final class DesktopScene: SKScene {
         // Sample real scene callbacks without publishing to SwiftUI each frame.
         frameRate.record(at: ProcessInfo.processInfo.systemUptime)
         terrainRenderer.advanceAnimation(at: currentTime, reducedMotion: reducedMotion)
+        particleRenderer.advance(into: particleLayer, reducedMotion: reducedMotion)
         lightingRenderer.advance(settings: renderedWorld?.lighting ?? WorldLightingSettings(), time: lightingTimeProviding())
     }
 
@@ -113,6 +118,7 @@ final class DesktopScene: SKScene {
         assetProvider = assets
         terrainRenderer.assets = assets
         circuitRenderer.textures.assets = assets
+        particleRenderer.assets = assets
         if let world = renderedWorld { updateWorld(world, poweredTiles: renderedPower, leverPositions: renderedLevers, powerLevels: renderedPowerLevels) }
     }
 
@@ -181,7 +187,10 @@ final class DesktopScene: SKScene {
             }
         }
         rebuildCircuit()
-        lightingRenderer.render(world: world, lava: world.generation == nil ? Set(world.tiles.filter { $0.value.terrain == .lava }.keys) : terrainRenderer.lavaTiles,
+        let lava = world.generation == nil ? Set(world.tiles.filter { $0.value.terrain == .lava }.keys) : terrainRenderer.lavaTiles
+        particleRenderer.render(world: world, lava: lava, power: powerLevels ?? Dictionary(uniqueKeysWithValues: poweredTiles.map { ($0, PowerLevel.full) }),
+            mapper: mapper, screen: screen, into: particleLayer, reducedMotion: reducedMotion)
+        lightingRenderer.render(world: world, lava: lava,
             power: powerLevels ?? Dictionary(uniqueKeysWithValues: poweredTiles.map { ($0, PowerLevel.full) }),
             mapper: mapper, screen: screen, into: lightingLayer, time: lightingTimeProviding())
         rebuildDiagnostics()
@@ -235,6 +244,7 @@ final class DesktopScene: SKScene {
         removeAllChildren()
         addChild(tileLayer)
         addChild(lightingLayer)
+        addChild(particleLayer)
         addChild(circuitLayer)
         addChild(outputFlash)
         addChild(occupancyLayer)

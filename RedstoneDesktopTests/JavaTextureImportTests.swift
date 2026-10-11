@@ -27,7 +27,7 @@ final class JavaTextureImportTests: XCTestCase {
         let result = try JavaTextureImporter.importTextures(from: Self.fixture, cacheRoot: root)
         XCTAssertEqual(result.pack.textures.count, 39)
         XCTAssertTrue(result.pack.sounds.isEmpty)
-        XCTAssertEqual(result.record.warnings.count, 5, "Older fixture lacks wood plates, lamps and regular torch; original art supplies these.")
+        XCTAssertEqual(result.record.warnings.count, 10, "Older fixture lacks wood plates, lamps, torch, particles and audio; originals supply these.")
         XCTAssertEqual(result.record.mappings["terrainGrass"], "assets/minecraft/textures/block/grass_block_top.png")
         XCTAssertEqual(try Data(contentsOf: Self.fixture), sourceBefore)
         let files = try FileManager.default.contentsOfDirectory(atPath: result.folder.path)
@@ -67,7 +67,7 @@ final class JavaTextureImportTests: XCTestCase {
         try image.pngData().write(to: folder.appendingPathComponent("grass_top.png"))
         let result = try JavaTextureImporter.importTextures(from: source, cacheRoot: cache)
         XCTAssertEqual(result.pack.textures.count, 2)
-        XCTAssertEqual(result.record.warnings.count, 42)
+        XCTAssertEqual(result.record.warnings.count, 47)
         XCTAssertEqual(result.record.mappings["terrainGrass"], "assets/minecraft/textures/blocks/grass_top.png")
         XCTAssertTrue(FileManager.default.fileExists(atPath: folder.appendingPathComponent("grass_top.png").path))
     }

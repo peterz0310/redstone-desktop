@@ -17,3 +17,6 @@ This is an experimental prototype; completed code/tests do not establish physica
 Pending physical checks remain unverified in TESTING.md until the owner confirms them. Backup/reset testing is explicitly deferred.
 
 - Water/lava animation supports vertical square-frame PNG strips and bounded frame/timing metadata only, sampled at 16 pixels per tile. Other animated Java textures still use their first frame; custom static packs remain static. No pack shader/model code, flowing fluids, heat or damage is simulated. Preview cards remain static. Old imports require one refresh for liquid animation. See [Terrain animation](TERRAIN_ANIMATION.md).
+
+- Scene particles are intentionally sparse and capped at 64 visible emitters per scene. They use static imported sprites and app-owned behavior, not Minecraft particle JSON animation/physics. Reduce Motion hides and pauses particles.
+- Java audio imports cover ten short semantic app effects, not music/ambient loops or `sounds.json` event graphs. Native Ogg decoding was verified on the development Mac; older supported macOS versions/Intel still need physical validation and retain original sounds if their codec cannot decode an asset.
