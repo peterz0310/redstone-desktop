@@ -23,18 +23,41 @@ final class TerrainUpgradeTests: XCTestCase {
         let restored = try XCTUnwrap(store.load())
         XCTAssertEqual(restored.worlds[0].circuit, original.worlds[0].circuit)
         XCTAssertEqual(restored.areas, original.areas); XCTAssertEqual(restored.activeAreaID, original.activeAreaID)
-        XCTAssertEqual(restored.worlds[0].generation.generationVersion, 3)
+        XCTAssertEqual(restored.worlds[0].generation.generationVersion, 4)
         XCTAssertEqual(restored.worlds[0].terrainOverrides[WorldCoordinate(x: 23, y: 17)], Tile(terrain: .dryGrass))
         let backups = try FileManager.default.contentsOfDirectory(at: store.fileURL.deletingLastPathComponent(), includingPropertiesForKeys: nil).filter { $0.lastPathComponent.hasPrefix("library-before-terrain-upgrade-") }
         XCTAssertEqual(backups.count, 1); XCTAssertEqual(try Data(contentsOf: XCTUnwrap(backups.first)), bytes)
         XCTAssertEqual(try store.load(), restored)
         XCTAssertEqual(try FileManager.default.contentsOfDirectory(atPath: store.fileURL.deletingLastPathComponent().path).count, 2)
     }
+    func testGenerationThreeUpgradesNewTreesWithBackupsAndPaintedGroundPreserved() throws {
+        let generator = try WorldGenerator(settings: WorldGenerationSettings(seed: 7))
+        let point = try XCTUnwrap((-128..<128).lazy.flatMap { y in (-128..<128).map { WorldCoordinate(x: $0, y: y) } }
+            .first { generator.tile(at: $0).decoration == .tree })
+        var document = WorldDocument(generation: WorldGenerationSettings(generationVersion: 3, seed: 7))
+        document.circuit.components[point] = CircuitComponent(kind: .lever)
+        document.activeLevers = [point]
+        let painted = WorldCoordinate(x: 999, y: 999)
+        document.terrainOverrides[painted] = Tile(terrain: .sand)
+        let original = WorldLibraryDocument(world: document), store = try store()
+        let bytes = try JSONEncoder().encode(original); try bytes.write(to: store.fileURL)
+        let upgraded = try XCTUnwrap(store.load())
+        XCTAssertEqual(upgraded.worlds[0].generation.generationVersion, 4)
+        XCTAssertEqual(upgraded.worlds[0].circuit, document.circuit)
+        XCTAssertEqual(upgraded.worlds[0].activeLevers, [point])
+        XCTAssertEqual(upgraded.worlds[0].terrainOverrides[point], Tile(terrain: .grass))
+        XCTAssertEqual(upgraded.worlds[0].terrainOverrides[painted], Tile(terrain: .sand))
+        let backup = try XCTUnwrap(FileManager.default.contentsOfDirectory(at: store.fileURL.deletingLastPathComponent(), includingPropertiesForKeys: nil)
+            .first { $0.lastPathComponent.hasPrefix("library-before-terrain-upgrade-") })
+        XCTAssertEqual(try Data(contentsOf: backup), bytes)
+        XCTAssertEqual(try store.load(), upgraded)
+    }
+
     func testOlderExportsReceiveTheSameUpgradeWithoutChangingSource() throws {
         let original = oldLibrary(), bytes = try JSONEncoder().encode(original), source = try store().fileURL
         try bytes.write(to: source)
         let decoded = try LibraryImport.read(from: source)
-        XCTAssertEqual(decoded.worlds[0].generation.generationVersion, 3)
+        XCTAssertEqual(decoded.worlds[0].generation.generationVersion, 4)
         XCTAssertEqual(decoded.worlds[0].circuit, original.worlds[0].circuit)
         XCTAssertEqual(decoded.areas, original.areas)
         XCTAssertEqual(bytes, try Data(contentsOf: source))
@@ -47,7 +70,7 @@ final class TerrainUpgradeTests: XCTestCase {
             let coordinate = WorldCoordinate(x: 23, y: 17)
             if failure == 0 { library.worlds[0].terrainOverrides[coordinate] = Tile(terrain: .deepWater) }
             if failure == 1 { library.worlds[0].circuit.components[coordinate] = CircuitComponent(kind: .empty) }
-            if failure == 2 { library.worlds[0].generation.generationVersion = 3 }
+            if failure == 2 { library.worlds[0].generation.generationVersion = 4 }
             if failure == 3 { library.worlds[0].activeLevers = [coordinate] }
             let bytes = try JSONEncoder().encode(library); try bytes.write(to: store.fileURL)
             XCTAssertThrowsError(try store.load()); XCTAssertEqual(try Data(contentsOf: store.fileURL), bytes)

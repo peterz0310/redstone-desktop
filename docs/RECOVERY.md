@@ -14,7 +14,7 @@ Use **Settings → Data → Import Library…** to add independent copies of exp
 
 ## Terrain upgrades and blocked editing
 
-Older generation-version-1/2 libraries can become invalid when new scenery appears under an existing component. Startup upgrades those libraries to generation version 3, clearing only conflicting scenery or providing dry support beneath saved circuits. It preserves component configuration, saved lever positions, worlds, areas and assignment, and never changes your painted terrain. A later leaf/lava addition to the old test fixture can be reconciled too. The exact pre-upgrade library is backed up beside the active file:
+Older generation-version-1/2/3 libraries can become invalid when new scenery appears under an existing component. Startup upgrades those libraries to generation version 4, clearing only conflicting scenery or providing dry support beneath saved circuits. It preserves component configuration, saved lever positions, worlds, areas and assignment, and never changes your painted terrain. A later leaf/lava addition to the old test fixture can be reconciled too. The exact pre-upgrade library is backed up beside the active file:
 
 ```
 ~/Library/Application Support/RedstoneDesktop/library-before-terrain-upgrade-<UUID>.json

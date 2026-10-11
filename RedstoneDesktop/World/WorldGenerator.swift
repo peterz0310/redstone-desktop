@@ -1,7 +1,7 @@
-/// Generation 3 records circuit-preserving terrain upgrades. Older settings use
+/// Generation 4 records circuit-preserving terrain upgrades. Older settings use
 /// the current landscape; the library store reconciles their saved footprints.
 struct WorldGenerationSettings: Equatable, Codable, Sendable {
-    var generationVersion = 3
+    var generationVersion = 4
     var seed: UInt64
 }
 
@@ -30,7 +30,7 @@ struct WorldGenerator: Sendable {
     let settings: WorldGenerationSettings
 
     init(settings: WorldGenerationSettings) throws {
-        guard (1...3).contains(settings.generationVersion) else { throw WorldGenerationError.unsupportedVersion(settings.generationVersion) }
+        guard (1...4).contains(settings.generationVersion) else { throw WorldGenerationError.unsupportedVersion(settings.generationVersion) }
         self.settings = settings
     }
 
@@ -38,17 +38,20 @@ struct WorldGenerator: Sendable {
 
     func sample(at coordinate: WorldCoordinate) -> TerrainSample {
         var ground = groundSample(at: coordinate)
-        guard [.grass, .snow].contains(ground.tile.terrain),
-              let center = TreeCanopy.center(near: coordinate, seed: settings.seed) else { return ground }
-        let site = center == coordinate ? ground : groundSample(at: center)
-        guard site.tile.terrain == ground.tile.terrain else { return ground }
-        let groves = SeededNoise.value(seed: settings.seed, at: center, scale: 40, channel: 10)
-        let roll = SeededNoise.hash(seed: settings.seed, x: center.x, y: center.y, channel: 0x7EED) % 100
-        let pine = site.biome == .alpine && groves > 27000 && roll < 65
-        let oak = (site.biome == .woodland && roll < (groves > 32000 ? 85 : 15))
-            || (site.biome == .plains && groves > 48000 && roll < 25)
-        if pine { ground.tile.decoration = center == coordinate ? .pine : .pineLeaves }
-        else if oak { ground.tile.decoration = center == coordinate ? .tree : .treeLeaves }
+        guard [.grass, .snow].contains(ground.tile.terrain) else { return ground }
+        for center in TreeCanopy.centers(near: coordinate, seed: settings.seed) {
+            let site = center == coordinate ? ground : groundSample(at: center)
+            guard site.tile.terrain == ground.tile.terrain else { continue }
+            let groves = SeededNoise.value(seed: settings.seed, at: center, scale: 40, channel: 10)
+            let thicket = SeededNoise.value(seed: settings.seed, at: center, scale: 16, channel: 11)
+            let density = thicket > 36000 ? 95 : thicket > 26000 ? 60 : 12
+            let roll = SeededNoise.hash(seed: settings.seed, x: center.x, y: center.y, channel: 0x7EED) % 100
+            let pine = site.biome == .alpine && groves > 27000 && roll < density
+            let oak = (site.biome == .woodland && roll < density)
+                || (site.biome == .plains && groves > 44000 && roll < (thicket > 36000 ? 65 : 10))
+            if pine { ground.tile.decoration = center == coordinate ? .pine : .pineLeaves; break }
+            if oak { ground.tile.decoration = center == coordinate ? .tree : .treeLeaves; break }
+        }
         return ground
     }
 
@@ -91,7 +94,7 @@ struct WorldGenerator: Sendable {
             biome = .desert; terrain = .sand
         } else if moisture < 29000 && temperature > 31000 {
             biome = .savanna; terrain = .dryGrass
-        } else if moisture > 39500 {
+        } else if moisture > 38000 {
             biome = .woodland; terrain = .grass
         } else if moisture > 30000 && temperature < 39000 {
             biome = .meadow; terrain = .grass

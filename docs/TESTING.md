@@ -3,6 +3,12 @@
 These are physical-Mac checks, separate from automated tests. Report which numbered groups you actually tried and what failed; untested groups remain unverified. Use harmless folders/text files first. Place new test circuits on clear ground **to the right** of your existing builds. Do not use scripts for display-calibration tests.
 
 
+## Softer water and clustered forests — awaiting owner confirmation
+
+1. Quit with ⌘Q, then run the update using ⌘R in Xcode or open the updated release app. Revisit that river: shallow water should be a darker blue with a gentler contrast against the deep channel, still visibly different and crisp. Check both Original Look and your existing imported textures; no reimport is needed. Waves should still animate and reeds should retain their colors.
+2. Explore woodland and snowy forest in an existing or new world. Tree spacing should vary, with close trunks, overlapping canopies, dense patches and clearings. The center wood block should remain visible through leaf holes even where trees touch. Check across chunk boundaries and pan for a minute in both editor and Desktop.
+3. Confirm your saved circuits, levers, areas and painted ground remain and work. Older generation settings upgrade with an exact backup; only new generated obstacles beneath saved circuits are cleared. Paint/clear/restore a tree patch to the right of your builds, try Undo/Redo, then quit/reopen to confirm persistence.
+
 ## Wider deep river channels — awaiting owner confirmation
 
 1. Quit the running copy (⌘Q), then run the updated app with ⌘R in Xcode or open the newly built app. Revisit the river from your screenshot: most of its width should be dark deep water, with a light shallow strip only one or two tiles thick beside each bank. No new world or texture refresh is required.

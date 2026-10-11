@@ -92,7 +92,7 @@ final class WorldGeneratorTests: XCTestCase {
     }
 
     func testDefaultGenerationGoldenFingerprintsFreezeFieldsTerrainAndDecorations() throws {
-        XCTAssertEqual(fingerprint(try generator(42)), 15783121938156588682)
+        XCTAssertEqual(fingerprint(try generator(42)), 17383341522408239186)
         XCTAssertEqual(fingerprint(try generator(2026)), 8478557496088852779)
     }
 
@@ -124,7 +124,7 @@ final class WorldGeneratorTests: XCTestCase {
         let settings = WorldGenerationSettings(seed: .max)
         XCTAssertEqual(try JSONDecoder().decode(WorldGenerationSettings.self, from: JSONEncoder().encode(settings)), settings)
         XCTAssertThrowsError(try WorldGenerator(settings: WorldGenerationSettings(generationVersion: 0, seed: 1)))
-        XCTAssertThrowsError(try WorldGenerator(settings: WorldGenerationSettings(generationVersion: 4, seed: 1)))
+        XCTAssertThrowsError(try WorldGenerator(settings: WorldGenerationSettings(generationVersion: 5, seed: 1)))
     }
 
     func testRiversCrossHighGroundWithBanksAndLeaveMostLandBuildable() throws {
@@ -156,7 +156,7 @@ final class WorldGeneratorTests: XCTestCase {
 
     func testPreviousGenerationSettingsUseCurrentLandscapeWithoutHistoricalPromise() throws {
         let previous = try WorldGenerator(settings: WorldGenerationSettings(generationVersion: 1, seed: 42))
-        XCTAssertEqual(WorldGenerationSettings(seed: 42).generationVersion, 3)
+        XCTAssertEqual(WorldGenerationSettings(seed: 42).generationVersion, 4)
         XCTAssertEqual(try previous.chunk(at: ChunkCoordinate(x: -2, y: 3)), try generator().chunk(at: ChunkCoordinate(x: -2, y: 3)))
     }
 

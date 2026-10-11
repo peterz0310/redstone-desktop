@@ -51,6 +51,22 @@ final class TerrainAnimationTests: XCTestCase {
         XCTAssertThrowsError(try TextureAnimationSpec.java(metadata: nil, frameCount: .max))
     }
 
+    @MainActor func testShallowWaterIsDarkerForCachedPacksAndKeepsTimingAlphaAndDeepWater() throws {
+        let raster = RasterAsset(width: 1, height: 1, pixels: [80, 180, 220, 255])
+        let animated = try AnimatedRaster(strip: raster, spec: TextureAnimationSpec(frames: [0], durations: [0.2]))
+        let assets = AssetLibrary()
+        assets.apply(LoadedPack(manifest: PackManifest(name: "Old cached pack", assets: [:]), textures: [.waterShallow: raster, .waterDeep: raster], sounds: [:], warnings: [], animations: [.waterShallow: animated]))
+        XCTAssertEqual(assets.liquidAnimation(for: .shallowWater).strip.pixels, [56, 126, 193, 255])
+        XCTAssertEqual(assets.liquidAnimation(for: .shallowWater).spec, animated.spec)
+        XCTAssertEqual(assets.liquidAnimation(for: .deepWater).strip.pixels, raster.pixels)
+        let pixel = assets.pixel(Tile(terrain: .shallowWater), x: 0, y: 0)
+        XCTAssertEqual([pixel.0, pixel.1, pixel.2, pixel.3], [56, 126, 193, 255])
+        let shallow = OriginalTerrainPixels.pixel(Tile(terrain: .shallowWater), x: 1, y: 0)
+        let deep = OriginalTerrainPixels.pixel(Tile(terrain: .deepWater), x: 1, y: 0)
+        XCTAssertGreaterThan(shallow.1, deep.1)
+        XCTAssertLessThan(Int(shallow.1) - Int(deep.1), 40)
+    }
+
     func testOriginalArtworkChangesAndFramesRemainOpaque() {
         for terrain in [TerrainID.shallowWater, .deepWater, .lava] {
             let animation = OriginalLiquidAnimation.make(terrain)
@@ -78,14 +94,14 @@ final class TerrainAnimationTests: XCTestCase {
         }
         ambience.advance(at: 0, reducedMotion: false)
         let first = try color()
-        XCTAssertGreaterThan(first.redComponent, 0.9); XCTAssertLessThan(first.greenComponent, 0.1)
+        XCTAssertGreaterThan(first.redComponent, 0.65); XCTAssertLessThan(first.greenComponent, 0.1)
         ambience.advance(at: 0.15, reducedMotion: false)
         let second = try color()
-        XCTAssertGreaterThan(second.greenComponent, 0.9); XCTAssertLessThan(second.redComponent, 0.1)
+        XCTAssertGreaterThan(second.greenComponent, 0.65); XCTAssertLessThan(second.redComponent, 0.1)
         ambience.advance(at: 0.15, reducedMotion: true)
-        XCTAssertGreaterThan(try color().redComponent, 0.9)
+        XCTAssertGreaterThan(try color().redComponent, 0.65)
         ambience.advance(at: 99, reducedMotion: true)
-        XCTAssertGreaterThan(try color().redComponent, 0.9)
+        XCTAssertGreaterThan(try color().redComponent, 0.65)
     }
 
     @MainActor

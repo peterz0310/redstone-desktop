@@ -134,6 +134,8 @@ Relevant files: `Assets/AssetID.swift` defines the contract; `ResourcePack.swift
 
 When adding an ID, update enum, built-in fallback, renderer consumer, this table and tests. When changing accepted data, version/document the contract and add malformed/boundary cases. Never add third-party game art to examples, fixtures or the app bundle. Use original tiny test images, or load an owner's local game installation outside the repository for manual validation.
 
+Shallow-water RGB is multiplied by 70% red/green and 88% blue at display time to soften its contrast with deep water. This applies to static textures and every animation frame, preserving alpha, frame order and timing. Deep water, lava and decoration colors are unaffected.
+
 Water textures are composited over an opaque blue base for their depth, so translucent Java/custom water does not expose the checker backdrop. Decoration transparency is preserved. Imported/cache PNGs are unchanged; this is a rendering rule and requires no re-import.
 
 ## Optional liquid animation (format 1)

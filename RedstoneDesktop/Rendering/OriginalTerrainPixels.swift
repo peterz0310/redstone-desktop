@@ -10,7 +10,7 @@ enum OriginalTerrainPixels {
         case .dirt: base = (135, 95, 59)
         case .stone: base = (139, 148, 154)
         case .sand: base = (214, 197, 132)
-        case .shallowWater: base = (85, 177, 196)
+        case .shallowWater: base = (60, 125, 175)
         case .lava: base = (230, 104, 22)
         case .deepWater: base = (43, 97, 143)
         }
@@ -54,6 +54,12 @@ enum OriginalTerrainPixels {
         }
         let shade: UInt8 = tile.terrain == .gravel ? UInt8((x * 7 + y * 3) % 4 * 9) : ((x + y) % 5 == 0 ? 8 : 0)
         return (base.0 - shade, base.1 - shade, base.2 - shade, 255)
+    }
+
+    /// Imported shallow water is toned down at display time, including old caches.
+    /// Alpha is preserved; reeds and other overlays retain their own colors.
+    static func softenedShallow(_ color: (UInt8, UInt8, UInt8, UInt8)) -> (UInt8, UInt8, UInt8, UInt8) {
+        (UInt8(Int(color.0) * 70 / 100), UInt8(Int(color.1) * 70 / 100), UInt8(Int(color.2) * 88 / 100), color.3)
     }
 
     /// Whole leaf-block top, with holes that reveal ground or the central log.

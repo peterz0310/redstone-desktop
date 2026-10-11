@@ -6,64 +6,75 @@ final class TreeCanopyTests: XCTestCase {
         [(0, 0), (-1, 0), (1, 0), (0, -1), (0, 1)].map { WorldCoordinate(x: center.x + $0.0, y: center.y + $0.1) }
     }
 
-    func testPlantingCellsKeepRequiredCrossWithinVariableCanopies() {
-        for origin in [-192, -6, 0, 30, 192] {
-            let coordinates = (origin..<origin + 6).flatMap { y in (origin..<origin + 6).map { WorldCoordinate(x: $0, y: y) } }
-            let sites = coordinates.compactMap { TreeCanopy.center(near: $0, seed: 42) }
-            XCTAssertTrue((5...10).contains(sites.count))
-            XCTAssertEqual(Set(sites).count, 1)
-            let center = sites[0]
-            let footprint = Set(coordinates.filter { TreeCanopy.center(near: $0, seed: 42) != nil })
-            XCTAssertTrue(Set(neighbors(center)).isSubset(of: footprint))
-            XCTAssertTrue(footprint.allSatisfy {
-                let dx = abs($0.x - center.x), dy = abs($0.y - center.y)
-                return (dx <= 1 && dy <= 1) || (dx + dy == 2 && (dx == 0 || dy == 0))
-            })
-        }
-        for x in [Int.min, Int.max] {
-            _ = TreeCanopy.center(near: WorldCoordinate(x: x, y: x), seed: .max)
-        }
+    private func footprint(_ center: WorldCoordinate, seed: UInt64) -> [WorldCoordinate] {
+        (-2...2).flatMap { dy in (-2...2).map { WorldCoordinate(x: center.x + $0, y: center.y + dy) } }
+            .filter { TreeCanopy.contains($0, center: center, seed: seed) }
     }
 
-    func testCornerShapesVaryByTreeAndSeedButNeverBySamplingOrder() {
-        var shapes: Set<Int> = []
-        var seedDifferences = 0
-        for origin in stride(from: -384, through: 384, by: 6) {
-            let coordinates = (origin..<origin + 6).flatMap { y in (origin..<origin + 6).map { WorldCoordinate(x: $0, y: y) } }
-            let footprint = coordinates.filter { TreeCanopy.center(near: $0, seed: 42) != nil }
-            XCTAssertEqual(Set(footprint), Set(coordinates.reversed().filter { TreeCanopy.center(near: $0, seed: 42) != nil }))
-            let center = TreeCanopy.center(near: footprint[0], seed: 42)!
-            let corners = footprint.filter { abs($0.x - center.x) == 1 && abs($0.y - center.y) == 1 }
-            let mask = corners.reduce(0) { $0 | (1 << (($1.x < center.x ? 0 : 1) + ($1.y < center.y ? 0 : 2))) }
+    func testJitteredSitesKeepRequiredCrossAndVariableCorners() throws {
+        var shapes: Set<Int> = [], seedDifferences = 0, offsets: Set<WorldCoordinate> = []
+        for cell in -128..<128 {
+            let center = try XCTUnwrap(TreeCanopy.plantingCenter(cellX: cell, cellY: cell, seed: 42))
+            let points = footprint(center, seed: 42)
+            XCTAssertTrue((5...10).contains(points.count))
+            XCTAssertTrue(Set(neighbors(center)).isSubset(of: Set(points)))
+            XCTAssertEqual(TreeCanopy.centers(near: center, seed: 42).first, center, "Trunks take priority over leaves")
+            for point in points { XCTAssertTrue(TreeCanopy.centers(near: point, seed: 42).contains(center)) }
+            let mask = points.filter { abs($0.x - center.x) == 1 && abs($0.y - center.y) == 1 }
+                .reduce(0) { $0 | (1 << (($1.x < center.x ? 0 : 1) + ($1.y < center.y ? 0 : 2))) }
             shapes.insert(mask)
-            if footprint != coordinates.filter({ TreeCanopy.center(near: $0, seed: 2026) != nil }) { seedDifferences += 1 }
+            offsets.insert(WorldCoordinate(x: center.x - cell * 6, y: center.y - cell * 6))
+            if TreeCanopy.plantingCenter(cellX: cell, cellY: cell, seed: 2026) != center { seedDifferences += 1 }
         }
-        XCTAssertEqual(shapes.count, 16, "All combinations of missing corners should occur")
-        XCTAssertTrue(shapes.contains(0)); XCTAssertTrue(shapes.contains(15))
-        XCTAssertGreaterThan(seedDifferences, 80)
+        XCTAssertEqual(shapes.count, 16)
+        XCTAssertEqual(offsets.count, 36, "Sites can occupy the entire cell, rather than its middle")
+        XCTAssertGreaterThan(seedDifferences, 200)
+        for x in [Int.min, Int.max] { _ = TreeCanopy.centers(near: WorldCoordinate(x: x, y: x), seed: .max) }
     }
 
-    func testOccasionalExtensionsAreSingleConnectedLeavesInAllFourDirections() {
+    func testOccasionalExtensionsRemainConnectedInAllDirections() throws {
         var extended = 0, directions: Set<WorldCoordinate> = []
-        let origins = Array(stride(from: -768, through: 768, by: 6))
-        for origin in origins {
-            let coordinates = (origin..<origin + 6).flatMap { y in (origin..<origin + 6).map { WorldCoordinate(x: $0, y: y) } }
-            let footprint = coordinates.filter { TreeCanopy.center(near: $0, seed: 42) != nil }
-            let center = TreeCanopy.center(near: footprint[0], seed: 42)!
-            let extensions = footprint.filter { abs($0.x - center.x) == 2 || abs($0.y - center.y) == 2 }
+        for cell in -256..<256 {
+            let center = try XCTUnwrap(TreeCanopy.plantingCenter(cellX: cell, cellY: cell, seed: 42))
+            let points = footprint(center, seed: 42)
+            let extensions = points.filter { abs($0.x - center.x) == 2 || abs($0.y - center.y) == 2 }
             XCTAssertLessThanOrEqual(extensions.count, 1)
             for point in extensions {
                 extended += 1
                 let dx = point.x - center.x, dy = point.y - center.y
                 directions.insert(WorldCoordinate(x: dx, y: dy))
-                let neighbor = WorldCoordinate(x: center.x + dx / 2, y: center.y + dy / 2)
-                XCTAssertTrue(footprint.contains(neighbor), "Extensions must touch a required arm")
-                XCTAssertEqual(TreeCanopy.center(near: point, seed: 42), center)
+                XCTAssertTrue(points.contains(WorldCoordinate(x: center.x + dx / 2, y: center.y + dy / 2)))
             }
         }
-        XCTAssertEqual(directions, Set([WorldCoordinate(x: -2, y: 0), WorldCoordinate(x: 2, y: 0), WorldCoordinate(x: 0, y: -2), WorldCoordinate(x: 0, y: 2)]))
-        XCTAssertGreaterThan(extended, origins.count / 8)
-        XCTAssertLessThan(extended, origins.count * 3 / 8)
+        XCTAssertEqual(directions.count, 4)
+        XCTAssertGreaterThan(extended, 64); XCTAssertLessThan(extended, 192)
+    }
+
+    func testGeneratedTreesHaveCloseClustersClearingsAndStableSampling() throws {
+        let generator = try WorldGenerator(settings: WorldGenerationSettings(seed: 7))
+        var centers: Set<WorldCoordinate> = [], woodlandTiles = 0, woodlandLeaves = 0
+        for y in -160..<160 { for x in -160..<160 {
+            let point = WorldCoordinate(x: x, y: y), sample = generator.sample(at: point)
+            if sample.biome == .woodland {
+                woodlandTiles += 1
+                if [.tree, .treeLeaves].contains(sample.tile.decoration) { woodlandLeaves += 1 }
+            }
+            if [.tree, .pine].contains(sample.tile.decoration) { centers.insert(point) }
+        } }
+        let close = centers.filter { center in
+            (-2...2).contains { dy in (-2...2).contains { dx in
+                (dx != 0 || dy != 0) && centers.contains(WorldCoordinate(x: center.x + dx, y: center.y + dy))
+            } }
+        }
+        XCTAssertGreaterThan(close.count, 30, "Actual trunks should form nearby groups")
+        XCTAssertGreaterThan(woodlandLeaves, woodlandTiles / 12)
+        XCTAssertLessThan(woodlandLeaves, woodlandTiles / 2, "Forests still need clearings")
+        for center in centers.prefix(100) {
+            for point in footprint(center, seed: 7).reversed() {
+                let chunk = try generator.chunk(at: ChunkCoordinate.containing(point))
+                XCTAssertEqual(chunk.tiles[point], generator.tile(at: point))
+            }
+        }
     }
 
     func testExtendedLeafBlocksBuildingAndCanBeClearedAndRestored() throws {
@@ -71,7 +82,7 @@ final class TreeCanopyTests: XCTestCase {
         let generator = try WorldGenerator(settings: document.generation)
         for y in -128..<128 { for x in -128..<128 {
             let point = WorldCoordinate(x: x, y: y)
-            guard let center = TreeCanopy.center(near: point, seed: 7),
+            guard let center = TreeCanopy.centers(near: point, seed: 7).first,
                   abs(point.x - center.x) == 2 || abs(point.y - center.y) == 2,
                   let decoration = generator.tile(at: point).decoration,
                   [.treeLeaves, .pineLeaves].contains(decoration) else { continue }
@@ -95,7 +106,7 @@ final class TreeCanopyTests: XCTestCase {
             let center = WorldCoordinate(x: x, y: y)
             guard let decoration = generator.tile(at: center).decoration, [.tree, .pine].contains(decoration) else { continue }
             let footprint = (-2...2).flatMap { dy in (-2...2).map { WorldCoordinate(x: center.x + $0, y: center.y + dy) } }
-                .filter { TreeCanopy.center(near: $0, seed: 7) == center }
+                .filter { TreeCanopy.centers(near: $0, seed: 7).contains(center) }
             let leaf: DecorationID = decoration == .pine ? .pineLeaves : .treeLeaves
             guard footprint.filter({ $0 != center }).allSatisfy({ generator.tile(at: $0).decoration == leaf }) else { continue }
             found.insert(decoration)

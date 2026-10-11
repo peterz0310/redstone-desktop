@@ -204,15 +204,28 @@ final class AssetLibrary: ObservableObject, AssetProvider {
     }
     func liquidAnimation(for terrain: TerrainID) -> AnimatedRaster {
         let id = TextureAssetID.terrain(terrain)
-        if let animation = pack?.animations[id] { return animation }
+        if let animation = pack?.animations[id] { return softened(animation, terrain: terrain) }
         if let raster = pack?.textures[id], raster.width == raster.height {
-            return try! AnimatedRaster(strip: raster, spec: TextureAnimationSpec(frames: [0], durations: [1]))
+            return softened(try! AnimatedRaster(strip: raster, spec: TextureAnimationSpec(frames: [0], durations: [1])), terrain: terrain)
         }
         return OriginalLiquidAnimation.make(terrain)
+    }
+    private func softened(_ animation: AnimatedRaster, terrain: TerrainID) -> AnimatedRaster {
+        guard terrain == .shallowWater else { return animation }
+        return try! AnimatedRaster(strip: softened(animation.strip), spec: animation.spec)
+    }
+    private func softened(_ raster: RasterAsset) -> RasterAsset {
+        var pixels = raster.pixels
+        for i in stride(from: 0, to: pixels.count, by: 4) {
+            let color = OriginalTerrainPixels.softenedShallow((pixels[i], pixels[i + 1], pixels[i + 2], pixels[i + 3]))
+            pixels[i] = color.0; pixels[i + 1] = color.1; pixels[i + 2] = color.2
+        }
+        return RasterAsset(width: raster.width, height: raster.height, pixels: pixels)
     }
     func texture(for id: TextureAssetID) -> SKTexture? {
         if let value = textures[id] { return value }
         guard var raster = pack?.textures[id] ?? id.decorationFallback.flatMap({ pack?.textures[$0] }) else { return builtIn.texture(for: id) }
+        if id == .waterShallow { raster = softened(raster) }
         if let terrain = TerrainID.allCases.first(where: { TextureAssetID.terrain($0) == id && $0.definition.isLiquid }) {
             raster = raster.backedByOpaqueColor(OriginalTerrainPixels.pixel(Tile(terrain: terrain), x: 1, y: 0))
         }
@@ -226,6 +239,9 @@ final class AssetLibrary: ObservableObject, AssetProvider {
         let original = OriginalTerrainPixels.pixel(tile, x: x * 8 / resolution, y: y * 8 / resolution, appearance: appearance)
         let plain = OriginalTerrainPixels.pixel(Tile(terrain: tile.terrain), x: x * 8 / resolution, y: y * 8 / resolution)
         var base = pack?.textures[.terrain(tile.terrain)]?.sample(x: x, y: y, resolution: resolution) ?? plain
+        if tile.terrain == .shallowWater, pack?.textures[.waterShallow] != nil {
+            base = OriginalTerrainPixels.softenedShallow(base)
+        }
         if tile.terrain.definition.isLiquid {
             let backing = OriginalTerrainPixels.pixel(Tile(terrain: tile.terrain), x: 1, y: 0)
             let inverse = 255 - Int(base.3)

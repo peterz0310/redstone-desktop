@@ -57,7 +57,7 @@ struct WorldLibraryDocument: Codable, Equatable, Sendable {
         var next = self
         for index in next.worlds.indices {
             var document = next.worlds[index]
-            guard [1, 2].contains(document.generation.generationVersion) else { continue }
+            guard [1, 2, 3].contains(document.generation.generationVersion) else { continue }
             _ = try WorldGenerator(settings: document.generation)
             let base = document.unmodifiedWorld()
             for (coordinate, component) in document.circuit.components {
@@ -75,7 +75,7 @@ struct WorldLibraryDocument: Codable, Equatable, Sendable {
                 default: break // Invalid components, original fixture obstacles and painted tiles still fail validation.
                 }
             }
-            document.generation.generationVersion = 3
+            document.generation.generationVersion = 4
             next.worlds[index] = document
         }
         try next.validate()
