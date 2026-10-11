@@ -5,9 +5,14 @@ import SwiftUI
 
 @MainActor
 protocol DesktopBuildPresenting: AnyObject {
+    func setVisualSettings(_ settings: VisualSettings)
     func show()
     func update(world: World, levers: Set<WorldCoordinate>, assets: AssetLibrary)
     func close()
+}
+
+extension DesktopBuildPresenting {
+    func setVisualSettings(_ settings: VisualSettings) {}
 }
 
 private final class BuildInputWindow: NSWindow {
@@ -77,6 +82,8 @@ final class DesktopBuildController: NSObject, DesktopBuildPresenting, NSWindowDe
         renderer.scene.updateWorld(world, poweredTiles: [], leverPositions: levers)
         surface.refreshHighlight()
     }
+
+    func setVisualSettings(_ settings: VisualSettings) { renderer.scene.setVisualSettings(settings) }
 
     func close() {
         // Remove capture before any rendering/palette teardown. Safe to repeat.

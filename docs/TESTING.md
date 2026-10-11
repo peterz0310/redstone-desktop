@@ -3,6 +3,17 @@
 These are physical-Mac checks, separate from automated tests. Report which numbered groups you actually tried and what failed; untested groups remain unverified. Use harmless folders/text files first. Place new test circuits on clear ground **to the right** of your existing builds. Do not use scripts for display-calibration tests.
 
 
+## Visual preferences — awaiting owner confirmation
+
+1. Quit the old copy with ⌘Q, then run the update with ⌘R in Xcode (or open the updated release). Open **Settings → Appearance → Animation & effects**. All three switches start enabled unless you have already changed them.
+2. Find water/lava, some decorated grass and a regular torch; place any new examples to the right of existing circuits. Switch **Animate water and lava** off: liquid frames should become still, while particles and scenery shimmer can continue. Switch **Subtle scenery shimmer** off: tiny decoration glints should stop while liquids can continue. The shimmer is intentionally faint.
+3. Switch **Show particles** off: torch flames/smoke, lava pops and powered redstone sparks should disappear immediately. Liquid animation, light from torches/lava and circuit operation should continue. Turn particles back on and allow a few seconds for the sparse particles to appear.
+4. Repeat in the running Desktop and Desktop Build Mode. Change settings while each mode is open, and stop/start Desktop once: your choices should apply to new windows too. No circuit, area assignment or world lighting setting should change.
+5. Leave a mix of switches on/off, quit and reopen, and confirm those choices persist. Switching texture packs must also preserve them.
+6. With all three enabled, turn **System Settings → Accessibility → Display → Reduce Motion** on: all three effects should pause/hide. Turn it off: only effects enabled in the app should return. Restore your preferred Mac setting. A per-world day/night cycle should continue independently.
+
+Automated coverage checks isolated preference persistence/defaults/corrupt-data recovery, independent liquid/scenery shader uniforms, particle hide/pause with retained nodes, unchanged terrain texture builds, editor/runtime propagation and new Desktop/Build session initialization. These do not replace the visual checks above.
+
 ## Fixed world time — awaiting owner confirmation
 
 1. Quit with ⌘Q, then run the update with ⌘R in Xcode or open the updated release. World Settings → Lighting → Fixed Time. Choose Dawn or Dusk, adjust the slider to a nearby quarter-hour, and Save. Lighting should match that moment of the cycle and stay there for several minutes in both editor and Desktop.

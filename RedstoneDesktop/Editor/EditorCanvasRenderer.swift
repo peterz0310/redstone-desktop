@@ -30,6 +30,7 @@ final class EditorCanvasRenderer {
         guard let scene else { return nil }
         appState.editorDiagnosticScene = scene
         scene.setDiagnosticOverlays(appState.diagnosticOverlays)
+        scene.setVisualSettings(appState.visualSettings)
         scene.setAssets(appState.assets)
         ghostRenderer.textures.assets = appState.assets
         let world = editor.browsingWorld(appState)

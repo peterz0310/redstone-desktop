@@ -14,7 +14,7 @@ Build little redstone circuits underneath your real Mac desktop files. A button 
 - **Blueprints** has visual circuit previews, save/rename/delete actions and eight examples, including a switch-controlled clock. Right-click the editor map for relevant editing actions; hover tools for help. [Blueprint browser](docs/BLUEPRINTS.md).
 - **Test Circuit** runs a safe editor copy with Pause, Step and Reset. Outputs flash without opening files. Select groups to copy, move, rotate, undo or save reusable blueprints; [the editor guide](docs/EDITOR_TOOLS.md) walks through these tools.
 - **Build on Desktop** temporarily stops the circuit and lets you place components on the desktop. Exit to use your files normally again. R rotates the hovered repeater/torch; T changes a repeater’s delay.
-- **Settings → Appearance** can use textures from your installed Minecraft Java Edition. Original artwork is available without a game installation. Help buttons explain optional settings.
+- **Settings → Appearance** lets you independently switch liquid animation, scenery shimmer and particles on or off across every world. It can use textures from your installed Minecraft Java Edition. Original artwork is available without a game installation. Help buttons explain optional settings.
 - **Settings → Data** exports every world, area and circuit. **Import Library** adds independent copies, preserving your existing builds and desktop assignment. The separate blueprint shelf, texture packs, desktop files and script approvals are excluded.
 - **Start Over** creates a recovery backup before resetting app data. Read [the recovery guide](docs/RECOVERY.md) first. Backup/reset acceptance is still awaiting the owner’s manual testing.
 

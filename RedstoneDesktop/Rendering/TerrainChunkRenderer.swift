@@ -80,8 +80,8 @@ final class TerrainChunkRenderer {
         metrics.generatedChunks = cache.generatedCount
     }
 
-    func advanceAnimation(at time: Double, reducedMotion: Bool) {
-        ambience?.advance(at: time, reducedMotion: reducedMotion)
+    func advanceAnimation(at time: Double, reducedMotion: Bool, sceneryAnimations: Bool? = nil) {
+        ambience?.advance(at: time, reducedMotion: reducedMotion, sceneryAnimations: sceneryAnimations)
     }
 
     private func texture(for chunk: TerrainChunk, world: World) -> (texture: SKTexture, mask: SKTexture?)? {

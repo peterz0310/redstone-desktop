@@ -2,15 +2,35 @@ import SwiftUI
 import UniformTypeIdentifiers
 
 struct AssetSettingsView: View {
+    @ObservedObject var appState: AppState
     @ObservedObject var assets: AssetLibrary
     @State private var choosingPack = false
     @State private var choosingJava = false
     @State private var selectedVersion: URL?
 
+    private func visualBinding(_ key: WritableKeyPath<VisualSettings, Bool>) -> Binding<Bool> {
+        Binding(get: { appState.visualSettings[keyPath: key] }, set: { value in
+            var settings = appState.visualSettings
+            settings[keyPath: key] = value
+            appState.setVisualSettings(settings)
+        })
+    }
+
     var body: some View {
         ScrollView {
             VStack(alignment: .leading, spacing: 18) {
                 Text("Make it yours").font(.largeTitle)
+                VStack(alignment: .leading, spacing: 10) {
+                    Text("Animation & effects").font(.headline)
+                    Toggle("Animate water and lava", isOn: visualBinding(\.liquidAnimations))
+                    Toggle("Subtle scenery shimmer", isOn: visualBinding(\.sceneryAnimations))
+                    Toggle("Show particles", isOn: visualBinding(\.particles))
+                    Text("Particles add tiny flames, smoke, lava pops and redstone sparks. These settings apply to every world, in the editor and on your Desktop.")
+                        .font(.caption).foregroundStyle(.secondary)
+                    Text("Your Mac’s Reduce Motion setting pauses these effects. Daylight and local lighting are controlled separately in World Settings.")
+                        .font(.caption).foregroundStyle(.secondary)
+                }
+                Divider()
                 HStack {
                     VStack(alignment: .leading) { Text("Current appearance").font(.caption).foregroundStyle(.secondary); Text(assets.name).font(.headline) }
                     Spacer()

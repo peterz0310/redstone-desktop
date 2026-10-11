@@ -18,7 +18,7 @@ struct RedstoneDesktopApp: App {
         }
         .defaultSize(width: 640, height: 740)
         Window("Appearance & Packs", id: "asset-settings") {
-            AssetSettingsView(assets: appState.assets)
+            AssetSettingsView(appState: appState, assets: appState.assets)
         }.defaultSize(width: 660, height: 650)
         Window("Finder Diagnostics", id: "finder-diagnostics") {
             FinderDiagnosticsView(appState: appState)

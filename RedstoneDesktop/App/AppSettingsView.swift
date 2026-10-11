@@ -44,7 +44,7 @@ struct AppSettingsView: View {
                     Text("Sounds follow your circuit across the screen. Components outside the visible desktop stay quiet.").font(.caption).foregroundStyle(.secondary)
                 }
             }.formStyle(.grouped).tabItem { Label("Sound", systemImage: "speaker.wave.2") }
-            AssetSettingsView(assets: appState.assets).tabItem { Label("Appearance", systemImage: "paintpalette") }
+            AssetSettingsView(appState: appState, assets: appState.assets).tabItem { Label("Appearance", systemImage: "paintpalette") }
             scriptSettings.tabItem { Label("Outputs", systemImage: "terminal") }
             Form {
                 Section("Your worlds") {

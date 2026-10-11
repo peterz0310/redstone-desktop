@@ -199,6 +199,7 @@ final class AppState: ObservableObject {
     @Published private(set) var finderScaleStatus = "Independent: saved area scale."
     private let preferences: UserDefaults?
     @Published private(set) var audioSettings = AudioSettings()
+    @Published private(set) var visualSettings = VisualSettings()
     @Published private(set) var audioStatus = "Sound effects ready."
     let assets: AssetLibrary
     private var assetObserver: AnyCancellable?
@@ -275,6 +276,8 @@ final class AppState: ObservableObject {
         self.soundPlayer = soundPlayer
         self.assets = assets
         self.buildControllerFactory = buildControllerFactory
+        if let data = preferences?.data(forKey: "visualSettings"),
+           let stored = try? JSONDecoder().decode(VisualSettings.self, from: data) { visualSettings = stored }
         if let data = preferences?.data(forKey: "audioSettings"),
            let stored = try? JSONDecoder().decode(AudioSettings.self, from: data) {
             audioSettings = AudioSettings(volume: stored.volume.isFinite ? min(1, max(0, stored.volume)) : 0,
@@ -902,6 +905,7 @@ final class AppState: ObservableObject {
 
     private func refreshBuildRenderer() {
         guard buildSession != nil else { return }
+        buildController?.setVisualSettings(visualSettings)
         buildController?.update(world: buildSession?.terrainStroke?.plan?.world ?? desktopWorld, levers: savedLevers, assets: assets)
     }
 
@@ -1021,6 +1025,15 @@ final class AppState: ObservableObject {
         guard let index = library.worlds.firstIndex(where: { $0.id == activeWorldID }) else { return }
         library.worlds[index].activeLevers = savedLevers
         autosaver?.schedule(library)
+    }
+
+    func setVisualSettings(_ settings: VisualSettings) {
+        guard !isMaintenanceLocked, visualSettings != settings else { return }
+        visualSettings = settings
+        if let data = try? JSONEncoder().encode(settings) { preferences?.set(data, forKey: "visualSettings") }
+        for controller in desktopControllers { controller.scene.setVisualSettings(settings) }
+        editorDiagnosticScene?.setVisualSettings(settings)
+        buildController?.setVisualSettings(settings)
     }
 
     func setDiagnosticOverlays(_ settings: DiagnosticOverlaySettings) {
@@ -1236,6 +1249,7 @@ final class AppState: ObservableObject {
         desktopControllers = canvas.screens.map { physical in
             let controller = DesktopWindowController(screen: physical, mapper: mapper)
             controller.scene.setDiagnosticOverlays(diagnosticOverlays)
+            controller.scene.setVisualSettings(visualSettings)
             controller.scene.setAssets(assets)
             controller.scene.updateWorld(desktopWorld, poweredTiles: simulator.poweredTiles,
                 leverPositions: simulator.activeLevers, powerLevels: simulator.power)

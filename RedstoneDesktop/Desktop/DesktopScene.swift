@@ -31,6 +31,8 @@ final class DesktopScene: SKScene {
     private var renderedPower: Set<WorldCoordinate> = []
     private var renderedPowerLevels: [WorldCoordinate: PowerLevel]?
     private var renderedLevers: Set<WorldCoordinate>?
+    private(set) var visualSettings = VisualSettings()
+    private var animationTime: Double = 0
     private var reducedMotion = NSWorkspace.shared.accessibilityDisplayShouldReduceMotion
     private var motionObserver: AnyCancellable?
     var reduceMotionProviding: () -> Bool = { NSWorkspace.shared.accessibilityDisplayShouldReduceMotion }
@@ -44,7 +46,7 @@ final class DesktopScene: SKScene {
         super.init(size: screen.frame.size)
         motionObserver = NSWorkspace.shared.notificationCenter.publisher(for: NSWorkspace.accessibilityDisplayOptionsDidChangeNotification)
             .receive(on: RunLoop.main).sink { [weak self] _ in
-                MainActor.assumeIsolated { self?.reducedMotion = NSWorkspace.shared.accessibilityDisplayShouldReduceMotion }
+                MainActor.assumeIsolated { self?.reducedMotion = NSWorkspace.shared.accessibilityDisplayShouldReduceMotion; self?.applyVisualSettings() }
             }
         scaleMode = .resizeFill
         backgroundColor = .black
@@ -81,9 +83,22 @@ final class DesktopScene: SKScene {
     override func update(_ currentTime: TimeInterval) {
         // Sample real scene callbacks without publishing to SwiftUI each frame.
         frameRate.record(at: ProcessInfo.processInfo.systemUptime)
-        terrainRenderer.advanceAnimation(at: currentTime, reducedMotion: reducedMotion)
-        particleRenderer.advance(into: particleLayer, reducedMotion: reducedMotion)
+        animationTime = currentTime
+        applyVisualSettings()
         lightingRenderer.advance(settings: renderedWorld?.lighting ?? WorldLightingSettings(), time: lightingTimeProviding())
+    }
+
+    func setVisualSettings(_ settings: VisualSettings) {
+        guard visualSettings != settings else { return }
+        visualSettings = settings
+        applyVisualSettings()
+    }
+
+    private func applyVisualSettings() {
+        terrainRenderer.advanceAnimation(at: animationTime,
+            reducedMotion: reducedMotion || !visualSettings.liquidAnimations,
+            sceneryAnimations: !reducedMotion && visualSettings.sceneryAnimations)
+        particleRenderer.advance(into: particleLayer, reducedMotion: reducedMotion || !visualSettings.particles)
     }
 
     func setDiagnosticOverlays(_ settings: DiagnosticOverlaySettings) {
@@ -189,7 +204,8 @@ final class DesktopScene: SKScene {
         rebuildCircuit()
         let lava = world.generation == nil ? Set(world.tiles.filter { $0.value.terrain == .lava }.keys) : terrainRenderer.lavaTiles
         particleRenderer.render(world: world, lava: lava, power: powerLevels ?? Dictionary(uniqueKeysWithValues: poweredTiles.map { ($0, PowerLevel.full) }),
-            mapper: mapper, screen: screen, into: particleLayer, reducedMotion: reducedMotion)
+            mapper: mapper, screen: screen, into: particleLayer, reducedMotion: reducedMotion || !visualSettings.particles)
+        applyVisualSettings()
         lightingRenderer.render(world: world, lava: lava,
             power: powerLevels ?? Dictionary(uniqueKeysWithValues: poweredTiles.map { ($0, PowerLevel.full) }),
             mapper: mapper, screen: screen, into: lightingLayer, time: lightingTimeProviding())

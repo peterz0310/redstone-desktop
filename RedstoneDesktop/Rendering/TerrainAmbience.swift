@@ -10,6 +10,7 @@ final class TerrainAmbience {
     private let motion = SKUniform(name: "u_motion", float: 1)
     private var lastTime: Double?
     private var lastReduced: Bool?
+    private var lastScenery: Bool?
 
     init(assets: any AssetProvider) {
         let terrains: [TerrainID] = [.shallowWater, .deepWater, .lava]
@@ -32,13 +33,13 @@ final class TerrainAmbience {
         advance(at: 0, reducedMotion: false)
     }
 
-    func advance(at currentTime: Double, reducedMotion: Bool) {
+    func advance(at currentTime: Double, reducedMotion: Bool, sceneryAnimations: Bool? = nil) {
         guard currentTime.isFinite else { return }
-        if lastReduced == reducedMotion, let lastTime, currentTime >= lastTime, currentTime - lastTime < 0.05 { return }
-        lastTime = currentTime; lastReduced = reducedMotion
-        motion.floatValue = reducedMotion ? 0 : 1
+        if lastReduced == reducedMotion, lastScenery == (sceneryAnimations ?? !reducedMotion), let lastTime, currentTime >= lastTime, currentTime - lastTime < 0.05 { return }
+        lastTime = currentTime; lastReduced = reducedMotion; lastScenery = sceneryAnimations ?? !reducedMotion
+        motion.floatValue = (sceneryAnimations ?? !reducedMotion) ? 1 : 0
         // Bounded time avoids float precision loss during long-running desktop sessions.
-        time.floatValue = reducedMotion ? 0 : Float(currentTime.truncatingRemainder(dividingBy: 120))
+        time.floatValue = (sceneryAnimations ?? !reducedMotion) ? Float(currentTime.truncatingRemainder(dividingBy: 120)) : 0
         for (index, animation) in animations.enumerated() {
             let phase = animation.spec.phase(at: reducedMotion ? 0 : currentTime)
             phases[index].vectorFloat3Value = SIMD3(Float(phase.frame), Float(phase.next), phase.blend)
