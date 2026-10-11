@@ -98,4 +98,74 @@ final class WorldParticleTests: XCTestCase {
             XCTAssertEqual(builtIn.texture(for: id)?.filteringMode, .nearest)
         }
     }
+    @MainActor func testNightShadesParticlesFromEverySourceWhenLocalLightsAreDisabled() throws {
+        let mapper = try CoordinateMapper(canvasFrame: screen.frame, camera: CameraState(worldOrigin: WorldPoint(x: 0, y: 0), pointsPerTile: 64))
+        let view = SKView(frame: CGRect(origin: .zero, size: screen.frame.size))
+        let source = p(4,4), rect = mapper.sceneRect(forTile: source, on: screen)
+        let white = SKTexture(cgImage: try XCTUnwrap(RasterAsset(width: 1, height: 1, pixels: [255,255,255,255]).cgImage))
+        for kind in [CircuitComponentKind.lightTorch, .torch, .dust, .empty] {
+            let scene = DesktopScene(screen: screen, mapper: mapper)
+            scene.isPaused = true
+            var world = World(lighting: WorldLightingSettings(mode: .night))
+            world.tiles[source] = Tile(terrain: kind == .empty ? .lava : .grass)
+            if kind != .empty { world.circuit.components[source] = CircuitComponent(kind: kind) }
+            let power: [WorldCoordinate: PowerLevel] = [.torch, .dust].contains(kind) ? [source: .full] : [:]
+            scene.updateWorld(world, powerLevels: power)
+            // Component labels stay above shading for readability; isolate particle pixels.
+            try XCTUnwrap(scene.childNode(withName: "circuit")).isHidden = true
+            let layer = try XCTUnwrap(scene.childNode(withName: "world-particles"))
+            let emitters = layer.children.compactMap { $0 as? SKEmitterNode }
+            XCTAssertFalse(emitters.isEmpty, "Expected particles from \(kind)")
+            // Keep a visible stationary particle for deterministic native pixel comparison.
+            for emitter in emitters {
+                emitter.resetSimulation(); emitter.particleTexture = white
+                emitter.particleColorBlendFactor = 0
+                emitter.particleAlpha = 1; emitter.particleAlphaSpeed = 0
+                emitter.particleLifetime = 10; emitter.particleLifetimeRange = 0
+                emitter.particleSpeed = 0; emitter.particleSpeedRange = 0; emitter.yAcceleration = 0
+                emitter.particlePositionRange = .zero; emitter.particleSize = CGSize(width: 12, height: 12)
+                emitter.particleBirthRate = 2
+            }
+            func brightestPixel() throws -> CGFloat {
+                layer.isHidden = false; layer.isPaused = false // Independent of the test Mac's Reduce Motion preference.
+                for emitter in emitters { emitter.resetSimulation(); emitter.advanceSimulationTime(1.5) }
+                let texture = try XCTUnwrap(view.texture(from: scene, crop: rect))
+                let bitmap = NSBitmapImageRep(cgImage: texture.cgImage())
+                var maximum: CGFloat = 0
+                for y in 0..<bitmap.pixelsHigh { for x in 0..<bitmap.pixelsWide {
+                    maximum = max(maximum, bitmap.colorAt(x: x, y: y)?.redComponent ?? 0)
+                } }
+                return maximum
+            }
+            XCTAssertGreaterThan(try brightestPixel(), 0.85, "Enabled particles glow at night: \(kind)")
+            world.lighting?.localLights = false; scene.updateWorld(world, powerLevels: power)
+            XCTAssertLessThan(try brightestPixel(), 0.4, "Disabled local light must also shade particles: \(kind)")
+            XCTAssertTrue(emitters.allSatisfy { $0.parent === layer }, "Lighting changes must reuse emitters/trails")
+            world.lighting?.mode = .day; scene.updateWorld(world, powerLevels: power)
+            XCTAssertGreaterThan(try brightestPixel(), 0.85, "Daylight particles retain their brightness: \(kind)")
+            world.lighting?.mode = .night; world.lighting?.localLights = true
+            scene.updateWorld(world, powerLevels: power)
+            XCTAssertGreaterThan(try brightestPixel(), 0.85, "Re-enabling light restores the glow: \(kind)")
+        }
+    }
+
+    @MainActor func testParticleShadingFollowsClockWithoutRebuildingTrailsOrLightingMasks() throws {
+        let mapper = try CoordinateMapper(canvasFrame: screen.frame, camera: CameraState(worldOrigin: WorldPoint(x: 0, y: 0), pointsPerTile: 32))
+        let scene = DesktopScene(screen: screen, mapper: mapper)
+        scene.lightingTimeProviding = { 0 }
+        var world = World(lighting: WorldLightingSettings(mode: .cycle, cycleMinutes: 2, startPhase: 0.25, localLights: false))
+        world.circuit.components[p(2,2)] = CircuitComponent(kind: .lightTorch)
+        scene.updateWorld(world)
+        let layer = try XCTUnwrap(scene.childNode(withName: "world-particles"))
+        let lighting = try XCTUnwrap(scene.childNode(withName: "world-lighting"))
+        XCTAssertLessThan(layer.zPosition, lighting.zPosition)
+        let emitters = layer.children, maskBuilds = scene.lightingTextureBuilds
+        for time in 1...120 { scene.lightingTimeProviding = { Double(time) }; scene.update(Double(time)) }
+        XCTAssertEqual(scene.lightingTextureBuilds, maskBuilds)
+        XCTAssertTrue(emitters.allSatisfy { $0.parent === layer })
+        scene.updateViewport(screen: screen, mapper: mapper)
+        XCTAssertLessThan(layer.zPosition, lighting.zPosition)
+        XCTAssertTrue(emitters.allSatisfy { $0.parent === layer })
+    }
+
 }

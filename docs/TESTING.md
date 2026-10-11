@@ -300,3 +300,10 @@ Automated validation: Debug build and all 582 XCTest tests passed. The universal
 Read-only diagnosis found Dark window appearance with Default icon style on the owner’s Mac. Both compiled app-icon variants have distinct compositions and the intended light/dark background layers. The owner confirmed the dark-icon appearance looks good; both automatic transitions remain a separate check.
 
 Automated clock validation: Debug build and all 587 XCTest tests passed, including the five new duration/local-time/persistence/sheet checks. An initial run exited before finishing an unrelated Java-import test; that test passed in isolation and the complete rerun passed. No additional code changes were needed for that interruption.
+
+## Particle shading with local lighting disabled (2026-10-11)
+
+- [ ] MANUAL: Rebuild/launch the update, enable Show particles with Reduce Motion off, then set a world to Always Night. Look at lava, a regular Torch and powered dust/R. Torch. Uncheck **Light nearby ground with torches, lava and redstone**, then Save: their particles and existing trails should darken with the surrounding scene. Try original artwork and your current Java import.
+- [ ] MANUAL: Re-enable local lighting: particles should glow again. Switch to Always Day with local lighting disabled: particles should retain daytime brightness. Check both editor/Test Circuit and running Desktop; panning and Show particles should still behave normally.
+
+Automated particle validation: Debug build and all 589 XCTest tests passed. Native rendered-pixel comparisons cover lava, regular/redstone torches and powered dust across night/local-light toggling and daylight; clock and viewport checks preserve emitters and lighting-mask reuse. Component labels are hidden only in the pixel fixture to isolate particle brightness. Manual editor/Desktop and imported-pack checks above remain pending.

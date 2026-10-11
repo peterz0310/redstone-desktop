@@ -203,6 +203,9 @@ final class DesktopScene: SKScene {
         }
         rebuildCircuit()
         let lava = world.generation == nil ? Set(world.tiles.filter { $0.value.terrain == .lava }.keys) : terrainRenderer.lavaTiles
+        // Emissive particles bypass night shading only while local lights are enabled.
+        // Moving their persistent layer also shades existing trails as the clock advances.
+        particleLayer.zPosition = lightingLayer.zPosition + (world.lighting?.localLights == false ? -0.05 : 0.05)
         particleRenderer.render(world: world, lava: lava, power: powerLevels ?? Dictionary(uniqueKeysWithValues: poweredTiles.map { ($0, PowerLevel.full) }),
             mapper: mapper, screen: screen, into: particleLayer, reducedMotion: reducedMotion || !visualSettings.particles)
         applyVisualSettings()
