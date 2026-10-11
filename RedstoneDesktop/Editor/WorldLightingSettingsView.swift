@@ -15,8 +15,9 @@ struct WorldLightingSettingsView: View {
         _settings = State(initialValue: draft)
     }
     private var clockLabel: String {
-        let hour = Int((settings.startPhase * 24 + 6).truncatingRemainder(dividingBy: 24))
-        return "\(hour % 12 == 0 ? 12 : hour % 12) \(hour < 12 ? "AM" : "PM")"
+        let minutes = Int((settings.startPhase * 1440 + 360).rounded()) % 1440
+        let hour = minutes / 60
+        return "\(hour % 12 == 0 ? 12 : hour % 12):\(String(format: "%02d", minutes % 60)) \(hour < 12 ? "AM" : "PM")"
     }
     var body: some View {
         VStack(alignment: .leading, spacing: 18) {
@@ -28,12 +29,23 @@ struct WorldLightingSettingsView: View {
                 Text("Always Day").tag(WorldLightingSettings.Mode.day)
                 Text("Day & Night").tag(WorldLightingSettings.Mode.cycle)
                 Text("Always Night").tag(WorldLightingSettings.Mode.night)
-            }.pickerStyle(.segmented)
-            if settings.mode == .cycle {
-                Stepper("Full day: \(Int(settings.cycleMinutes)) minutes", value: $settings.cycleMinutes, in: 2...120, step: 1)
-                HStack { Text("Start at"); Spacer(); Text(clockLabel).monospacedDigit() }
-                Slider(value: $settings.startPhase, in: 0...1, step: 1.0 / 24)
-                Text("Time continues while the app is closed. Areas in this world share the same clock.")
+                Text("Fixed Time").tag(WorldLightingSettings.Mode.fixed)
+            }.pickerStyle(.menu)
+            if settings.mode == .cycle || settings.mode == .fixed {
+                if settings.mode == .cycle {
+                    Stepper("Full day: \(Int(settings.cycleMinutes)) minutes", value: $settings.cycleMinutes, in: 2...120, step: 1)
+                }
+                HStack { Text(settings.mode == .fixed ? "Keep at" : "Start at"); Spacer(); Text(clockLabel).monospacedDigit() }
+                Slider(value: $settings.startPhase, in: 0...1, step: 1.0 / 96)
+                HStack {
+                    Button("Dawn") { settings.startPhase = 0 }
+                    Button("Noon") { settings.startPhase = 0.25 }
+                    Button("Dusk") { settings.startPhase = 0.5 }
+                    Button("Midnight") { settings.startPhase = 0.75 }
+                }.controlSize(.small)
+                Text(settings.mode == .fixed
+                    ? "This world stays at this time, even when you reopen the app."
+                    : "Time continues while the app is closed. Areas in this world share the same clock.")
                     .font(.caption).foregroundStyle(.secondary)
             }
             Toggle("Light nearby ground with lava and powered redstone", isOn: $settings.localLights)

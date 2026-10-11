@@ -3,6 +3,14 @@
 These are physical-Mac checks, separate from automated tests. Report which numbered groups you actually tried and what failed; untested groups remain unverified. Use harmless folders/text files first. Place new test circuits on clear ground **to the right** of your existing builds. Do not use scripts for display-calibration tests.
 
 
+## Fixed world time — awaiting owner confirmation
+
+1. Quit with ⌘Q, then run the update with ⌘R in Xcode or open the updated release. World Settings → Lighting → Fixed Time. Choose Dawn or Dusk, adjust the slider to a nearby quarter-hour, and Save. Lighting should match that moment of the cycle and stay there for several minutes in both editor and Desktop.
+2. Check lava and powered redstone still light nearby ground. Browse another area in the same world: it should share the fixed time. Other worlds should keep their own settings.
+3. Quit/reopen and verify the chosen time persists. Try Cancel on a different time, then switch back to Day & Night and confirm time moves again. Existing Always Day and Always Night options should still work.
+
+Owner reports the day/night cycle looks smooth; the additional per-world, persistence and local-light checks below remain open where not explicitly confirmed.
+
 ## Per-world day/night and local lights — awaiting owner confirmation
 
 1. Quit with ⌘Q, then run the update with ⌘R in Xcode or open the updated release. Existing worlds should retain their daytime appearance and saved circuits. Click the gear beside Worlds, or right-click a world card → World Settings….

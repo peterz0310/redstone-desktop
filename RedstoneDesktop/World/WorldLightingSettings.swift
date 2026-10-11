@@ -2,7 +2,7 @@ import Foundation
 
 /// Visual world time only: never ticks circuits, changes terrain or executes actions.
 struct WorldLightingSettings: Codable, Equatable, Sendable {
-    enum Mode: String, Codable, CaseIterable, Sendable { case day, cycle, night }
+    enum Mode: String, Codable, CaseIterable, Sendable { case day, cycle, night, fixed }
     var mode: Mode = .day
     var cycleMinutes: Double = 20
     var startPhase: Double = 0.25 // Dawn = 0, noon = 0.25, dusk = 0.5.
@@ -16,7 +16,7 @@ struct WorldLightingSettings: Codable, Equatable, Sendable {
         }
     }
     func phase(at time: Double) -> Double {
-        guard time.isFinite else { return startPhase }
+        guard mode != .fixed, time.isFinite else { return startPhase }
         let elapsed = (time - anchorTime).truncatingRemainder(dividingBy: cycleMinutes * 60)
         let phase = (startPhase + elapsed / (cycleMinutes * 60)).truncatingRemainder(dividingBy: 1)
         return phase < 0 ? phase + 1 : phase
@@ -25,7 +25,7 @@ struct WorldLightingSettings: Codable, Equatable, Sendable {
         switch mode {
         case .day: return 1
         case .night: return 0.22
-        case .cycle:
+        case .cycle, .fixed:
             let sun = sin(phase(at: time) * 2 * .pi)
             let brightness = min(1, max(0, (sun + 0.2) / 0.7))
             return 0.22 + 0.78 * brightness

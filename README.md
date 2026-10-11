@@ -7,7 +7,7 @@ Build little redstone circuits underneath your real Mac desktop files. A button 
 ## Using the app
 
 - **Worlds** have larger biomes, winding rivers, flower meadows, golden savannas and snowy pine regions. [World generation](docs/WORLD_GENERATION.md) explains the new default and existing-world changes. Worlds are separate maps with their own landscapes and builds. **Areas** are saved views within a world.
-- **World Settings** (the gear beside Worlds) offers per-world day/night cycles, fixed lighting and illumination from lava and powered redstone. See [World lighting](docs/WORLD_LIGHTING.md).
+- **World Settings** (the gear beside Worlds) offers per-world day/night cycles, any fixed time of day and illumination from lava and powered redstone. See [World lighting](docs/WORLD_LIGHTING.md).
 - Build in the editor, save or update an area, and choose **Activate on Desktop**. **Start Desktop** runs that area. Browsing another world doesn’t change the desktop assignment.
 - **Terrain** paints grass, stone, sand, dirt, dry grass, snow, gravel, water or lava, clears decorations, and restores original terrain. Dragging is one undo step; existing circuits are protected. [Terrain editing](docs/TERRAIN_EDITING.md) explains both build modes.
 - **Plate** powers a circuit while a Finder item occupies its tile. **Sensor** can filter by filename or extension. [Desktop detectors](docs/DESKTOP_SENSORS.md) explains timing, configuration and testing.

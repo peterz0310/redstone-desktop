@@ -18,6 +18,23 @@ final class WorldLightingTests: XCTestCase {
             XCTAssertThrowsError(try invalid.validate())
         }
     }
+    func testFixedTimeUsesCycleLightingButNeverAdvancesAndSurvivesReopening() throws {
+        for phase in [0.0, 0.125, 0.25, 0.5, 0.525, 0.75, 1.0] {
+            let fixed = WorldLightingSettings(mode: .fixed, startPhase: phase, anchorTime: 100)
+            let cycle = WorldLightingSettings(mode: .cycle, startPhase: phase, anchorTime: 100)
+            XCTAssertEqual(fixed.daylight(at: 100), cycle.daylight(at: 100), accuracy: 0.000001)
+            for time in [-1000000.0, 100, 500, 1000000] {
+                XCTAssertEqual(fixed.phase(at: time), phase)
+                XCTAssertEqual(fixed.daylight(at: time), fixed.daylight(at: 100))
+            }
+            var document = WorldDocument(); document.lighting = fixed
+            let library = WorldLibraryDocument(world: document)
+            let reopened = try LibraryImport.decode(JSONEncoder().encode(library))
+            XCTAssertEqual(reopened.worlds[0].lighting, fixed)
+            XCTAssertEqual(try reopened.worlds[0].restoredWorld().lighting, fixed)
+        }
+    }
+
     func testLightFallsOffSmoothlyAndPowerAttenuatesIt() {
         XCTAssertEqual(WorldLightFalloff.intensity(dx: 0, dy: 0, radius: 5, strength: 1), 1)
         XCTAssertGreaterThan(WorldLightFalloff.intensity(dx: 1, dy: 0, radius: 5, strength: 1), WorldLightFalloff.intensity(dx: 3, dy: 0, radius: 5, strength: 1))
@@ -118,5 +135,14 @@ final class WorldLightingTests: XCTestCase {
         world.lighting?.mode = .day
         renderer.render(world: world, lava: [], power: [:], mapper: mapper, screen: screen, into: layer, time: 0)
         XCTAssertTrue(layer.isHidden); XCTAssertGreaterThan(try color().redComponent, 0.9)
+        world.lighting = WorldLightingSettings(mode: .fixed, startPhase: 0)
+        renderer.render(world: world, lava: [], power: [:], mapper: mapper, screen: screen, into: layer, time: 0)
+        let dawn = try color().redComponent
+        XCTAssertGreaterThan(dawn, dark + 0.15); XCTAssertLessThan(dawn, 0.7)
+        let fixedBuilds = renderer.textureBuilds
+        renderer.advance(settings: try XCTUnwrap(world.lighting), time: 999999)
+        XCTAssertEqual(try color().redComponent, dawn, accuracy: 0.01)
+        XCTAssertEqual(renderer.textureBuilds, fixedBuilds)
+
     }
 }
