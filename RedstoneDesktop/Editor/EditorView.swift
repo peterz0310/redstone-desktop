@@ -237,9 +237,9 @@ struct EditorView: View {
                             .font(.caption).foregroundStyle(.secondary)
                     }
                 }
-                if let component = editor.browsingWorld(appState).circuit.components[coordinate], component.kind == .fileSensor {
-                    FileSensorConfigurationView(filter: component.sensorFilter) { appState.configureFileSensor(at: coordinate, filter: $0) }
-                        .id("sensor:\(appState.selectedWorldID):\(coordinate)")
+                if let component = editor.browsingWorld(appState).circuit.components[coordinate], component.kind.isDesktopSensor {
+                    FileSensorConfigurationView(filter: component.sensorFilter, initialMatch: editor.sensorEditRequest.flatMap { $0.tile == coordinate && $0.worldID == appState.selectedWorldID ? $0.match : nil }) { appState.configureFileSensor(at: coordinate, filter: $0) }
+                        .id("sensor:\(appState.selectedWorldID):\(coordinate):\(editor.sensorEditRequest?.id.uuidString ?? "")")
                         .disabled(appState.isEditorConfigurationLocked || editor.isPreviewing(appState) || editor.circuitTest != nil)
                 }
                 Button("Erase selected component") {

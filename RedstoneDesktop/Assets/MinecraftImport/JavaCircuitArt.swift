@@ -2,7 +2,7 @@ import Foundation
 
 /// Fixed, bounded 2D recipes over validated pixels, never a Java model/code interpreter.
 enum JavaCircuitArt: Sendable {
-    case button(Bool), lever(Bool), repeater(Bool), dust(Bool), cactus, output(Bool)
+    case plate(Bool), button(Bool), lever(Bool), repeater(Bool), dust(Bool), cactus, output(Bool)
 
     func render(_ source: RasterAsset) -> RasterAsset {
         if case let .dust(on) = self {
@@ -29,6 +29,13 @@ enum JavaCircuitArt: Sendable {
             result.pixels.replaceSubrange(i..<i + 4, with: color)
         }
         switch self {
+        case let .plate(down):
+            // Pressure plates reuse the block material; no Java model code is loaded.
+            for y in 2..<14 { for x in 2..<14 {
+                let face = sample((x - 2) * 16 / 12, (y - 2) * 16 / 12)
+                let shade = y >= (down ? 12 : 11) ? 150 : (down ? 220 : 255)
+                put(x, y + (down ? 1 : 0), [UInt8(Int(face[0]) * shade / 255), UInt8(Int(face[1]) * shade / 255), UInt8(Int(face[2]) * shade / 255), face[3]])
+            } }
         case let .button(down):
             for y in 5..<12 {
                 for x in 3..<13 {

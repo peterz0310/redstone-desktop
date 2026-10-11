@@ -29,6 +29,7 @@ final class DesktopBuildController: NSObject, DesktopBuildPresenting, NSWindowDe
         exit = { [weak appState] in appState?.exitDesktopBuildMode() }
         renderer = DesktopWindowController(screen: screen, mapper: session.mapper)
         surface = DesktopBuildSurface(session: session, screen: screen)
+        surface.appState = appState
         inputWindow = BuildInputWindow(contentRect: screen.frame, styleMask: .borderless, backing: .buffered, defer: false)
         inputWindow.title = "Desktop Build Mode Input"
         inputWindow.level = NSWindow.Level(rawValue: Int(CGWindowLevelForKey(.desktopIconWindow)) + 1)
@@ -82,6 +83,7 @@ final class DesktopBuildController: NSObject, DesktopBuildPresenting, NSWindowDe
         inputWindow.ignoresMouseEvents = true
         inputWindow.orderOut(nil)
         surface.stopFeedback()
+        surface.appState = nil
         surface.click = nil; surface.rotate = nil; surface.changeDelay = nil; surface.exit = nil
         inputWindow.close()
         palette.delegate = nil
@@ -100,6 +102,7 @@ final class DesktopBuildController: NSObject, DesktopBuildPresenting, NSWindowDe
 @MainActor
 final class DesktopBuildSurface: SKView {
     let session: DesktopBuildSession
+    weak var appState: AppState?
     let screen: ScreenDescriptor
     var terrainInput: ((CGPoint, TerrainStrokePhase) -> Void)?
     var click: ((CGPoint, Bool) -> Void)?
@@ -222,9 +225,53 @@ final class DesktopBuildSurface: SKView {
     }
 
     override func rightMouseDown(with event: NSEvent) {
+        if let menu = menu(for: event) { NSMenu.popUpContextMenu(menu, with: event, for: self); return }
         window?.makeFirstResponder(self)
         if session.tool == .terrain { terrainInput?(point(event), .cancel) }
         else { click?(point(event), true) }
+        refreshHighlight()
+    }
+
+    private final class SensorContextInvocation: NSObject {
+        let tile: WorldCoordinate
+        let sessionID: UUID
+        let match: FileSensorMatch?
+        init(tile: WorldCoordinate, sessionID: UUID, match: FileSensorMatch?) {
+            self.tile = tile; self.sessionID = sessionID; self.match = match
+        }
+    }
+    override func menu(for event: NSEvent) -> NSMenu? {
+        guard session.tool != .terrain, let appState, appState.buildSession?.id == session.id,
+              let tile = session.tile(at: point(event)),
+              let component = appState.desktopWorld.circuit.components[tile], component.kind.isDesktopSensor else { return nil }
+        session.selectedTile = tile
+        let menu = NSMenu(); menu.autoenablesItems = false
+        for match in FileSensorMatch.allCases {
+            let item = NSMenuItem(title: "Detect: " + match.title + (match == .anyItem ? "" : "…"), action: #selector(runSensorContext(_:)), keyEquivalent: "")
+            item.target = self
+            item.state = (component.kind == .pressurePlate ? FileSensorMatch.anyItem : component.sensorFilter.match) == match ? .on : .off
+            item.representedObject = SensorContextInvocation(tile: tile, sessionID: session.id, match: match)
+            menu.addItem(item)
+        }
+        menu.addItem(.separator())
+        let delete = NSMenuItem(title: "Delete Component", action: #selector(runSensorContext(_:)), keyEquivalent: "")
+        delete.target = self
+        delete.representedObject = SensorContextInvocation(tile: tile, sessionID: session.id, match: nil)
+        menu.addItem(delete)
+        return menu
+    }
+    @objc private func runSensorContext(_ item: NSMenuItem) {
+        guard let invocation = item.representedObject as? SensorContextInvocation,
+              let appState, appState.buildSession?.id == invocation.sessionID,
+              appState.desktopWorld.circuit.components[invocation.tile]?.kind.isDesktopSensor == true else { return }
+        session.selectedTile = invocation.tile
+        if let match = invocation.match {
+            if match == .anyItem { appState.configureBuildFileSensor(at: invocation.tile, filter: FileSensorFilter()) }
+            session.sensorEditRequest = DesktopBuildSession.SensorEditRequest(tile: invocation.tile, match: match)
+        } else {
+            let rect = session.mapper.screenRect(forTile: invocation.tile)
+            appState.buildClick(at: CGPoint(x: rect.midX, y: rect.midY), erase: true, sessionID: session.id)
+        }
         refreshHighlight()
     }
 
@@ -273,10 +320,10 @@ private struct DesktopBuildHotbar: View {
             Text(session.tool.description).font(.caption).foregroundStyle(.secondary).fixedSize(horizontal: false, vertical: true)
             if session.tool == .terrain {
                 TerrainBrushControls(brush: $session.terrainBrush, size: $session.terrainBrushSize)
-            } else if let tile = session.selectedTile, let component = appState.desktopWorld.circuit.components[tile], component.kind == .fileSensor {
-                FileSensorConfigurationView(filter: component.sensorFilter) { filter in
+            } else if let tile = session.selectedTile, let component = appState.desktopWorld.circuit.components[tile], component.kind.isDesktopSensor {
+                FileSensorConfigurationView(filter: component.sensorFilter, initialMatch: session.sensorEditRequest.flatMap { $0.tile == tile ? $0.match : nil }) { filter in
                     appState.configureBuildFileSensor(at: tile, filter: filter)
-                }.id("sensor:\(tile)")
+                }.id("sensor:\(tile):\(session.sensorEditRequest?.id.uuidString ?? "")")
             } else if session.tool == .fileSensor {
                 FileSensorConfigurationView(filter: session.sensorFilter) { session.sensorFilter = $0 }
             }

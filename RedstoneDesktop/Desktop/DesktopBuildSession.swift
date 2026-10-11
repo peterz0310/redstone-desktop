@@ -38,7 +38,15 @@ final class DesktopBuildSession: ObservableObject {
     @Published var sensorFilter = FileSensorFilter()
     @Published var direction = Direction.east
     @Published var delay = RepeaterDelay.one
-    @Published var selectedTile: WorldCoordinate?
+    struct SensorEditRequest {
+        let id = UUID()
+        let tile: WorldCoordinate
+        let match: FileSensorMatch
+    }
+    @Published var sensorEditRequest: SensorEditRequest?
+    @Published var selectedTile: WorldCoordinate? {
+        didSet { if selectedTile != oldValue { sensorEditRequest = nil } }
+    }
     @Published var hoveredTile: WorldCoordinate?
     @Published var status = "Left-click places; right-click erases. Edits save to this world. Circuit stopped."
 

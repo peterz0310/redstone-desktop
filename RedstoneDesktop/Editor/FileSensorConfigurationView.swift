@@ -5,8 +5,11 @@ struct FileSensorConfigurationView: View {
     let filter: FileSensorFilter
     let save: (FileSensorFilter) -> Void
     @State private var draft: FileSensorFilter
-    init(filter: FileSensorFilter, save: @escaping (FileSensorFilter) -> Void) {
-        self.filter = filter; self.save = save; _draft = State(initialValue: filter)
+    init(filter: FileSensorFilter, initialMatch: FileSensorMatch? = nil, save: @escaping (FileSensorFilter) -> Void) {
+        self.filter = filter; self.save = save
+        var initial = filter
+        if let initialMatch { initial.match = initialMatch }
+        _draft = State(initialValue: initial)
     }
     var body: some View {
         VStack(alignment: .leading, spacing: 6) {

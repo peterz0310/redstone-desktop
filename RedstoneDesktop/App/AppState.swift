@@ -769,7 +769,8 @@ final class AppState: ObservableObject {
 
     @discardableResult
     func configureFileSensor(at coordinate: WorldCoordinate, filter: FileSensorFilter) -> Bool {
-        guard filter.isValid, var component = editorWorld.circuit.components[coordinate], component.kind == .fileSensor else { return false }
+        guard filter.isValid, var component = editorWorld.circuit.components[coordinate], component.kind.isDesktopSensor else { return false }
+        if filter.match != .anyItem { component.kind = .fileSensor }
         component.sensorFilter = filter
         var circuit = editorWorld.circuit; circuit.components[coordinate] = component
         return replaceEditorCircuit(circuit)
@@ -956,8 +957,9 @@ final class AppState: ObservableObject {
 
     func configureBuildFileSensor(at tile: WorldCoordinate, filter: FileSensorFilter) {
         guard let session = buildSession, session.worldID == activeWorldID, session.areaID == library.activeAreaID,
-              filter.isValid, desktopWorld.circuit.components[tile]?.kind == .fileSensor else { return }
+              filter.isValid, desktopWorld.circuit.components[tile]?.kind.isDesktopSensor == true else { return }
         var next = desktopWorld; next.circuit.components[tile]?.sensorFilter = filter
+        if filter.match != .anyItem { next.circuit.components[tile]?.kind = .fileSensor }
         commitCircuit(next, worldID: session.worldID); refreshBuildRenderer()
         session.status = "Sensor filter saved. Circuit stopped."
     }

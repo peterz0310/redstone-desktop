@@ -1,7 +1,7 @@
 import Foundation
 
 enum EditorContextAction: Equatable {
-    case inspect, copy, paste, move, rotate, delay(RepeaterDelay), delete, saveBlueprint, clearDecoration, restoreTerrain
+    case sensorSource(FileSensorMatch), inspect, copy, paste, move, rotate, delay(RepeaterDelay), delete, saveBlueprint, clearDecoration, restoreTerrain
 }
 struct EditorContextOption {
     let title: String
@@ -31,6 +31,11 @@ extension EditorSession {
                     options.append(EditorContextOption(title: "Delay: \(delay.rawValue) tick\(delay == .one ? "" : "s")", action: .delay(delay), enabled: canEdit))
                 }
             }
+            if component.kind.isDesktopSensor, count <= 1 {
+                for match in FileSensorMatch.allCases {
+                    options.append(EditorContextOption(title: "Detect: " + match.title + (match == .anyItem ? "" : "…"), action: .sensorSource(match), enabled: canEdit))
+                }
+            }
             options.append(EditorContextOption(title: count > 1 ? "Delete Selection (\(count))" : "Delete Component", action: .delete, enabled: canEdit))
         } else { options.append(EditorContextOption(title: "Paste", action: .paste, enabled: canEdit)) }
         if let decoration = browsingWorld(appState).tile(at: tile)?.decoration {
@@ -46,6 +51,10 @@ extension EditorSession {
         guard worldID == appState.selectedWorldID,
               contextOptions(at: tile, appState: appState).contains(where: { $0.action == action && $0.enabled }) else { return }
         switch action {
+        case .sensorSource(let match):
+            selectSidebar(.inspector); selectContextTile(tile, appState: appState)
+            if match == .anyItem { _ = appState.configureFileSensor(at: tile, filter: FileSensorFilter()) }
+            sensorEditRequest = SensorEditRequest(worldID: worldID, tile: tile, match: match)
         case .inspect: selectSidebar(.inspector); selectContextTile(tile, appState: appState)
         case .copy: copyToClipboard(appState)
         case .paste: pasteFromClipboard(appState)

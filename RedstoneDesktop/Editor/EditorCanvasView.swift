@@ -155,6 +155,10 @@ final class EditorCanvasSurface: SKView {
         for option in editor.contextOptions(at: tile, appState: appState) {
             let item = NSMenuItem(title: option.title, action: #selector(runContext(_:)), keyEquivalent: "")
             item.target = self; item.isEnabled = option.enabled
+            if case .sensorSource(let match) = option.action,
+               let component = editor.browsingWorld(appState).circuit.components[tile] {
+                item.state = (component.kind == .pressurePlate ? FileSensorMatch.anyItem : component.sensorFilter.match) == match ? .on : .off
+            }
             item.representedObject = ContextInvocation(option.action, tile: tile, worldID: appState.selectedWorldID)
             menu.addItem(item)
         }

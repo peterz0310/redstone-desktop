@@ -28,7 +28,7 @@ import AppKit
                     }
                     NSColor(calibratedRed: 0.65, green: 0.10, blue: 0.13, alpha: 1).setStroke(); path.stroke()
                     NSBezierPath(rect: rect.insetBy(dx: scale * 0.38, dy: scale * 0.38)).fill()
-                } else if let id = CircuitTextureID.id(for: component.kind, powered: false) {
+                } else if let id = CircuitTextureID.id(for: component.kind, powered: false, sensorFilter: component.sensorFilter) {
                     NSGraphicsContext.saveGraphicsState()
                     let transform = NSAffineTransform(); transform.translateX(by: center.x, yBy: center.y)
                     if component.kind == .repeater {

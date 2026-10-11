@@ -32,12 +32,12 @@ enum CircuitTextureID: String, CaseIterable {
         }
     }
 
-    static func id(for kind: CircuitComponentKind, powered: Bool) -> CircuitTextureID? {
+    static func id(for kind: CircuitComponentKind, powered: Bool, sensorFilter: FileSensorFilter = FileSensorFilter()) -> CircuitTextureID? {
         switch kind {
         case .lamp: return powered ? .lampOn : .lampOff
         case .lightTorch: return .lightTorch
         case .pressurePlate: return powered ? .plateOn : .plateOff
-        case .fileSensor: return powered ? .sensorOn : .sensorOff
+        case .fileSensor: return sensorFilter.match == .anyItem ? (powered ? .plateOn : .plateOff) : (powered ? .sensorOn : .sensorOff)
         case .dust: return powered ? .dustOn : .dustOff
         case .button: return powered ? .buttonDown : .buttonUp
         case .lever: return powered ? .leverOn : .leverOff
@@ -92,15 +92,19 @@ final class CircuitTextures {
                 fill(CGRect(x: 10, y: 20, width: 12, height: 7), .orange)
                 fill(CGRect(x: 13, y: 23, width: 6, height: 7), .yellow)
                 fill(CGRect(x: 14, y: 24, width: 4, height: 3), .white)
-            case .plateOff, .plateOn:
-                fill(CGRect(x: 2, y: 5, width: 28, height: 22), dark)
-                fill(CGRect(x: 4, y: 7, width: 24, height: 18), id == .plateOn ? hot : rim)
-                fill(CGRect(x: 7, y: 10, width: 18, height: 12), .gray)
-            case .sensorOff, .sensorOn:
-                fill(CGRect(x: 3, y: 3, width: 26, height: 26), dark)
-                fill(CGRect(x: 9, y: 7, width: 14, height: 20), rim)
-                for y in [12, 17, 22] { fill(CGRect(x: 12, y: y, width: 8, height: 2), dark) }
-                fill(CGRect(x: 3, y: 3, width: 5, height: 5), id == .sensorOn ? hot : red)
+            case .plateOff, .plateOn, .sensorOff, .sensorOn:
+                let wood = id == .plateOff || id == .plateOn
+                let down = id == .plateOn || id == .sensorOn
+                let base = wood ? NSColor(calibratedRed: 0.60, green: 0.40, blue: 0.21, alpha: 1) : rim
+                let face = down ? base.blended(withFraction: 0.18, of: dark)! : base
+                fill(CGRect(x: 2, y: 4, width: 28, height: 23), dark)
+                fill(CGRect(x: 3, y: down ? 5 : 7, width: 26, height: 20), face)
+                if wood {
+                    for y in [11, 17, 23] { fill(CGRect(x: 3, y: y, width: 26, height: 1), .brown) }
+                    for x in [9, 21] { fill(CGRect(x: x, y: 12, width: 1, height: 5), .brown) }
+                } else {
+                    for (x, y) in [(6, 12), (17, 20), (23, 10)] { fill(CGRect(x: x, y: y, width: 3, height: 2), .gray) }
+                }
             case .dustOff, .dustOn:
                 let color = id == .dustOn ? hot : red
                 fill(CGRect(x: 0, y: 0, width: 32, height: 32), color)

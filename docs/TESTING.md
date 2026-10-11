@@ -220,3 +220,13 @@ Please report acceptance by group/substep, e.g. “1, 2, 4 passed; 3 skipped (on
 - [ ] Try exposed Desktop button and lever clicks during Day and Night. Record Last action in Advanced → Desktop Details if an input does not respond. Confirm no file opens merely from a torch/lamp placement.
 
 Desktop click investigation remains open: the owner reports missed clicks on the running Desktop. Inputs blocked during Finder/display settling now report the reason and count the received press; this is diagnostic feedback, not a verified fix for the reported missed clicks. Capture Last action and event metadata from Desktop Details when reproducing. Automated input gates, queued reads, fresh-output routing and polling tests continue to pass.
+
+## Sensor pressure-plate appearance and source shortcuts — Mac validation pending
+
+- [ ] Quit the app with ⌘Q, then run the updated app from Xcode with ⌘R. Stop Desktop before editing.
+- [ ] Place Plate and Sensor with Any item selected: both look wooden. Select a Sensor, choose File extension and enter `pdf`: it becomes a stone plate. Item name filters also use stone. Switching back to Any item restores wood.
+- [ ] Right-click either plate in the editor. Detect: Any item saves immediately. Detect: File extension… / Item name… opens the Inspector with the right entry field. Empty drafts must leave the original saved configuration unchanged; typing a valid value saves immediately. Undo/redo restores both filter and appearance.
+- [ ] In Desktop Build Mode, right-click a plate and use the same shortcuts. The palette opens its field; changing the source leaves the plate on the same tile. Delete Component still works in the sensor menu; right-click nonsensor components still erases them.
+- [ ] Use Test Circuit and click each plate to toggle simulated occupancy. Both wood and stone have distinct raised/depressed appearances; Test Circuit bypasses matching only for its simulated input. It never opens files. Stop testing before changing filters.
+- [ ] Refresh Imported Minecraft Textures in Appearance settings. Any item plates use oak plank material; filtered plates use stone. Built-In still supplies clear wood/stone art without an import.
+- [ ] Copy a filtered plate into a blueprint and check its preview is stone. Stamp it elsewhere, save/reopen, and confirm the filter remains. With Desktop running, Any item accepts a file or folder; a `pdf` filter accepts a PDF and turns off for a TXT/folder replacement after Finder refresh. Use Outputs set to Do nothing for this check.

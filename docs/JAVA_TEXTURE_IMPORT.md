@@ -65,6 +65,8 @@ Modern paths below are relative to `assets/minecraft/textures/block/`. Legacy pa
 | `redstoneLeverOn` | `lever.png` | `lever.png` | On handle recipe |
 | `redstoneRepeaterOff` | `repeater.png` | `repeater_off.png` | East-facing top/indicator recipe |
 | `redstoneRepeaterOn` | `repeater_on.png` | `repeater_on.png` | East-facing top/indicator recipe |
+| `redstonePlateOff` / `redstonePlateOn` | `oak_planks.png` | `planks_oak.png` | Wooden raised/depressed pressure-plate recipe for Any item |
+| `redstoneSensorOff` / `redstoneSensorOn` | `stone.png` | `stone.png` | Stone raised/depressed pressure-plate recipe for name/extension filters |
 | `redstoneLampOff` | `redstone_lamp.png` | `redstone_lamp_off.png` | Full square lamp face |
 | `redstoneLampOn` | `redstone_lamp_on.png` | `redstone_lamp_on.png` | Full square lit lamp face |
 | `lightTorch` | `torch.png` | `torch_on.png` | Regular torch; unchanged pixels |
@@ -136,3 +138,5 @@ Tests in `JavaTextureImportTests.swift` use original synthetic PNGs in a real de
 The animation follow-up was also checked against the locally installed **1.21.8 JAR** in a temporary cache: 37 textures, no import warnings; water has 32 frames at 0.1 seconds each, and lava has 20 frames in a 38-step forward/backward sequence at 0.1 seconds each. Cache reload preserved the sequences. This read did not change the owner’s active pack, save data or source JAR, and its temporary imported images were removed. Other Java versions/packs still need their own validation.
 
 Lamps and regular torches use original art when missing from a pack. Existing imported caches keep their original mappings; choose **Refresh Imported Minecraft Textures** for the Minecraft JAR or Java pack to pick up the three new mappings. They are image data only, never code, models or scripts.
+
+Pressure-plate recipes sample the material into a transparent 16×16 plate, with a shaded rim and a depressed powered variant. An Any item Sensor uses the wooden plate IDs just like a Plate; filtered Sensors use the stone IDs. No nonexistent standalone Java pressure-plate PNG or model execution is required. Refresh an existing Minecraft import to acquire the new mappings.

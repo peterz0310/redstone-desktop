@@ -16,7 +16,7 @@ final class CircuitRenderer {
             let level = powerLevels?[coordinate] ?? (powerLevels == nil && poweredTiles.contains(coordinate) ? .full : .off)
             let powered = level > .off
             let brightness: CGFloat = powered ? 0.45 + 0.55 * CGFloat(level.rawValue) / 15 : 1
-            guard let textureID = CircuitTextureID.id(for: component.kind, powered: component.kind == .lever ? (leverPositions?.contains(coordinate) ?? powered) : powered) else { continue }
+            guard let textureID = CircuitTextureID.id(for: component.kind, powered: component.kind == .lever ? (leverPositions?.contains(coordinate) ?? powered) : powered, sensorFilter: component.sensorFilter) else { continue }
             if component.kind == .lamp {
                 let icon = SKSpriteNode(texture: textures.texture(for: textureID))
                 icon.name = "component-icon:\(coordinate.x),\(coordinate.y)"
@@ -147,7 +147,7 @@ final class CircuitRenderer {
             switch component.kind {
             case .lightTorch: labelText = "TORCH"
             case .pressurePlate: labelText = powered ? "DOWN" : "PLATE"
-            case .fileSensor: labelText = powered ? "FOUND" : "SENSOR"
+            case .fileSensor: labelText = component.sensorFilter.match == .anyItem ? (powered ? "DOWN" : "PLATE") : (powered ? "FOUND" : "SENSOR")
             case .button: labelText = powered ? "DOWN" : "PRESS"
             case .lever: labelText = (leverPositions?.contains(coordinate) ?? powered) ? "ON" : "OFF"
             case .repeater, .torch:
