@@ -1,49 +1,97 @@
-# Build and release engineering
+# Build and prepare a release
 
-This is an experimental prototype. A passing archive/build is not physical-Mac MVP acceptance. Review [TESTING.md](TESTING.md), [KNOWN_LIMITATIONS.md](KNOWN_LIMITATIONS.md) and the licensing notice before distribution.
+Redstone Desktop 0.1.0 is an early preview. Local builds and automated tests are ready to review; public distribution still needs the [release checklist](RELEASE_CHECKLIST.md). No public download or hosted CI success is implied by a local build.
 
-## Required tools and clean checkout
+## Build from source
 
-The supported, locally verified development toolchain is **Xcode 27.0 or newer**, **Swift 6 language mode**, and **XcodeGen 2.44+** (verified with 2.46.0), plus Python 3 for archive verification. Install full Xcode, open it once to finish setup/license installation, and ensure `xcode-select -p` points at its Developer directory. Command Line Tools alone do not provide the full app build/test environment. Older Xcode versions have not been validated for this final tree.
-
-The **app deployment target is macOS 14.0**, independent of the OS/Xcode needed to develop it. Local tests ran on Apple Silicon/macOS 27.0; older macOS and Intel runtime behavior remain unverified. The Release script builds both arm64 and x86_64 slices; cross-compilation is not Intel runtime acceptance.
-
-From a new checkout:
+The locally verified toolchain is **Xcode 27.0**, Swift 6 language mode, **XcodeGen 2.46.0** (minimum 2.44) and Python 3. Install full Xcode, open it once to finish its setup, and check `xcode-select -p` points to that Xcode. The app targets **macOS 14+**; development was tested on Apple Silicon/macOS 27. Older macOS and Intel execution remain physical checks.
 
 ```sh
 git clone https://github.com/peterz0310/redstone-desktop.git
 cd redstone-desktop
 brew install xcodegen
-xcodebuild -version
-xcrun swift --version
 xcodegen generate --spec project.yml
 xcodebuild -project RedstoneDesktop.xcodeproj -scheme RedstoneDesktop -configuration Debug -destination 'platform=macOS' -derivedDataPath build CODE_SIGNING_ALLOWED=NO build
 xcodebuild -project RedstoneDesktop.xcodeproj -scheme RedstoneDesktop -configuration Debug -destination 'platform=macOS' -derivedDataPath build CODE_SIGNING_ALLOWED=NO test
-open build/Build/Products/Debug/RedstoneDesktop.app
+python3 -m unittest discover -s scripts/tests -v
+python3 scripts/check-docs.py
 ```
 
-Alternatively open the generated Xcode project, select RedstoneDesktop/My Mac and press **⌘R**. Quit older running copies first. `project.yml` is the checked-in project definition; regenerate after adding files. Build products/generated projects are ignored. No backend, Java installation, downloaded texture pack or script is required for builds/tests/default art. Tests isolate owner stores/preferences and use synthetic/fake adapters; ordinary app launch uses the production library and starts Desktop stopped.
+To run, open the generated project, choose **RedstoneDesktop → My Mac**, and press **⌘R**. Or open `build/Build/Products/Debug/RedstoneDesktop.app` directly. Xcode helps with debugging; normal installed users don't need it. Quit older copies first. Normal launches use your actual library; tests use isolated data.
 
-## Permissions and distribution identity
+`project.yml` is the checked-in project definition. Regenerate after adding source files. There is no backend, required Java installation, downloaded pack or script dependency for a build. Build products and generated projects are ignored.
 
-Bundle ID: `org.redstonedesktop.RedstoneDesktop`. This native app is intentionally **not App Sandbox enabled**: public Finder Apple Events and explicitly approved user script execution use normal account access. Script actions are distinct from simulation/rendering, execute only supported exact targets after approval, and have bounded process/output/cancellation handling. It is not an App Store submission configuration.
+## Package a local review build
 
-- **Automation → Finder**: explicitly connecting/starting tracking reads names, paths, icon positions and view settings. `NSAppleEventsUsageDescription` and the Apple Events entitlement explain/permit this under hardened runtime.
-- **Files & Folders → Desktop Folder**: explicit script choice/check/opt-in requests folder access. `NSDesktopFolderUsageDescription` explains it. Opening ordinary occupants and Finder Automation are separate from script reading.
-- **Per-script confirmation**: app-owned exact-file approval, separate from TCC; remembered approval starts checked but can be unchecked/revoked. Automatic script/open routing remains opt-in.
-- No Accessibility, microphone, camera, screen-recording or blanket Full Disk Access permission is requested. The desktop input gate uses documented public event/window metadata, without private APIs or input interception in normal mode.
+```sh
+scripts/release.sh
+```
 
-macOS chooses prompt timing and stores privacy decisions across reinstall/reset. Signing identity/path changes may affect permission attribution; retest with the actual signed app. Start Over resets app data, not TCC; see [RECOVERY.md](RECOVERY.md). Do not distribute developer fixture scripts as app content.
+The script checks documentation, builds optimized arm64/x86_64 Release, verifies the app, ZIP and read-only mounted DMG, and produces:
 
-## Licensing
+```text
+build/releases/RedstoneDesktop-0.1.0-macOS.dmg
+build/releases/RedstoneDesktop-0.1.0-macOS.zip
+build/releases/RedstoneDesktop-0.1.0-macOS-symbols.zip
+build/releases/RedstoneDesktop-0.1.0-macOS.json
+```
 
-Project code/original world art/sound: [MIT](../LICENSE). No third-party runtime packages/backend are bundled; SwiftUI/AppKit/SpriteKit/AVFoundation are system frameworks. XcodeGen is a development tool, not part of the app.
+Each ZIP/DMG also has a `.sha256` sidecar. The DMG contains the app, an Applications shortcut, install instructions, README/media, release notes, license/notices and guides. ZIP contains the same files in a `RedstoneDesktop` folder. Matching dSYM UUIDs are checked and archived separately; **retain symbols and the manifest privately for crash reports**, not as the ordinary customer download. The manifest records the actual artifact hashes, source commit/dirty status, version/build, toolchain and signing mode. It records notarization as not performed; hashing is not a trust signature.
 
-App/menu/Dust-tool identity uses the owner-provided logo; all other toolbar icons use native SF Symbols. No Minecraft artwork/audio or game-derived icons are shipped. [Artwork notices](../THIRD_PARTY_NOTICES.md) record the unchanged source PNG, hash and derivation. World textures, particles and audio remain optional local imports and are absent from releases. Pack data is validated images/PCM/metadata; no resource-pack code executes. MIT/license and notices are embedded inside the app and included in the review ZIP. The release verifier inspects the actual compiled Assets.car with the macOS developer tool `assetutil`, in both the app and ZIP, and rejects the retired game-derived image sets. Optional asset imports must never be added to a release to make a demo work.
+Default packages are **unsigned local review artifacts**, not Gatekeeper-ready downloads. The linker may add an ad-hoc signature; that is not Developer ID distribution. `--output DIRECTORY` changes their location. Unique staging is cleaned on exit and validation finishes before replacing existing packages. Rebuilding the same version replaces generated artifacts; preserve the exact app, manifest and symbols if investigating a crash.
 
-## Identity and README visuals
+Read-only checks:
 
-The unchanged owner-provided source is `RedstoneDesktop/Resources/Assets.xcassets/Logo.imageset/logo.png`. Regenerate derived assets with:
+```sh
+python3 scripts/verify-release.py build/releases/RedstoneDesktop-0.1.0-macOS.dmg
+python3 scripts/verify-release.py build/releases/RedstoneDesktop-0.1.0-macOS.zip
+(cd build/releases && shasum -a 256 -c RedstoneDesktop-0.1.0-macOS.dmg.sha256)
+```
+
+Verification checks identity/version/build/copyright, macOS target and permission explanations, native light/dark icon variants, licensing, both actual Mach-O slices, documentation links/images and the absence of local saves/imports/scripts/audio. ZIP traversal, duplicate/case-colliding entries and unexpected symbolic links are refused. DMG checks use a unique read-only mount, do not open Finder/app windows, and detach afterwards. It never launches the app or uses your saved library. The installer uses HFS+ for the supported older Macs; macOS 27 emits deprecation warnings for hdiutil, but creation/verification/read-only mounting passed locally.
+
+## Sign and notarize for public download
+
+You need Apple Developer membership, an installed **Developer ID Application** certificate/private key, and notarization credentials. Keep credentials in Keychain; never put them in this repository. The development Mac currently has no Developer ID Application identity. Follow Apple's [notarization workflow](https://developer.apple.com/documentation/security/customizing-the-notarization-workflow).
+
+```sh
+# Use your exact installed Developer ID identity.
+scripts/release.sh --sign "Developer ID Application: Your Name (TEAMID)"
+# Configure this Keychain profile using Apple's instructions first.
+xcrun notarytool submit build/releases/RedstoneDesktop-0.1.0-macOS.dmg --keychain-profile "RedstoneDesktop-notary" --wait
+```
+
+Signing enables hardened runtime, timestamps and the Apple Events entitlement on the app, and signs the DMG too. Apple Development identities are refused by the distribution script. Inspect notarization's result and log; stop on rejection. No submission/upload is done automatically by the packaging script.
+
+After **Accepted**, staple the **same DMG** without rebuilding:
+
+```sh
+xcrun stapler staple build/releases/RedstoneDesktop-0.1.0-macOS.dmg
+xcrun stapler validate build/releases/RedstoneDesktop-0.1.0-macOS.dmg
+python3 scripts/verify-release.py build/releases/RedstoneDesktop-0.1.0-macOS.dmg
+spctl --assess --type open --context context:primary-signature --verbose=2 build/releases/RedstoneDesktop-0.1.0-macOS.dmg
+(cd build/releases && shasum -a 256 RedstoneDesktop-0.1.0-macOS.dmg > RedstoneDesktop-0.1.0-macOS.dmg.sha256)
+```
+
+Stapling changes the DMG's hash. Update its manifest hash/size and notarization record only after successful ticket/Gatekeeper checks; retain the submission ID and matching symbols. The packaging manifest is a pre-notarization build record until then. Do not advertise the independently generated ZIP as notarized/stapled: a ZIP cannot be stapled, and this path submits the DMG. For offline ZIP distribution, staple the accepted app separately, verify it, then repackage/checksum that exact app. The current bundle has no nested helpers/frameworks; future nested code requires inside-out signing, not a `--deep` workaround.
+
+The release's actual app should also pass `codesign --verify --deep --strict` and `spctl --assess --type execute` after installation. Test a downloaded/quarantined copy on a clean account/Mac; local mounting is not Gatekeeper acceptance. Publish only after the remaining [manual gates](RELEASE_CHECKLIST.md) pass.
+
+## Permissions and privacy
+
+Bundle ID: `org.redstonedesktop.RedstoneDesktop`. The app is intentionally **not sandboxed**, and this is not an App Store submission setup. Finder Apple Events and explicitly approved scripts use normal account access.
+
+- Finder Automation reads names, paths, icon positions and view settings when you connect/start tracking.
+- Optional script access requests Desktop-folder consent separately; each new/changed script still needs exact-file approval. Automatic script/open routing is opt-in.
+- No Accessibility, microphone, camera, screen-recording or Full Disk Access permission is requested.
+
+macOS controls prompt timing and retains privacy decisions through reset/reinstall. Retest permissions with the actual signed app. Start Over resets app-owned data, not TCC. See [recovery](RECOVERY.md) and [script behavior](SCRIPT_OUTPUTS.md).
+
+## Artwork and icons
+
+Code, original world art/sound and original examples are MIT licensed. Identity uses the owner-provided logo; other toolbar icons use native SF Symbols. No Minecraft art, sound, game code or resource-pack code is bundled. Imports remain local. See [artwork notices](../THIRD_PARTY_NOTICES.md).
+
+The unchanged source is `RedstoneDesktop/Resources/Assets.xcassets/Logo.imageset/logo.png`. Regenerate derived identity/README images with:
 
 ```sh
 swiftc -swift-version 6 -parse-as-library RedstoneDesktop/App/AppIdentityArtwork.swift scripts/GenerateAppIcons.swift -o /tmp/redstone-generate-icons
@@ -51,66 +99,12 @@ swiftc -swift-version 6 -parse-as-library RedstoneDesktop/App/AppIdentityArtwork
 scripts/readme-previews.sh
 ```
 
-`AppIcon.icon` is a native [Icon Composer](https://developer.apple.com/icon-composer/) document: a centered transparent logo layer with System Light and System Dark backgrounds. Xcode compiles the native macOS appearance variants and a conventional `AppIcon.icns` fallback for older macOS. On macOS 26 and later, icon style is controlled separately from window appearance: System Settings → Appearance → Icon & widget style → Dark → Auto follows light/dark appearance, while Default uses the light/colored design. A normal Debug build includes both variants; Release is not required. Older releases use the static fallback. See [Apple’s appearance guide](https://support.apple.com/guide/mac-help/change-appearance-settings-mchlp1225/mac). No private API, Dock-only override or permission is involved. `AppLogo.imageset` has matching light/dark previews for setup. The menu bar and Dust tool use a template silhouette so macOS supplies the appropriate foreground color automatically.
+`AppIcon.icon` is a native [Icon Composer](https://developer.apple.com/icon-composer/) document with light/dark backgrounds and a static fallback for older macOS. On macOS 26+, **System Settings → Appearance → Icon & widget style** controls icon appearance separately from window appearance; see [Apple's appearance guide](https://support.apple.com/guide/mac-help/change-appearance-settings-mchlp1225/mac). Debug builds include both variants. Menu/Dust uses a template silhouette. Regeneration preserves source bytes/proportions; update the notice/hash test if replacing the logo.
 
-The generator trims transparent margins only in derived files and preserves proportions. Edit the `.icon` composition in Xcode → Open Developer Tool → Icon Composer to change its system backgrounds/layers. Replacing the source logo also requires updating its notice/hash test. Build/test and run the release verifier after regenerating; it checks both native icon appearances in the actual compiled catalog.
+README scenery and lighting examples use original art and offscreen rendering. The generation scripts use isolated/synthetic state and never query Finder, play through speakers, import owner game assets or write your library. Keep game-derived screenshots and local assets out of releases.
 
-`scripts/readme-previews.sh` creates native SpriteKit landscape/day/night examples and copies the generated icon previews into `docs/media`. It uses original assets and synthetic circuits, creates only offscreen windows, and never instantiates production app state, reads Finder, opens files, plays sounds, imports Minecraft assets or changes saved worlds. The existing circuit GIF is generated by `scripts/polish-profile.sh` with isolated app state. All README media is shipped with the review ZIP so its relative links work after extraction.
+## CI and final records
 
-## Local Release archive
+`.github/workflows/macos.yml` uses [GitHub's Xcode 27 preview image](https://github.com/actions/runner-images/blob/main/images/macos/xcode-27-arm64-Readme.md), pinned action commits, read-only repository permission and no persisted checkout credentials. It checks guides/Python tests, builds Debug, runs XCTest and builds/verifies unsigned universal ZIP/DMG packages. Logs, xcresult, packages, checksums, symbols and manifest are retained for 14 days. It never publishes or notarizes a release; hosted success remains unclaimed until GitHub executes it.
 
-```sh
-scripts/release.sh
-```
-
-This generates the project, builds an optimized **universal arm64/x86_64** Release app, stages only that app/license/notices/public guides, validates actual bundle/ZIP contents, and creates:
-
-```
-build/releases/RedstoneDesktop-0.1.0-macOS.zip
-build/releases/RedstoneDesktop-0.1.0-macOS.zip.sha256
-```
-
-The ZIP contains a `RedstoneDesktop` folder with the app, README, LICENSE, notices and `docs/`. A matching SHA-256 sidecar is for integrity comparison, not a trust signature. Default output is a local **unsigned/not-notarized** review build (a linker may add an ad-hoc signature). No Internet release is published. A signed/notarized DMG is planned for the public download; no DMG or public release is created by this script. `--output DIRECTORY` changes the archive location; temporary staging is unique and cleaned on exit. Rebuilding replaces the generated versioned archive. `build/release-build.log` records build details.
-
-Read-only verification can be repeated:
-
-```sh
-python3 scripts/verify-release.py build/releases/RedstoneDesktop-0.1.0-macOS.zip
-shasum -a 256 build/releases/RedstoneDesktop-0.1.0-macOS.zip
-```
-
-Checks include identity/target/permission descriptions/icon/license/notices, both Mach-O architectures, required guides and absence of local saves/imports/source archives/scripts. Open/extract manually only after validation. Quit the development copy before launching the extracted app; normal copies share the same production library. For a clean first-launch test use another macOS account or the isolated Debug maintenance harness, not an unannounced reset of existing builds.
-
-Unsigned downloaded software may be refused by Gatekeeper. This local artifact is not presented as trusted distribution; use a signed/notarized package for public users rather than disabling system protections.
-
-## Optional Developer ID signing and notarization
-
-This requires your own Apple Developer membership, installed **Developer ID Application** certificate/private key and notarization credentials. None is supplied, used, printed or committed by these tasks. Follow Apple's [notarization guide](https://developer.apple.com/documentation/security/notarizing-macos-software-before-distribution) and [custom workflow](https://developer.apple.com/documentation/security/customizing-the-notarization-workflow).
-
-```sh
-# Use the exact installed identity; verify it in Keychain Access first.
-scripts/release.sh --sign "Developer ID Application: Your Name (TEAMID)"
-# Configure a Keychain profile using Apple's notarytool instructions; never commit credentials.
-xcrun notarytool submit build/releases/RedstoneDesktop-0.1.0-macOS.zip --keychain-profile "RedstoneDesktop-notary" --wait
-```
-
-Signing enables hardened runtime, timestamps and the Apple Events entitlement, then verifies the copied staged app. The current bundle has no nested helpers/frameworks; the script refuses a new nested-framework layout that requires inside-out signing/Xcode archive export. Do not use `codesign --deep` to paper over signing failures. Notarization is deliberately a separate explicit command; inspect its result/log and stop on rejection.
-
-After acceptance, extract the **same signed ZIP**, staple and validate its app ticket, then repackage the same `RedstoneDesktop` folder and regenerate the checksum (replace the example location with your extraction folder):
-
-```sh
-xcrun stapler staple "/absolute/path/to/extracted/RedstoneDesktop/RedstoneDesktop.app"
-xcrun stapler validate "/absolute/path/to/extracted/RedstoneDesktop/RedstoneDesktop.app"
-codesign --verify --deep --strict --verbose=2 "/absolute/path/to/extracted/RedstoneDesktop/RedstoneDesktop.app"
-spctl --assess --type execute --verbose=2 "/absolute/path/to/extracted/RedstoneDesktop/RedstoneDesktop.app"
-ditto -c -k --sequesterRsrc --keepParent "/absolute/path/to/extracted/RedstoneDesktop" build/releases/RedstoneDesktop-0.1.0-macOS-notarized.zip
-shasum -a 256 build/releases/RedstoneDesktop-0.1.0-macOS-notarized.zip > build/releases/RedstoneDesktop-0.1.0-macOS-notarized.zip.sha256
-```
-
-Do not rebuild between submission and stapling. Actual Developer ID/notary/Gatekeeper acceptance remains untested until performed with your credentials. Signing/notarization does not resolve artwork redistribution rights.
-
-## GitHub Actions
-
-`.github/workflows/macos.yml` runs on push to main, pull requests and manual dispatch. It uses [GitHub's documented Xcode 27 runner](https://github.com/actions/runner-images/blob/main/images/macos/xcode-27-arm64-Readme.md), currently a preview image, to match the validated local toolchain. It generates the project, builds Debug, runs isolated XCTest and builds/validates the unsigned universal Release archive. Pinned checkout/upload action commits, read-only repository permission and no persisted checkout credentials/signing secrets keep this a build/review pipeline; it never publishes a release or resets privacy.
-
-Logs, xcresult and unsigned ZIP/checksum are retained as artifacts for 14 days. A hosted run is not claimed until GitHub actually executes it. If the preview image changes/disappears, update the runner using official runner-image evidence and revalidate; do not silently claim a different compiler/OS passed.
+Set `MARKETING_VERSION` and `CURRENT_PROJECT_VERSION` in `project.yml` for a future release; update [release notes](../CHANGELOG.md), build/test from the intended clean commit, and retain exact hashes/symbols. Replace README's coming-soon text with a real download link only when the signed release is actually published.

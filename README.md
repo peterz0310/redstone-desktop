@@ -13,7 +13,7 @@ Your files stay in Finder, right where you left them. Everything runs locally. N
 
 ## Download
 
-A **DMG download is coming**. There isn’t a public installer yet; the app is currently in development. It requires **macOS 14 or newer**.
+A **public DMG download is coming**. This is an early preview; there isn’t a public signed installer yet. The source release script already produces local DMG and ZIP review builds. It requires **macOS 14 or newer**.
 
 Already have a build? Move **RedstoneDesktop.app** to Applications and open it normally. You don’t need Xcode to use the app. If you’re building from source, see the [development and release guide](docs/RELEASE.md).
 
@@ -46,6 +46,8 @@ These examples use the app’s original artwork, rendered with the same engine a
 - **Make it yours:** adjust textures, sounds, animations and particles in Settings. The `?` buttons explain the options.
 
 Outputs open files by default. Running scripts is optional and asks for your approval. You can export and import your worlds in **Settings → Data**; see [backups and recovery](docs/RECOVERY.md) for restoring or starting over.
+
+Open **Help → Redstone Desktop Help** for offline instructions. See the [release notes](CHANGELOG.md) for this preview.
 
 For a closer look, read the [editor guide](docs/EDITOR_TOOLS.md), [circuit guide](docs/REDSTONE_RULES.md), or [Minecraft import guide](docs/JAVA_TEXTURE_IMPORT.md).
 

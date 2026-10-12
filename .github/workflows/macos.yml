@@ -25,6 +25,11 @@ jobs:
           brew install xcodegen
           xcodegen --version
           xcodegen generate --spec project.yml
+          mkdir -p build
+      - name: Documentation and release-tool tests
+        run: |
+          python3 scripts/check-docs.py
+          python3 -m unittest discover -s scripts/tests -v
       - name: Debug application build
         run: |
           set -o pipefail
@@ -44,6 +49,8 @@ jobs:
             build/*.log
             build/tests.xcresult
             build/releases/*.zip
+            build/releases/*.dmg
+            build/releases/*.json
             build/releases/*.sha256
           if-no-files-found: warn
           retention-days: 14

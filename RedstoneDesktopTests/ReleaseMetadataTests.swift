@@ -1,5 +1,6 @@
 import XCTest
 import AppKit
+import SwiftUI
 @testable import RedstoneDesktop
 
 final class ReleaseMetadataTests: XCTestCase {
@@ -10,7 +11,22 @@ final class ReleaseMetadataTests: XCTestCase {
         XCTAssertTrue(try XCTUnwrap(bundle.object(forInfoDictionaryKey: "NSAppleEventsUsageDescription") as? String).contains("Finder"))
         XCTAssertTrue(try XCTUnwrap(bundle.object(forInfoDictionaryKey: "NSDesktopFolderUsageDescription") as? String).lowercased().contains("script"))
         XCTAssertNil(bundle.object(forInfoDictionaryKey: "NSMicrophoneUsageDescription"))
+        XCTAssertFalse(try XCTUnwrap(bundle.object(forInfoDictionaryKey: "CFBundleShortVersionString") as? String).isEmpty)
+        XCTAssertFalse(try XCTUnwrap(bundle.object(forInfoDictionaryKey: "CFBundleVersion") as? String).isEmpty)
+        XCTAssertTrue(try XCTUnwrap(bundle.object(forInfoDictionaryKey: "NSHumanReadableCopyright") as? String).contains("MIT"))
     }
+    @MainActor
+    func testOfflineHelpFitsACompactWindowWithoutChangingAppState() throws {
+        let app = AppStartup.makeState(); defer { app.shutdown() }
+        let library = app.library
+        let host = NSHostingView(rootView: AppHelpView())
+        host.frame = CGRect(x: 0, y: 0, width: 680, height: 700)
+        host.layoutSubtreeIfNeeded()
+        XCTAssertLessThanOrEqual(host.fittingSize.width, 680)
+        XCTAssertEqual(app.library, library)
+        XCTAssertFalse(app.isDesktopWorldEnabled); XCTAssertFalse(app.finderDiagnostics.hasRead)
+    }
+
     @MainActor
     func testCatalogContainsOnlyOwnerIdentityAndAllNativeToolSymbolsExist() throws {
         let source = URL(fileURLWithPath: #filePath).deletingLastPathComponent().deletingLastPathComponent()

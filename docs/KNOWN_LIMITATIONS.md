@@ -12,7 +12,7 @@ This is an experimental prototype; completed code/tests do not establish physica
 - Export is a validated whole-library JSON snapshot. Import adds independent world/area copies in Settings; a full reset-backup restore still requires the app to be quit. Start Over retains backups indefinitely, leaves TCC intact and cannot promise repeated macOS prompts. See [recovery](RECOVERY.md). Do not reset while other independent app copies use the same store.
 - Profiling records an isolated renderer/simulator fixture and CPU/peak-RSS proxy, not battery watts or the full live Finder/desktop workload. Instruments/Activity Monitor and prolonged real use remain required.
 - Minimum target is macOS 14; this implementation was built/tested on macOS 27 with Xcode 27. Older supported OS and Intel execution are not physically validated here. Deprecation warnings from the newer SDK remain for supported older audio APIs; this is not a compiler/test failure.
-- CI is configured but a hosted GitHub run is not claimed until it actually runs. Local release archives are unsigned unless signing is explicitly configured. No Developer ID signature/notarization or internet release is claimed.
+- CI is configured but a hosted GitHub run is not claimed until it actually runs. Local ZIP/DMG packages are unsigned unless Developer ID signing is explicitly configured. No Developer ID signature/notarization or internet release is claimed.
 
 Pending physical checks remain unverified in TESTING.md until the owner confirms them. Backup/reset testing is explicitly deferred.
 

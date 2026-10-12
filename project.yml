@@ -24,6 +24,7 @@ targets:
         PRODUCT_BUNDLE_IDENTIFIER: org.redstonedesktop.RedstoneDesktop
         ASSETCATALOG_COMPILER_APPICON_NAME: AppIcon
         INFOPLIST_KEY_CFBundleDisplayName: Redstone Desktop
+        INFOPLIST_KEY_NSHumanReadableCopyright: "Copyright © 2026 Peter Zielinski. MIT licensed."
         INFOPLIST_KEY_LSApplicationCategoryType: public.app-category.utilities
         ENABLE_APP_SANDBOX: NO
         INFOPLIST_KEY_NSAppleEventsUsageDescription: Redstone Desktop connects your circuits to files and folders on your desktop by reading their names and positions in Finder.

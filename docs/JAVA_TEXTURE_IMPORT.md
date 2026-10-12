@@ -18,7 +18,7 @@ Discovery checks up to 512 version folders under:
 
 It lists readable, regular, bounded-size JARs; discovery does not import or validate their contents. Version names sort numerically descending, with names starting `1.` first. The importer validates the selected archive when you press Import. Alternative launcher locations are supported through the manual picker.
 
-On this development Mac, the current temporary import of **1.21.11** produced all 48 image mappings and 10 sound effects with no warnings. Select an installed version with its launcher asset cache available for a first visual/audio check. This observation is local validation, not a promise that every installed/version/modded JAR is supported. The repository now includes owner-requested dust and derived toolbar-icon exceptions; see [THIRD_PARTY_NOTICES.md](../THIRD_PARTY_NOTICES.md). World-texture, particle and audio imports remain local and are not committed or shipped.
+A previous isolated development check of **1.21.11** produced all 48 image mappings and 10 sound effects with no warnings. Select an installed version with its launcher asset cache available for a first visual/audio check. This observation is local validation, not a promise that every installed/version/modded JAR is supported. The app ships only original/owner-provided identity artwork and native toolbar symbols; see [THIRD_PARTY_NOTICES.md](../THIRD_PARTY_NOTICES.md). World-texture, particle and audio imports remain local and are not committed or shipped.
 
 ## Import a JAR or Java pack manually
 
@@ -89,9 +89,9 @@ Java stone buttons use the validated stone texture cropped into a raised/depress
 
 Dust converts source-dot luminance into an **opaque** textured material, dark red when off and bright red when on (base RGB 106/12/18 and 255/24/32, luminance strength 184–255/255). Transparent source corners become continuous material so they cannot cut holes in connected traces. The renderer supplies one-fifth-tile-wide cardinal strips and square junctions, without an orange tint. Positive power applies neutral brightness `0.45 + 0.55 × power/15`, so weak signals fade while strength 15 retains full bright red. Adjacent aligned repeaters have short visible end traces; larger repeater art retains labels and directional port rules. Generic Redstone Desktop packs can still override semantic wire materials directly.
 
-The existing generator's flower and legacy rock positions are preserved. Stable seed/coordinate selection chooses poppy/dandelion/blue orchid/allium/oxeye daisy, with cactus on sand (including sandy shores) and coal/iron elsewhere. Generated dirt is presented with the imported grass-block top; explicit saved dirt overrides remain dirt. Ore art replaces loose rock art; deposits remain placement-blocking decorations, not mineable resources. This is appearance variety, not a generation/save migration.
+The existing generator's flower and legacy rock positions are preserved. Stable seed/coordinate selection chooses poppy/dandelion/blue orchid/allium/oxeye daisy, with cactus on sand (including sandy shores) and coal/iron elsewhere. Generated dirt is presented with the imported grass-block top; explicit saved dirt overrides remain dirt. Ore art replaces loose rock art; ore deposits on stone remain buildable; other decorations remain blocked until cleared. Deposits are not mineable resources. This is appearance variety, not a generation/save migration.
 
-**After upgrading an existing import, use More options & custom packs → Refresh Imported Minecraft Assets once.** Reload only reads the generated cache; it cannot recover discarded animation frames or add new mappings. Reimport reads the original local source and creates the current 37-mapping pack, including water/lava strips and log tops. No automatic rewrite of user caches occurs.
+**After upgrading an existing import, use More options & custom packs → Refresh Imported Minecraft Assets once.** Reload only reads the generated cache; it cannot recover discarded animation frames or add new mappings. Reimport reads the original local source and creates a pack with the currently supported mappings, including water/lava strips and log tops. No automatic rewrite of user caches occurs.
 
 ## Cache, reload and removal
 
@@ -121,11 +121,11 @@ Selection and the last import UUID are app preferences, separate from `library.j
 
 ## Failure and security boundaries
 
-Missing or invalid individual mappings warn and use original fallback. At least one supported, valid image or sound is required. A failed Java import preserves the previous active appearance and cache; generic pack-load failures instead activate built-in fallback, as documented in the format guide.
+Missing or invalid individual mappings warn and use original fallback. At least one supported, valid image or sound is required. A failed Java import preserves the previous active appearance and cache; failed custom-pack replacements/reloads also preserve the working appearance, sounds and remembered source. On a fresh launch there is no prior loaded pack, so an unreadable remembered choice leaves the original look active.
 
 Archives use the same bounded [SafeZIP contract](RESOURCE_PACKS.md#archive-contract-and-limits): no shell extraction, unsafe paths, symlink entries, encryption, ZIP64, multi-disk or unsupported compression. Limits apply to the whole archive's declared metadata, including entries not selected for import. Some large/modded exports may therefore be refused even if a useful texture exists. Recreate a smaller ordinary Java texture pack rather than disabling validation.
 
-Decode/validation happens before cache publication. Writes use fixed semantic filenames in an app-owned staging directory, validate the resulting pack, then rename the directory into place. Archive paths never become output filenames. Removal requires a direct UUID child of the configured cache root, no symlink redirection, and a matching format-1 import record. Unrecognized/tampered directories are refused rather than deleted. A newer selection or Use Built-In supersedes a pending import; late completion cannot reactivate it.
+Decode/validation happens before cache publication. Writes use fixed semantic filenames in an app-owned staging directory, validate the resulting pack, then rename the directory into place. Archive paths never become output filenames. Removal requires a direct UUID child of the configured cache root, no symlink redirection, and a matching format-1 import record. Unrecognized/tampered directories are refused rather than deleted. A newer selection or Use Original Look supersedes a pending import; late completion cannot reactivate it.
 
 ## Sharing the project and contributing
 

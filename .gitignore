@@ -7,3 +7,6 @@ DerivedData/
 xcuserdata/
 RedstoneDesktop.xcodeproj/
 build-release/
+
+__pycache__/
+*.pyc

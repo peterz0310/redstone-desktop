@@ -14,7 +14,7 @@ Choose **Dust**, then click once for a tile or hold and drag for a wire path in 
 
 ## Select, copy, move and rotate
 
-**Move** still pans when you drag and inspects a component when you click. Use **Select** to drag a rectangle around components. Shift-click adds/removes individual components; Shift-drag also selects while using Move. The right panel reports the number selected. Empty ground and terrain decorations aren't copied.
+**Move** still pans when you drag and inspects a component when you click. Use **Select** to drag a rectangle around components. Shift-click adds/removes individual components; Shift-drag also selects while using Move. The Build tab reports the number selected. Empty ground and terrain decorations aren't copied.
 
 Choose **Copy**, then **Paste**. Move the pointer over a destination: a green preview means the whole group fits; red means something blocks it. Click to place, press **R** to rotate the preview clockwise, or **Escape** to cancel. The destination tile is the lower-left of the group's bounding rectangle. A failed placement changes nothing, so you can try another location. Existing components aren't overwritten; water, trees and other placement restrictions still apply.
 
@@ -35,9 +35,9 @@ Circuit copies use a private macOS clipboard type. They contain configuration, n
 
 ## Undo and redo
 
-The right panel's **Undo** and **Redo** buttons reverse terrain strokes, component placement, erasure, inspector configuration and group operations. A terrain stroke, group move, paste, rotation or deletion is one undo step. History belongs to each world and lasts for the current app session. It holds up to 100 operations, additionally bounded by 50,000 changed cells across multiple operations. A new edit clears redo.
+The sidebar's **Undo** and **Redo** buttons reverse terrain strokes, component placement, erasure, inspector configuration and group operations. A terrain stroke, group move, paste, rotation or deletion is one undo step. History belongs to each world and lasts for the current app session. It holds up to 100 operations, additionally bounded by 50,000 changed cells across multiple operations. A successful new edit clears redo; a rejected edit preserves it.
 
-Undo doesn't reverse camera movement, world/area creation or deletion, blueprint shelf deletion, permissions, or desktop runtime inputs. It is disabled for a running world's circuit, seed previews and test mode. Successful edits and undo/redo use normal autosaving; quitting clears history but preserves the resulting circuit.
+Undo doesn't reverse camera movement, world/area creation or deletion, blueprint shelf deletion, permissions, or desktop runtime inputs. It is disabled for a running world's circuit, seed previews and test mode. Every edit checks the complete world library’s 2 MB save limit before publication. A refused operation preserves the prior build/history and cannot be fixed by repeatedly clicking Save Now. Successful edits and undo/redo use normal autosaving; quitting clears history but preserves the resulting circuit.
 
 ## Blueprints and examples
 

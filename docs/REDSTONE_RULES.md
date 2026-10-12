@@ -4,7 +4,7 @@ This is a deterministic 2D simulation, separate from SpriteKit, Finder and file/
 
 ## Placement
 
-Components can be built on dry grass, dirt, stone and sand. Coal/iron deposits on stone are part of the buildable surface; placing or erasing a component preserves the ore decoration. Water, trees, cactuses and other decorations remain blocked. Placement never overwrites an existing component silently. [Terrain editing](TERRAIN_EDITING.md) can clear decorations or paint solid ground to create construction space; painting protects existing components and skips unsupported terrain changes.
+Components can be built on grass, dry grass, dirt, stone, sand, snow and gravel. Coal/iron deposits on stone are part of the buildable surface; placing or erasing a component preserves the ore decoration. Water, trees, cactuses and other decorations remain blocked. Placement never overwrites an existing component silently. [Terrain editing](TERRAIN_EDITING.md) can clear decorations or paint solid ground to create construction space; painting protects existing components and skips unsupported terrain changes.
 
 ## Ports and timing
 
@@ -18,7 +18,7 @@ North is positive world Y. A component's direction points forward; rear is its o
 | Lever | Accepted desktop click toggles state | 15 on every side while on | Next simulation tick; saved lever position |
 | Dust | Adjacent emitting sources/dust | Current strength minus one to neighboring dust; current strength to a repeater rear or Output | Settles within the same tick |
 | Repeater | Rear only, positive signal | 15 to front only | Both edges delayed 2/4/6/8 simulation ticks (1–4 redstone ticks) |
-| Torch | Rear only, positive signal inhibits it | 15 to front and both sides while rear is off; never to rear | Both inversion edges delayed 2 simulation ticks (1 redstone tick) |
+| R. Torch | Rear only, positive signal inhibits it | 15 to front and both sides while rear is off; never to rear | Both inversion edges delayed 2 simulation ticks (1 redstone tick) |
 | Output | Any adjacent emitting port | Current positive strength to an adjacent repeater rear only | One action event on an off-to-on edge; repeater applies its own delay |
 
 Simulation runs at 20 Hz (50 ms per tick); one redstone tick is 100 ms. Every delayed component matures its old history first, then the bounded dust solver runs. Outputs read the completed network and emit rising edges. All torch/repeater rear inputs sample that same completed snapshot to append history for future ticks. Dictionary insertion order cannot change the result. There is no recursive propagation.
@@ -40,7 +40,7 @@ Set Torch and Repeater direction to **East**. The torch's rear is the lever at i
 
 With the lever OFF, the torch is ON and powers the downstream circuit. Turning the lever ON extinguishes it after 100 ms; downstream power then clears after the repeater's delay. Turning the lever OFF restores power and creates another Output rising edge. Adjacent sources can feed a wire independently of the torch; avoid parallel connections that bypass the inverter when testing.
 
-In the editor, choose Torch and a Direction, then click a valid empty tile. Move/select an existing torch, change Direction (it saves immediately). Erase works as for other components. In Desktop Build Mode, Torch is hotbar shortcut **7** (existing 1–6 unchanged); hover a torch and press **R**, or select it and use **Rotate Selected**. T/Delay only applies to repeaters; torches always use one redstone tick. Build Mode stops simulation until you explicitly Start Desktop again.
+In the editor, choose R. Torch and a Direction, then click a valid empty tile. Move/select an existing torch, change Direction (it saves immediately). Erase works as for other components. In Desktop Build Mode, Torch is hotbar shortcut **7** (existing 1–6 unchanged); hover a torch and press **R**, or select it and use **Rotate Selected**. T/Delay only applies to repeaters; torches always use one redstone tick. Build Mode stops simulation until you explicitly Start Desktop again.
 
 ## Actions and startup
 

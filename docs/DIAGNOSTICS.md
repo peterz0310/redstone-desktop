@@ -1,4 +1,4 @@
-# Desktop diagnostics — Slice 31
+# Desktop diagnostics
 
 Open **Advanced → Desktop Details** for the overview and session controls. **Advanced → Finder Diagnostics** shows the item table, raw Finder positions, transformed screen centers and assigned-desktop tiles. Opening either window reads cached state; it never requests permission, queries Finder, saves a world, advances simulation or executes an action. Names/paths and script results are visible locally and are not uploaded or newly logged by this slice.
 
@@ -37,7 +37,7 @@ Pause leaves the desktop renderer and pointer sampling available, but invalidate
 ## Investigating “this icon is one tile off”
 
 1. Confirm the **assigned** world/area names, IDs and saved/effective camera. Browsing or panning the editor does not change the desktop assignment. Optional Finder scale synchronization can change effective desktop tile size; its current status and both cameras are visible.
-2. Check target and Finder-reference display frames/backing scales. Look for display/layout settling or unavailable mapping, and compare the click-through desktop window frame against its target. Multi-display continuous rendering remains future Slice 32 work.
+2. Check target and Finder-reference display frames/backing scales. Look for display/layout settling or unavailable mapping, and compare the click-through desktop window frame against its target. Desktop renders one continuous virtual canvas across reported displays; physical gaps cannot dispatch actions. Build Mode currently edits only the primary display.
 3. Use **Finder Diagnostics → Read Finder Items** if no successful read is available. Inspect the icon's raw position, mapped screen center and world tile. Check read errors/permission status, age/duration and ambiguous occupants. The table stays read-only.
 4. Start Desktop for physical alignment inspection, then Pause simulation. Enable mapped center rings and tile labels. Compare the ring against the real icon and the reported tile. If necessary freeze automatic polling while stationary; remember explicit reads/actions remain fresh.
 5. Move the icon, unfreeze/read again and check the table/ring update. If geometry disagrees with actual macOS behavior, report the target/reference frames, camera values, raw/mapped row and settling/error state. Stop that behavior rather than adding manual offsets or source-level print statements.

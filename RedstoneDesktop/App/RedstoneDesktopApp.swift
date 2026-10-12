@@ -12,6 +12,7 @@ struct RedstoneDesktopApp: App {
         .defaultSize(width: 1200, height: 820)
         .commands { DesktopAppCommands(appState: appState) }
         Settings { AppSettingsView(appState: appState) }
+        Window("Redstone Desktop Help", id: "help") { AppHelpView() }.defaultSize(width: 680, height: 700)
         Window("Welcome to Redstone Desktop", id: "setup") { SetupWizardView(appState: appState) }
             .windowResizability(.contentSize)
         Window("Desktop Details", id: "desktop-controls") {
@@ -34,13 +35,19 @@ struct RedstoneDesktopApp: App {
     }
 }
 
-
-
 struct DesktopAppCommands: Commands {
     let appState: AppState
+    @Environment(\.openWindow) private var openWindow
     @ObservedObject private var presentation: MenuPresentation
     init(appState: AppState) { self.appState = appState; presentation = appState.menuPresentation }
     var body: some Commands {
+        CommandGroup(replacing: .help) {
+            Button("Redstone Desktop Help") {
+                appState.exitDesktopBuildMode()
+                openWindow(id: "help")
+                NSApplication.shared.activate(ignoringOtherApps: true)
+            }
+        }
         CommandGroup(after: .windowArrangement) {
             Button(presentation.snapshot.building ? "Exit Build Mode" : "Build on Desktop") {
                 if presentation.snapshot.building { appState.exitDesktopBuildMode() } else { appState.enterDesktopBuildMode() }

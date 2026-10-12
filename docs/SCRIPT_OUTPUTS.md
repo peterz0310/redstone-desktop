@@ -1,4 +1,4 @@
-# Script Output actions — Slices 29/29A/29B
+# Script Output actions
 
 Outputs use the app’s **Default** behavior, initially **Open occupant**, including components decoded from older saves. To opt in, stop the active desktop, choose Move, select an Output and change **Output action → Execute script** in the Inspector. **None** disables its file action while preserving its simulation/visual activation. Tools place ordinary Default outputs; no imported pack can configure an action. Editing an inactive world never runs it.
 
@@ -17,7 +17,7 @@ The working directory is the resolved script's parent folder. Standard input is 
 
 ## Authorization and fresh targeting
 
-Each unapproved activation opens a dedicated SwiftUI confirmation window, even if the editor is closed. It previews the full resolved path/interpreter and offers Cancel or Run Script. **Remember my choice for this script** starts checked and remembers the canonical path, filesystem identity and SHA-256 contents fingerprint. Editing/replacing/retargeting the file asks again. Approvals persist separately in app preferences (`approvedScripts`), never in library JSON or packs; at most 256 approvals are retained. **Settings → Forget Script Approvals** revokes remembered permissions. There is no bypass setting in this slice.
+Each unapproved activation opens a dedicated SwiftUI confirmation window, even if the editor is closed. It previews the full resolved path/interpreter and offers Cancel or Run Script. **Remember my choice for this script** starts checked and remembers the canonical path, filesystem identity and SHA-256 contents fingerprint. Editing/replacing/retargeting the file asks again. Approvals persist separately in app preferences (`approvedScripts`), never in library JSON or packs; at most 256 approvals are retained. **Settings → Outputs → Forget Script Approvals** revokes remembered permissions. Automatic routing does not bypass approval.
 
 After approval, acquire a fresh read through the existing shared Finder gate. Refuse missing, changed or ambiguous occupancy and revalidate the script identity/contents. An Output never falls back to its previous target. A world/area/runtime/display/layout change or Stop/Quit cancels the pending action; an old approval cannot launch into a new session or be remembered after cancellation. A held Output still produces only one rising activation. Turning an input off and on produces another activation; cancellation does not queue a retry. Explicit Start with a saved ON lever can produce a fresh activation, following the existing runtime contract.
 
@@ -40,7 +40,7 @@ Execution uses documented Foundation [Process](https://developer.apple.com/docum
 - `ScriptExecutionTests.swift`: native harmless temporary scripts plus fake Finder/authorization/executor integration. Test startup never touches the owner's saved library/approvals or executes a real Desktop item.
 - `examples/Scripts/hello.sh`: original MIT fixture printing stdout/stderr only; no file/settings mutation.
 
-Fixed paths, arbitrary interpreter selection, developer bypass, terminal UI, advanced redstone and resource-pack code are outside this slice.
+Fixed paths, arbitrary interpreter selection, developer bypass and terminal UI are not supported. Resource-pack code is never executed.
 
 ## Mac walkthrough
 
@@ -49,14 +49,14 @@ Fixed paths, arbitrary interpreter selection, developer bypass, terminal UI, adv
 3. Stop Desktop. In the editor choose Move, select a visible existing Output and set **Output action → Execute script**. If using a repeater circuit, retain its direction/delay. Save Now, quit/reopen and confirm the selected Output retains this mode while Desktop starts stopped.
 4. Move the copied `hello.sh` icon onto that Output on the physical desktop. Keep it away from the input. Start Desktop and click the circuit's button. The wire/repeater should activate before the confirmation appears. Check the preview points to your Desktop copy, then click **Cancel**: nothing runs.
 5. Wait for power to turn off, then press again. Uncheck **Remember my choice for this script**, then click **Run Script**. Open **Advanced → Desktop Details**, expand **Last script result**, and check greeting stdout, example stderr, exit 0 and duration. Held power must not run it again. A later fresh activation should ask again.
-6. Repeat with **Remember my choice for this script** enabled. Later activations of that unchanged file skip the prompt. Use **Settings → Forget Script Approvals** to restore prompting. Editing the file also requires fresh approval.
+6. Repeat with **Remember my choice for this script** enabled. Later activations of that unchanged file skip the prompt. Use **Settings → Outputs → Forget Script Approvals** to restore prompting. Editing the file also requires fresh approval.
 7. While a prompt is open, move the script off the Output and then approve: execution should be refused. A later press with an empty Output must not run the old script. Stop Desktop while a prompt is open: the prompt should close and no delayed execution should occur after Start. Keep the script away from inputs when checking normal Finder selection/drag.
 8. Turn automatic routing off, then switch the Output back to Default (open occupant) and verify ordinary folder opening still works. New script MANUAL checks remain pending until owner confirmation; automated success is not physical Finder/permission/focus proof.
 
 
 ## Settings and early Desktop access
 
-**Redstone Desktop → Settings… (⌘,)** or **Advanced → Settings…** opens native SwiftUI settings. **Run supported scripts; open other items** is an OFF-by-default opt-in stored under `scriptOutputSettings`, separately from library.json. Existing `openOccupant` modes serve as Default: they open normally while off; while on, a unique current local regular Finder file with case-insensitive `.sh`/`.command`/`.zsh` filename extension enters the same approval/execution transaction. Folders, apps, Finder aliases, documents and unsupported extensions use ordinary opening. This is routing, not blanket script authorization; fresh targeting, exact-file approval and resolved-file validation still apply. If a script-like candidate resolves to an unsupported/invalid target, refuse it rather than silently open it. Explicit Execute script remains script-only and None disables action. The Inspector names the effective default.
+**Redstone Desktop → Settings… (⌘,)** or **Redstone Desktop → Settings…** opens native SwiftUI settings. **Run supported scripts; open other items** is an OFF-by-default opt-in stored under `scriptOutputSettings`, separately from library.json. Existing `openOccupant` modes serve as Default: they open normally while off; while on, a unique current local regular Finder file with case-insensitive `.sh`/`.command`/`.zsh` filename extension enters the same approval/execution transaction. Folders, apps, Finder aliases, documents and unsupported extensions use ordinary opening. This is routing, not blanket script authorization; fresh targeting, exact-file approval and resolved-file validation still apply. If a script-like candidate resolves to an unsupported/invalid target, refuse it rather than silently open it. Explicit Execute script remains script-only and None disables action. The Inspector names the effective default.
 
 Turning the setting on/off cancels pending approval/action work and drops queued activations, while keeping power/cameras/worlds unchanged. It does not replay a held Output or execute anything merely from changing the preference. Restoring it on startup starts no integration or folder request.
 
@@ -68,19 +68,18 @@ The exact-script checkbox starts checked but **Cancel grants nothing**; uncheck 
 
 ## Slice 29A settings and earlier permission walkthrough
 
-1. Quit with ⌘Q and reopen the rebuilt app. Open **Redstone Desktop → Settings… (⌘,)** or **Advanced → Settings…**. Fresh settings leave automatic routing off; existing worlds remain intact and Desktop starts stopped.
+1. Quit with ⌘Q and reopen the rebuilt app. Open **Redstone Desktop → Settings… (⌘,)** or **Redstone Desktop → Settings…**. Fresh settings leave automatic routing off; existing worlds remain intact and Desktop starts stopped.
 2. With Desktop stopped, select an Output and choose Execute script. Check Settings for a Desktop-access result. If macOS needs first consent it should ask at this point; since you already allowed it, **no new prompt is expected**. **Check Desktop Access…** should report success; any failure should show a useful message. Do not reset macOS permissions just to make it ask again. If it still waits until circuit execution to request access, report the exact requesting app and dialog so we can verify attribution.
 3. Set that Output to **Default**, then enable **Run supported scripts; open other items** in Settings. Put the harmless Desktop copy of `examples/Scripts/hello.sh` on it, Start Desktop, and press its circuit input. A new file should still show a resolved-path Run Script prompt with **Remember my choice for this script checked**. Approve, wait for power to go off, then press again: the unchanged approved file should run without another app confirmation.
 4. Move the script away and place a harmless folder on that same Output. On a fresh input activation it should open the folder normally. None should open/execute nothing; explicit Execute script should refuse the folder. No mode chooses among ambiguous occupants.
-5. Use **Settings → Forget Script Approvals**. Put the script back; at the next prompt uncheck remembering and run. The following fresh activation should ask again. Cancel should execute nothing. Turning automatic routing off while a prompt is open should dismiss it/refuse any stale approval without running or remembering that request.
+5. Use **Settings → Outputs → Forget Script Approvals**. Put the script back; at the next prompt uncheck remembering and run. The following fresh activation should ask again. Cancel should execute nothing. Turning automatic routing off while a prompt is open should dismiss it/refuse any stale approval without running or remembering that request.
 6. Save/quit/reopen. Automatic routing should retain your preference, with Desktop stopped and no automatic action/access request. Check setting changes during held power do not activate again. If testing an unrecognized extension such as `.py`, expect ordinary opening; Python/interpreter selection is future scope. These new MANUAL checks await owner confirmation.
 
-## Future first-launch setup and Start Over
+## Setup and Start Over
 
-The planned Slice 33 wizard will explain worlds/areas and request permissions when choosing the matching feature, with Skip and reopen Setup. It will not automatically enable Desktop or execute a script. Settings’ planned **Start Over…** will require confirmation, preserve a recoverable local backup of worlds/areas and the legacy migration source, stop all runtime/background work, reset app-owned library/settings/approvals/appearance/setup state, then close/relaunch into fresh setup. It must prevent old autosaves or legacy re-import from restoring cleared state. Failure preserves existing data with recovery guidance.
+The five-step first-launch setup explains worlds/areas, Finder access, optional local Java assets and optional scripts. Skip Setup and Let’s Build remember completion; Settings → General → Open Setup… reopens it. Setup never starts Desktop or executes a script.
 
-Desktop files, external source JARs/packs and other apps’ data are outside reset scope. macOS privacy choices remain intact; returning to app-first-launch state does not force system permission prompts. Wizard/reset/relaunch are documented future work and are not implemented in this build.
-
+Settings → Data → Start Over… confirms, validates a recoverable backup, stops runtime/background work, resets app-owned data/preferences and relaunches into fresh setup. It does not reset Mac privacy decisions, delete desktop files or modify external JARs/packs. Failure preserves data with recovery guidance. Owner backup/reset acceptance remains deferred; see [recovery](RECOVERY.md) for the implemented scope and restoration steps.
 
 ## Powered Output chaining (Slice 30A)
 

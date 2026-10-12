@@ -1,6 +1,6 @@
 # Mac acceptance checklist
 
-These are physical-Mac checks, separate from automated tests. Report which numbered groups you actually tried and what failed; untested groups remain unverified. Use harmless folders/text files first. Place new test circuits on clear ground **to the right** of your existing builds. Do not use scripts for display-calibration tests.
+Start with [the public-release gates](RELEASE_CHECKLIST.md) and the [stability checks](#stability-fixes-2026-10-12). The feature walkthroughs below preserve earlier acceptance records; an “awaiting confirmation” label does not mean the feature is unimplemented. These are physical-Mac checks, separate from automated tests. Report which numbered groups you actually tried and what failed; untested groups remain unverified. Use harmless folders/text files first. Place new test circuits on clear ground **to the right** of your existing builds. Do not use scripts for display-calibration tests.
 
 
 ## Owner-provided logo — awaiting owner confirmation
@@ -21,7 +21,7 @@ A native AppKit regression reproduces the oversized initial panel, then verifies
 ## Dust dragging, brighter particles and Test Stop — awaiting owner confirmation
 
 - [ ] Quit the old copy with ⌘Q and run the update with ⌘R in Xcode (or open the updated release). In Settings → Appearance, enable Show particles. Keep macOS Reduce Motion off while checking moving effects.
-- [ ] Power a Dust path with a lever in Test Circuit. Red flecks should be clearly visible within a second, including weaker dust near the end. Try a short button pulse and a lit R. Torch. Turning power off stops particles. Check at night too: flecks should retain their brightness.
+- [ ] Power a Dust path with a lever in Test Circuit. Red flecks should be clearly visible within a second, including weaker dust near the end. Try a short button pulse and a lit R. Torch. Turning power off stops particles. Check at night too: flecks should retain their brightness with local lighting enabled, and darken with the scene when local lighting is disabled.
 - [ ] Look at lava and a regular Torch for a few seconds. Pops, flames and smoke should be larger and more frequent. Test both original and your installed Java assets. Toggle Show particles off: all particles disappear while circuits, terrain animation and lighting continue.
 - [ ] On clear ground to the right of existing builds, choose Dust and drag slowly, then quickly and diagonally. The preview should fill skipped tiles and connect diagonal steps with elbows. Release: it persists. Retrace a diagonal path: it should reuse the same elbows. Undo/redo should remove/restore the entire stroke in one step. Single clicks should still place one tile.
 - [ ] Drag across an existing repeater and water: neither should be overwritten. The path skips blocked ground; you may need to route around obstacles to reconnect it. Press Escape during another drag, then release: none of that stroke should save.
@@ -185,14 +185,14 @@ Backup/reset testing remains deferred; the polish changes do not require Start O
 ## 1. Build and launch the updated app
 
 1. Quit the previous Redstone Desktop app using its dust menu → Quit. Keep your usual Finder desktop intact.
-2. From the repo, run `xcodegen generate`, then open `RedstoneDesktop.xcodeproj`. Select **RedstoneDesktop → My Mac**, then **⌘R**. If Xcode asks about signing for local development, the unsigned Terminal build/run commands in README also work.
+2. From the repo, run `xcodegen generate`, then open `RedstoneDesktop.xcodeproj`. Select **RedstoneDesktop → My Mac**, then **⌘R**. If Xcode asks about signing for local development, the unsigned Terminal build commands in RELEASE.md also work.
 3. Confirm existing worlds/areas/circuits remain. New Setup should appear once after this update, without resetting them. Desktop must start stopped. Move/close windows and open the menu: status spacing should stay constant in Stopped, Running, Paused and Build Mode. Check the owner-provided logo in Dock/Finder/⌘Tab; restart after building if macOS cached the old icon.
 4. In the dust menu, verify Start/Stop, assigned-world/area checkmarks, Open Editor, Show Assigned Area, Build Mode, Settings, Mute and Tools. Browsing an editor area should not change the desktop assignment. Choosing a menu area automatically resumes Desktop if it was running; a stopped desktop stays stopped.
 
 ## 2. Setup and Settings (Slice 33)
 
-1. In Setup, move Next/Back through all four pages. Text/buttons should fit without truncation. Close or **Skip Setup**: no circuit should run and no script should execute. Quit/reopen: skipped/completed Setup should not appear automatically again.
-2. Open **Settings → General → Open Setup…**. It should reopen even after Skip/Finish. Completing it should preserve all builds and keep Desktop stopped.
+1. In Setup, move Next/Back through all five pages. Text/buttons should fit without truncation. Close or **Skip Setup**: no circuit should run and no script should execute. Quit/reopen: skipped/completed Setup should not appear automatically again.
+2. Open **Settings → General → Open Setup…**. It should reopen even after Skip/Let’s Build. Completing it should preserve all builds and keep Desktop stopped.
 3. Only choose **Connect to Finder…** when you want tracking. If permission was already allowed, no new prompt is expected. If denied, the app should explain the refusal and keep the editor usable. To retry, enable Redstone Desktop under **System Settings → Privacy & Security → Automation → Finder**, then explicitly retry the read. Do not reset system privacy settings just to repeat this test.
 4. On the script page, **Allow Access to Desktop Scripts…** checks the separate folder access. It must not execute a file or enable automatic routing. Inspect **Settings → Outputs**: automatic script/open routing should remain your existing preference, off on fresh setup.
 5. Open each Settings tab: **General, Sound, Appearance, Outputs, Data**. Check fit, scrolling, native tab switching and Settings keyboard shortcut **⌘,**. General scale controls should match their existing behavior. Appearance/Packs and Tools windows should still work.
@@ -224,7 +224,7 @@ Backup/reset testing remains deferred; the polish changes do not require Start O
 1. Stop Desktop. **Settings → Data → Export Library…**; save outside Application Support. Cancel one export too. Open the JSON in a text editor: named worlds/areas, seeds, components and lever positions should be present. Finder files, script source, approvals and texture contents should be absent. Keep this export.
 2. Open **Start Over…**, read the exact scope, then Cancel. Confirm builds/settings/assignment stay the same and no relaunch occurs.
 3. For an intentional reset, note a harmless Desktop folder and your source JAR/pack path. Confirm **Back Up, Reset and Restart**. The app should stop all integration, create a backup, close the old instance and open Setup automatically. If relaunch fails, read the message, Quit and reopen manually; do not repeat reset blindly.
-4. Fresh instance: one empty procedural world and Home area, no copied demo/old components, Desktop stopped, default sound/scale/appearance, routing off and no remembered script approvals. Quit/reopen once more: no old library/legacy migration should reappear. Setup Skip/Finish should persist again.
+4. Fresh instance: one empty procedural world and Home area, no copied demo/old components, Desktop stopped, default sound/scale/appearance, routing off and no remembered script approvals. Quit/reopen once more: no old library/legacy migration should reappear. Setup Skip/Let’s Build should persist again.
 5. Check the original Desktop folder and source pack/JAR still exist with unchanged contents. macOS Automation/Files & Folders decisions should remain; new system prompts are not guaranteed. Built-in appearance should be selected even if a previous import was active.
 6. **Settings → Data → Reveal Backups Folder**. Find the timestamped directory: standalone library.json, preferences.plist, backup.json and original Support (including any old world.json/managed imports). Validate worlds/areas are present; keep the entire directory. Before the first backup, Reveal Backups Folder should open an empty folder. Saved blueprints, when present, should be included as Support/blueprints.json.
 7. Follow [RECOVERY.md](RECOVERY.md) with the app quit to restore the exported or backed-up library, preserving the fresh file first. Reopen: builds/assignment should return **stopped**. Full preference/cache restoration is optional and also described there. Do not force corruption/rename failures in your real store; automated tests cover injected failures and interrupted recovery.
@@ -239,9 +239,9 @@ Backup/reset testing remains deferred; the polish changes do not require Start O
 ## 7. Release engineering (Slice 34)
 
 1. Follow [RELEASE.md](RELEASE.md)'s clean-checkout build instructions. XcodeGen generates the untracked Xcode project. Build and test without relying on owner-specific paths, game installs or preferences.
-2. Run the unsigned release script and inspect its ZIP: app, license, third-party notices and release/limitations documentation should be present; no imported Java world assets, saves or scripts should be included.
+2. Run the unsigned release script and inspect its DMG and ZIP: app, license, third-party notices and release/limitations documentation should be present; no imported Java world assets, saves or scripts should be included.
 3. Extract to a separate folder and launch that app after quitting the development copy. It uses the same production library unless you use a separate account. Check icon/menu/setup/settings, explicit Start/Stop and Quit/reopen. Unsigned download Gatekeeper behavior, Developer ID/notarized distribution and older macOS/Intel require separate validation.
-4. Inspect the GitHub Actions run after pushing: build, tests and Release archive must actually pass there. A local successful build is not a hosted-CI result. Signing/notarization remains optional and requires your credentials/asset distribution decision.
+4. Inspect the GitHub Actions run after pushing: build, tests and Release archive must actually pass there. A local successful build is not a hosted-CI result. Public download signing/notarization requires your Developer ID certificate and credentials; local unsigned review packages do not establish Gatekeeper acceptance.
 
 Please report acceptance by group/substep, e.g. “1, 2, 4 passed; 3 skipped (one screen); 5 not attempted.” That keeps the testing record accurate without claiming untested destructive, permission or multi-display behavior.
 
@@ -319,3 +319,9 @@ Use one updated app instance. Quit the previous build, open `RedstoneDesktop.xco
 - [ ] MANUAL: Pan, zoom and resize the editor; close/reopen it; start/stop Desktop, reassign areas and enter/exit Build Mode repeatedly. Keep particles, animated liquids and nighttime lighting enabled for 20–30 minutes, including a sleep/wake cycle. Existing circuits should still react; no app crash or growing stack of overlay windows should appear. If available, repeat with another display/Spaces arrangement.
 
 Automated results and remaining crash-history boundaries are recorded in [STABILITY.md](STABILITY.md). No manual checkbox above is marked complete by automated tests.
+
+## Release packaging and native Help
+
+- [ ] MANUAL: Open the updated DMG, drag its app to Applications, eject the image and launch that copy after quitting the old one. It should keep your worlds/settings, start Desktop stopped and show the current logo/version. Local review packages are unsigned; public Gatekeeper acceptance needs the actual signed/notarized download.
+- [ ] MANUAL: Open Help → Redstone Desktop Help. Resize/scroll the window, read the quick start and try View License / Artwork Notices. Opening Help must not start a circuit or request Finder access. Confirm native About reports the version and MIT copyright.
+- [ ] MANUAL: Follow the quick start with a harmless folder Output. Check the README/INSTALL guides in the extracted package have their images and links. Finish the unresolved distribution checks in RELEASE_CHECKLIST.md before publishing.
