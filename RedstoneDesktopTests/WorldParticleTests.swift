@@ -116,19 +116,21 @@ final class WorldParticleTests: XCTestCase {
             let layer = try XCTUnwrap(scene.childNode(withName: "world-particles"))
             let emitters = layer.children.compactMap { $0 as? SKEmitterNode }
             XCTAssertFalse(emitters.isEmpty, "Expected particles from \(kind)")
-            // Keep a visible stationary particle for deterministic native pixel comparison.
-            for emitter in emitters {
-                emitter.resetSimulation(); emitter.particleTexture = white
-                emitter.particleColorBlendFactor = 0
-                emitter.particleAlpha = 1; emitter.particleAlphaSpeed = 0
-                emitter.particleLifetime = 10; emitter.particleLifetimeRange = 0
-                emitter.particleSpeed = 0; emitter.particleSpeedRange = 0; emitter.yAcceleration = 0
-                emitter.particlePositionRange = .zero; emitter.particleSize = CGSize(width: 12, height: 12)
-                emitter.particleBirthRate = 2
-            }
             func brightestPixel() throws -> CGFloat {
                 layer.isHidden = false; layer.isPaused = false // Independent of the test Mac's Reduce Motion preference.
-                for emitter in emitters { emitter.resetSimulation(); emitter.advanceSimulationTime(1.5) }
+                // Every scene refresh reapplies the real emitter's movement and size.
+                // Restore the stationary pixel fixture after each lighting transition.
+                for emitter in emitters {
+                    emitter.resetSimulation(); emitter.particleTexture = white
+                    emitter.particleColorBlendFactor = 0
+                    emitter.particleAlpha = 1; emitter.particleAlphaRange = 0; emitter.particleAlphaSpeed = 0
+                    emitter.particleLifetime = 10; emitter.particleLifetimeRange = 0
+                    emitter.particleScale = 1; emitter.particleScaleRange = 0; emitter.particleScaleSpeed = 0
+                    emitter.particleSpeed = 0; emitter.particleSpeedRange = 0; emitter.yAcceleration = 0
+                    emitter.particlePositionRange = .zero; emitter.particleSize = CGSize(width: 12, height: 12)
+                    emitter.particleBirthRate = 2
+                    emitter.advanceSimulationTime(1.5)
+                }
                 let texture = try XCTUnwrap(view.texture(from: scene, crop: rect))
                 let bitmap = NSBitmapImageRep(cgImage: texture.cgImage())
                 var maximum: CGFloat = 0
