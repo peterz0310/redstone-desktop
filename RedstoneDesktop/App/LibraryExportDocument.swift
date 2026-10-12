@@ -14,10 +14,7 @@ struct LibraryExportDocument: FileDocument {
     }
     func encodedData() throws -> Data {
         try library.validate()
-        let encoder = JSONEncoder(); encoder.outputFormatting = [.prettyPrinted, .sortedKeys]
-        let data = try encoder.encode(library)
-        guard data.count <= WorldLibraryStore.maximumBytes else { throw MaintenanceError(message: "Library exceeds export limit.") }
-        return data
+        return try WorldLibraryStore.encodedData(library)
     }
     func fileWrapper(configuration: WriteConfiguration) throws -> FileWrapper {
         FileWrapper(regularFileWithContents: try encodedData())

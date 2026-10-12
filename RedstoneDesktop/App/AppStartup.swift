@@ -1,0 +1,35 @@
+import AppKit
+
+/// Xcode's application test host must never migrate/save the owner's real library.
+@MainActor
+enum AppStartup {
+    static let state = makeState()
+    static func makeState() -> AppState {
+        let environment = ProcessInfo.processInfo.environment
+        if environment["REDSTONE_DESKTOP_DATA_ROOT"] != nil || environment["REDSTONE_DESKTOP_PREFERENCES_SUITE"] != nil {
+            precondition(MaintenanceSmokeConfiguration.settings != nil, "Invalid smoke isolation configuration; owner store will not be opened.")
+        }
+        let testing = NSClassFromString("XCTestCase") != nil
+            || environment.keys.contains { $0.hasPrefix("XCTest") || $0 == "XCInjectBundleInto" }
+        if !testing, let smoke = MaintenanceSmokeConfiguration.settings, let prefs = UserDefaults(suiteName: smoke.domain) {
+            let store = WorldLibraryStore(fileURL: smoke.root.appendingPathComponent("library.json"), legacyFileURL: smoke.root.appendingPathComponent("world.json"))
+            let state = AppState(libraryStore: store, preferences: prefs, soundPlayer: SilentSoundPlayer(),
+                assets: AssetLibrary(preferences: prefs, importCacheRoot: smoke.root.appendingPathComponent("ImportedTextures")),
+                blueprintStore: CircuitBlueprintStore(fileURL: smoke.root.appendingPathComponent("blueprints.json")),
+                maintenanceStore: LibraryMaintenanceStore(root: smoke.root, backups: smoke.root.deletingLastPathComponent().appendingPathComponent("Backups")),
+                preferencesDomain: smoke.domain)
+            MaintenanceSmokeConfiguration.report("startup", state: state)
+            return state
+        }
+        let assets = AssetLibrary(preferences: testing ? nil : .standard, importCacheRoot: testing ? nil : JavaTextureImporter.applicationCacheRoot)
+        if !testing { Task { await assets.restoreSelection() } }
+        return AppState(desktopScriptAccess: testing ? nil : DesktopScriptAccess.applicationDefault(),
+            libraryStore: testing ? nil : WorldLibraryStore.applicationDefault(), automaticallyRefreshFinder: !testing,
+            preferences: testing ? nil : .standard,
+            soundPlayer: testing ? SilentSoundPlayer() : (try? AudioEngine()) ?? SilentSoundPlayer(), assets: assets,
+            blueprintStore: testing ? nil : CircuitBlueprintStore.applicationDefault(),
+            maintenanceStore: testing ? nil : .applicationDefault(),
+            preferencesDomain: testing ? nil : Bundle.main.bundleIdentifier,
+            screensProviding: testing ? nil : { NSScreen.screens.map { ScreenDescriptor(screen: $0) } })
+    }
+}

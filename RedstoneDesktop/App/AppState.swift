@@ -74,18 +74,18 @@ final class AppState: ObservableObject {
         document.activeLevers = (levers ?? document.activeLevers).filter { circuit.components[$0]?.kind == .lever }
         do {
             let world = try document.restoredWorld()
-            if terrainOverrides != nil { try validateTerrainLibrarySize(document) }
-            commitCircuit(world, worldID: document.id, recordUndo: recordUndo, leverPositions: document.activeLevers, terrainOverrides: document.terrainOverrides)
-            return true
+            return commitCircuit(world, worldID: document.id, recordUndo: recordUndo, leverPositions: document.activeLevers, terrainOverrides: document.terrainOverrides)
         } catch { developerPlacementStatus = "Nothing changed: \(error.localizedDescription)"; return false }
     }
-    private func validateTerrainLibrarySize(_ document: WorldDocument) throws {
-        var candidate = library
-        guard let index = candidate.worlds.firstIndex(where: { $0.id == document.id }) else { throw BlueprintError("World no longer exists.") }
-        candidate.worlds[index] = document
-        let encoder = JSONEncoder(); encoder.outputFormatting = [.prettyPrinted, .sortedKeys]
-        guard try encoder.encode(candidate).count <= WorldLibraryStore.maximumBytes else {
-            throw BlueprintError("Nothing changed: this edit would exceed the 2 MB library limit. Restore terrain or remove unused worlds first.")
+    /// Check the whole proposed library before publishing any edit or changing history/runtime.
+    private func canApplyLibrary(_ candidate: WorldLibraryDocument) -> Bool {
+        guard !persistenceBlocked, !isMaintenanceLocked else { return false }
+        do { _ = try WorldLibraryStore.encodedData(candidate); return true }
+        catch {
+            let message = "Nothing changed: \(error.localizedDescription)"
+            developerPlacementStatus = message; libraryStatus = message; areaStatus = message
+            buildSession?.status = message
+            return false
         }
     }
 
@@ -97,9 +97,7 @@ final class AppState: ObservableObject {
                   let document = library.world(id: session.worldID) else { return false }
             do {
                 let plan = try TerrainEditing.plan(document: document, brush: brush, tiles: tiles)
-                var nextDocument = document; nextDocument.terrainOverrides = plan.overrides
-                try validateTerrainLibrarySize(nextDocument)
-                commitCircuit(plan.world, worldID: session.worldID, terrainOverrides: plan.overrides)
+                guard commitCircuit(plan.world, worldID: session.worldID, terrainOverrides: plan.overrides) else { return false }
                 session.status = "Changed \(plan.changed.count) tiles; protected \(plan.protected.count) circuit tiles."
                 refreshBuildRenderer(); return true
             } catch { session.status = error.localizedDescription; return false }
@@ -429,7 +427,7 @@ final class AppState: ObservableObject {
         var next = library
         next.worlds.append(document)
         next.areas.append(SavedArea(name: "Home", worldID: document.id, camera: SavedArea.homeCamera))
-        guard (try? next.validate()) != nil else { return false }
+        guard (try? next.validate()) != nil, canApplyLibrary(next) else { return false }
         library = next
         selectedWorldID = document.id
         selectedAreaID = next.areas.last!.id
@@ -444,7 +442,9 @@ final class AppState: ObservableObject {
         guard !isMaintenanceLocked, !persistenceBlocked,
               let index = library.worlds.firstIndex(where: { $0.id == id }),
               (try? settings.validate()) != nil else { libraryStatus = "World settings could not be saved."; return false }
-        library.worlds[index].lighting = settings
+        var next = library; next.worlds[index].lighting = settings
+        guard canApplyLibrary(next) else { return false }
+        library = next
         if selectedWorldID == id { editorWorld.lighting = settings }
         if activeWorldID == id {
             desktopWorld.lighting = settings
@@ -473,7 +473,9 @@ final class AppState: ObservableObject {
             libraryStatus = "Disable Desktop World and enter a nonempty world name."
             return false
         }
-        library.worlds[index].name = name
+        var next = library; next.worlds[index].name = name
+        guard canApplyLibrary(next) else { return false }
+        library = next
         autosaver?.schedule(library)
         libraryStatus = "World renamed."
         return true
@@ -492,7 +494,9 @@ final class AppState: ObservableObject {
         guard !isMaintenanceLocked else { return false }
         let area = SavedArea(name: name.trimmingCharacters(in: .whitespacesAndNewlines), worldID: selectedWorldID, camera: camera)
         guard (try? area.validate()) != nil else { areaStatus = "Enter an area name and a valid camera."; return false }
-        library.areas.append(area)
+        var next = library; next.areas.append(area)
+        guard canApplyLibrary(next) else { return false }
+        library = next
         selectedAreaID = area.id
         autosaver?.schedule(library)
         areaStatus = "Saved \(area.name). Desktop assignment is unchanged."
@@ -512,7 +516,9 @@ final class AppState: ObservableObject {
             areaStatus = "Enter a nonempty name for an existing area."
             return false
         }
-        library.areas[index].name = name
+        var next = library; next.areas[index].name = name
+        guard canApplyLibrary(next) else { return false }
+        library = next
         autosaver?.schedule(library)
         areaStatus = "Area renamed; its saved camera is unchanged."
         return true
@@ -549,6 +555,7 @@ final class AppState: ObservableObject {
         next.areas[index].camera = camera
         do { try next.validate() }
         catch { areaStatus = "Invalid area view: \(error.localizedDescription) Nothing changed."; return false }
+        guard canApplyLibrary(next) else { return false }
         guard autosaver?.commit(next, operation: "Area update") ?? true else {
             areaStatus = "Could not save area update. Previous view preserved; check save status and retry Update Current Area."
             return false
@@ -594,6 +601,7 @@ final class AppState: ObservableObject {
         }
         var next = library
         next.activeAreaID = area.id
+        guard canApplyLibrary(next) else { return false }
         guard (try? next.validate()) != nil, autosaver?.commit(next) ?? true else {
             areaStatus = "Activation could not be saved. Current desktop preserved; use Save Now, then retry Activate on Desktop."
             return false
@@ -655,6 +663,7 @@ final class AppState: ObservableObject {
 
     private func commitDeletion(_ next: WorldLibraryDocument) -> Bool {
         guard !isMaintenanceLocked else { return false }
+        guard canApplyLibrary(next) else { return false }
         guard !persistenceBlocked, autosaver?.commit(next, operation: "Deletion") ?? true else {
             libraryStatus = "Could not save deletion. Nothing deleted; check save/recovery status and retry."
             return false
@@ -693,8 +702,10 @@ final class AppState: ObservableObject {
         var next = editorWorld
         let result = circuitPlacement.place(component, at: coordinate, in: &next)
         if result.isAllowed {
-            editorWorld = next
-            worldDidChange()
+            guard commitCircuit(next, worldID: selectedWorldID) else {
+                playSound(.invalidPlacement, at: coordinate, mapper: audioMapper)
+                return .rejected(.libraryFull)
+            }
             playSound(.placeCircuit, at: coordinate, mapper: audioMapper)
             developerPlacementStatus = "Placed \(component.kind.rawValue) at (\(coordinate.x), \(coordinate.y)). Saved in the selected world. Activate a saved area to run it."
         } else { developerPlacementStatus = result.message; playSound(.invalidPlacement, at: coordinate, mapper: audioMapper) }
@@ -713,8 +724,7 @@ final class AppState: ObservableObject {
         }
         var next = editorWorld
         next.circuit.components.removeValue(forKey: coordinate)
-        editorWorld = next
-        worldDidChange()
+        guard commitCircuit(next, worldID: selectedWorldID) else { return false }
         playSound(.removeCircuit, at: coordinate, mapper: audioMapper)
         developerPlacementStatus = "Erased component at (\(coordinate.x), \(coordinate.y)); terrain preserved."
         return true
@@ -730,8 +740,7 @@ final class AppState: ObservableObject {
         component.direction = direction
         var next = editorWorld
         next.circuit.components[coordinate] = component
-        editorWorld = next
-        worldDidChange()
+        guard commitCircuit(next, worldID: selectedWorldID) else { return false }
         developerPlacementStatus = "Torch direction updated at (\(coordinate.x), \(coordinate.y))."
         return true
     }
@@ -750,8 +759,7 @@ final class AppState: ObservableObject {
         component.repeaterDelay = delay
         var next = editorWorld
         next.circuit.components[coordinate] = component
-        editorWorld = next
-        worldDidChange()
+        guard commitCircuit(next, worldID: selectedWorldID) else { return false }
         developerPlacementStatus = "Repeater updated at (\(coordinate.x), \(coordinate.y))."
         return true
     }
@@ -763,8 +771,7 @@ final class AppState: ObservableObject {
         component.outputAction = mode
         var next = editorWorld
         next.circuit.components[coordinate] = component
-        editorWorld = next
-        worldDidChange()
+        guard commitCircuit(next, worldID: selectedWorldID) else { return false }
         developerPlacementStatus = "Output action updated. Execution requires separate file approval."
         if mode == .executeOccupant { requestDesktopScriptAccess() }
         return true
@@ -835,27 +842,26 @@ final class AppState: ObservableObject {
         }
         var next = editorWorld
         for target in DeveloperPlacementFixture.targets { next.circuit.components.removeValue(forKey: target.coordinate) }
-        editorWorld = next
-        worldDidChange()
+        guard commitCircuit(next, worldID: selectedWorldID) else { return }
         developerPlacementStatus = "Test placements reset; original circuits and terrain preserved."
     }
 
-    private func worldDidChange() {
-        commitCircuit(editorWorld, worldID: selectedWorldID)
-    }
-
-    private func commitCircuit(_ world: World, worldID: UUID, recordUndo: Bool = true, leverPositions: Set<WorldCoordinate>? = nil, terrainOverrides: [WorldCoordinate: Tile]? = nil) {
-        guard let index = library.worlds.firstIndex(where: { $0.id == worldID }) else { return }
+    @discardableResult
+    private func commitCircuit(_ world: World, worldID: UUID, recordUndo: Bool = true, leverPositions: Set<WorldCoordinate>? = nil, terrainOverrides: [WorldCoordinate: Tile]? = nil) -> Bool {
+        guard let index = library.worlds.firstIndex(where: { $0.id == worldID }) else { return false }
         let before = library.worlds[index]
         let nextLevers = (leverPositions ?? before.activeLevers).filter { world.circuit.components[$0]?.kind == .lever }
+        var candidate = library
+        if let terrainOverrides { candidate.worlds[index].terrainOverrides = terrainOverrides }
+        candidate.worlds[index].circuit = world.circuit
+        candidate.worlds[index].activeLevers = nextLevers
+        guard canApplyLibrary(candidate) else { return false }
         if recordUndo {
             let change = CircuitChange(before: before.circuit, after: world.circuit, leversBefore: before.activeLevers, leversAfter: nextLevers, terrainBefore: before.terrainOverrides, terrainAfter: terrainOverrides ?? before.terrainOverrides)
             editHistories[worldID, default: CircuitEditHistory()].record(change)
             editHistoryRevision += 1
         }
-        if let terrainOverrides { library.worlds[index].terrainOverrides = terrainOverrides }
-        library.worlds[index].circuit = world.circuit
-        library.worlds[index].activeLevers = nextLevers
+        library = candidate
         if selectedWorldID == worldID { editorWorld = world }
         if activeWorldID == worldID {
             desktopWorld = world
@@ -863,6 +869,7 @@ final class AppState: ObservableObject {
             simulator = CircuitSimulator(world: desktopWorld.circuit)
         }
         autosaver?.schedule(library)
+        return true
     }
 
     /// Explicit local editing. Normal simulation and its asynchronous action requests
@@ -935,7 +942,7 @@ final class AppState: ObservableObject {
         if let buildSessionID {
             guard let session = buildSession, session.id == buildSessionID, session.worldID == activeWorldID,
                   session.areaID == library.activeAreaID, library.world(id: session.worldID) == stroke.document else { return false }
-            commitCircuit(world, worldID: session.worldID)
+            guard commitCircuit(world, worldID: session.worldID) else { return false }
             session.status = "Placed \(stroke.placed) dust tiles; skipped \(stroke.blocked) blocked tiles."
             refreshBuildRenderer()
         } else {
@@ -972,12 +979,12 @@ final class AppState: ObservableObject {
             session.delay = existing.repeaterDelay
         }
         var next = desktopWorld
-        if erase || session.tool == .erase {
+        let removing = erase || session.tool == .erase
+        if removing {
             guard next.circuit.components.removeValue(forKey: tile) != nil else {
                 session.status = "No circuit component here. Terrain is preserved."; return
             }
-            session.status = "Erased (\(tile.x), \(tile.y)). Terrain preserved."
-            playSound(.removeCircuit, at: tile, mapper: session.mapper)
+
         } else if let component = session.component {
             let result = circuitPlacement.place(component, at: tile, in: &next)
             guard result.isAllowed else {
@@ -985,10 +992,11 @@ final class AppState: ObservableObject {
                 playSound(.invalidPlacement, at: tile, mapper: session.mapper)
                 return
             }
-            session.status = "Placed \(session.tool.rawValue) at (\(tile.x), \(tile.y)). Circuit stopped."
-            playSound(.placeCircuit, at: tile, mapper: session.mapper)
+
         } else { return }
-        commitCircuit(next, worldID: session.worldID)
+        guard commitCircuit(next, worldID: session.worldID) else { return }
+        session.status = removing ? "Erased (\(tile.x), \(tile.y)). Terrain preserved." : "Placed \(session.tool.rawValue) at (\(tile.x), \(tile.y)). Circuit stopped."
+        playSound(removing ? .removeCircuit : .placeCircuit, at: tile, mapper: session.mapper)
         refreshBuildRenderer()
     }
 
@@ -997,7 +1005,7 @@ final class AppState: ObservableObject {
               filter.isValid, desktopWorld.circuit.components[tile]?.kind.isDesktopSensor == true else { return }
         var next = desktopWorld; next.circuit.components[tile]?.sensorFilter = filter
         if filter.match != .anyItem { next.circuit.components[tile]?.kind = .fileSensor }
-        commitCircuit(next, worldID: session.worldID); refreshBuildRenderer()
+        guard commitCircuit(next, worldID: session.worldID) else { return }; refreshBuildRenderer()
         session.status = "Sensor filter saved. Circuit stopped."
     }
 
@@ -1047,17 +1055,20 @@ final class AppState: ObservableObject {
         if component.kind == .repeater { component.repeaterDelay = session.delay }
         var next = desktopWorld
         next.circuit.components[tile] = component
-        commitCircuit(next, worldID: session.worldID)
+        guard commitCircuit(next, worldID: session.worldID) else { return }
         refreshBuildRenderer()
         session.status = component.kind == .torch
             ? "Torch (\(tile.x), \(tile.y)): \(session.direction.rawValue), fixed 1-tick inversion."
             : "Repeater (\(tile.x), \(tile.y)): \(session.direction.rawValue), delay \(session.delay.rawValue)."
     }
 
-    private func desktopLeversDidChange() {
-        guard let index = library.worlds.firstIndex(where: { $0.id == activeWorldID }) else { return }
-        library.worlds[index].activeLevers = savedLevers
+    private func desktopLeversDidChange() -> Bool {
+        guard let index = library.worlds.firstIndex(where: { $0.id == activeWorldID }) else { return false }
+        var next = library; next.worlds[index].activeLevers = savedLevers
+        guard canApplyLibrary(next) else { return false }
+        library = next
         autosaver?.schedule(library)
+        return true
     }
 
     func setVisualSettings(_ settings: VisualSettings) {
@@ -1184,7 +1195,19 @@ final class AppState: ObservableObject {
         } catch { libraryStatus = "Couldn’t import this library: \(error.localizedDescription)"; return false }
     }
 
-    func saveWorldNow() { autosaver?.flush() }
+    @discardableResult
+    func saveWorldNow() -> Bool { autosaver?.flush() ?? true }
+
+    /// A verified snapshot independent of the failed destination, with a larger emergency-only bound.
+    func saveRecoveryCopy(to url: URL) throws {
+        try library.validate()
+        // Emergency preservation also works for a compact old save whose pretty encoding exceeds 2 MB.
+        let recoveryLimit = 16 * 1024 * 1024
+        let data = try WorldLibraryStore.encodedData(library, maximumBytes: recoveryLimit)
+        try data.write(to: url, options: .atomic)
+        let written = try BoundedFileReader.read(url, maximumBytes: recoveryLimit)
+        guard written == data else { throw MaintenanceError(message: "Recovery copy verification failed.") }
+    }
 
     /// Used by both disable and the app's termination notification.
     func shutdown(preserveEditorTracking: Bool = false) {
@@ -1583,11 +1606,16 @@ final class AppState: ObservableObject {
                 self.playSound(.buttonPress, at: tile, mapper: controller.scene.mapper)
                 self.lastActionResult = "Button pulse queued; repeats extend it without another rising activation."
             } else {
+                let previous = self.simulator
                 self.simulator.toggleLever(at: tile)
+                self.savedLevers = self.simulator.activeLevers
+                guard self.desktopLeversDidChange() else {
+                    self.simulator = previous; self.savedLevers = previous.activeLevers
+                    self.lastActionResult = self.developerPlacementStatus
+                    return
+                }
                 self.playSound(self.simulator.activeLevers.contains(tile) ? .leverToggleOn : .leverToggleOff,
                     at: tile, mapper: controller.scene.mapper)
-                self.savedLevers = self.simulator.activeLevers
-                self.desktopLeversDidChange()
                 self.lastActionResult = self.simulator.activeLevers.contains(tile)
                     ? "Lever on; power updates on the next tick." : "Lever off; power updates on the next tick."
             }

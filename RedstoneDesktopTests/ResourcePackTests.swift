@@ -162,6 +162,30 @@ final class ResourcePackTests: XCTestCase {
         XCTAssertNil(library.pack); XCTAssertTrue(library.status.contains("refused"))
     }
     @MainActor
+    func testRefusedReplacementPreservesTexturesSoundsSourceRevisionAndSavedChoice() async throws {
+        let suite = "RedstoneDesktopTests.pack-stability.\(UUID())"
+        let preferences = try XCTUnwrap(UserDefaults(suiteName: suite))
+        defer { preferences.removePersistentDomain(forName: suite) }
+        let library = AssetLibrary(preferences: preferences)
+        let source = Self.examples.appendingPathComponent("GrassOnly")
+        await library.load(source)
+        // A working pack may also have imported effects. Failure must not reset them.
+        let original = try XCTUnwrap(library.pack)
+        let pack = LoadedPack(manifest: original.manifest, textures: original.textures, sounds: [.buttonPress: BuiltInSounds.samples(for: .buttonPress)], warnings: original.warnings)
+        library.apply(pack)
+        let revision = library.revision, name = library.name, warnings = library.warnings
+        let texture = try XCTUnwrap(library.texture(for: .terrainGrass))
+        await library.load(URL(fileURLWithPath: "/nonexistent/refused-pack.zip"))
+        XCTAssertEqual(library.revision, revision)
+        XCTAssertEqual(library.name, name); XCTAssertEqual(library.warnings, warnings)
+        XCTAssertEqual(library.source, source)
+        XCTAssertTrue(library.texture(for: .terrainGrass) === texture)
+        XCTAssertEqual(library.soundOverrides, pack.sounds)
+        XCTAssertEqual(preferences.string(forKey: "assetPackPath"), source.path)
+        XCTAssertTrue(library.status.contains("unchanged")); XCTAssertFalse(library.isLoading)
+    }
+
+    @MainActor
     func testReloadAndPreferenceRestoreRevalidateSourceAndUseBuiltInClearsChoice() async throws {
         let root = try temporary()
         try png().write(to: root.appendingPathComponent("grass.png"))

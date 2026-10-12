@@ -20,8 +20,7 @@ struct CircuitBlueprintStore: CircuitBlueprintStoring {
     }
     func load() throws -> CircuitBlueprintDocument {
         guard FileManager.default.fileExists(atPath: fileURL.path) else { return CircuitBlueprintDocument() }
-        let handle = try FileHandle(forReadingFrom: fileURL); defer { try? handle.close() }
-        let data = try handle.read(upToCount: Self.maximumBytes + 1) ?? Data()
+        let data = try BoundedFileReader.read(fileURL, maximumBytes: Self.maximumBytes)
         guard data.count <= Self.maximumBytes else { throw BlueprintError("The blueprint library exceeds 2 MB.") }
         let document = try JSONDecoder().decode(CircuitBlueprintDocument.self, from: data)
         try document.validate(); return document

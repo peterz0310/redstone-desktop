@@ -95,7 +95,7 @@ struct DesktopMenuView: View {
         }
         if state.locked { Text(state.maintenance) }
         Divider()
-        Button("Quit Redstone Desktop") { appState.shutdown(); NSApplication.shared.terminate(nil) }
+        Button("Quit Redstone Desktop") { NSApplication.shared.terminate(nil) }
     }
 
     private func show(_ id: String) {

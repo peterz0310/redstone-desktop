@@ -20,3 +20,6 @@ Pending physical checks remain unverified in TESTING.md until the owner confirms
 
 - Scene particles are capped at 64 visible emitters per scene. They use static imported sprites and app-owned behavior, not Minecraft particle JSON animation/physics. Reduce Motion hides and pauses particles.
 - Java audio imports cover ten short semantic app effects, not music/ambient loops or `sounds.json` event graphs. Native Ogg decoding was verified on the development Mac; older supported macOS versions/Intel still need physical validation and retain original sounds if their codec cannot decode an asset.
+
+- Save failures postpone ordinary Quit and offer retry or a recovery copy; Force Quit/power loss still bypass this protection. The aggregate library limit remains 2 MB, enforced before edits. Emergency copies can exceed the normal import limit; preserve them and see [recovery](RECOVERY.md).
+- The October 12 audio-device notification crash was reproduced and corrected. A separate older SpriteKit child-attachment exception was not reproduced; initialization/layer ownership is hardened and covered by resize/pan tests, but prolonged physical-Mac validation remains open. See [stability evidence](STABILITY.md). Large-library encoding/saves remain synchronous; short automated stress is not a sustained GPU/battery measurement.

@@ -75,7 +75,7 @@ struct AppSettingsView: View {
         .disabled(appState.isMaintenanceLocked)
         .overlay(alignment: .bottom) {
             if appState.isMaintenanceLocked {
-                VStack { Text(appState.maintenanceStatus).textSelection(.enabled); Button("Quit") { appState.shutdown(); NSApplication.shared.terminate(nil) } }
+                VStack { Text(appState.maintenanceStatus).textSelection(.enabled); Button("Quit") { NSApplication.shared.terminate(nil) } }
                     .padding().background(.regularMaterial)
             }
         }

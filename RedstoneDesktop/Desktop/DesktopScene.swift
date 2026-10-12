@@ -11,6 +11,8 @@ final class DesktopScene: SKScene {
     var terrainMetrics: TerrainRenderMetrics { terrainRenderer.metrics }
     private(set) var screen: ScreenDescriptor
     private(set) var mapper: CoordinateMapper
+    private var sceneReady = false
+    private let checkerLayer = SKNode()
     private let highlight = SKShapeNode()
     private let clickFlash = SKShapeNode()
     private let tileLayer = SKNode()
@@ -73,6 +75,12 @@ final class DesktopScene: SKScene {
         occupancyLayer.zPosition = 0.5
         finderMarkers.name = "finder-markers"
         finderMarkers.zPosition = 3
+        // SKScene initialization/resize can call didChangeSize before setup is complete.
+        // Attach owned layers once; camera changes rebuild only checker geometry.
+        checkerLayer.name = "checker"
+        for layer in [checkerLayer, tileLayer, lightingLayer, particleLayer, circuitLayer, outputFlash,
+                      occupancyLayer, highlight, clickFlash, finderMarkers] { addChild(layer) }
+        sceneReady = true
         rebuildChecker()
     }
 
@@ -108,6 +116,7 @@ final class DesktopScene: SKScene {
     }
 
     override func didChangeSize(_ oldSize: CGSize) {
+        guard sceneReady else { return }
         rebuildChecker()
         if let world = renderedWorld { updateWorld(world, poweredTiles: renderedPower, leverPositions: renderedLevers, powerLevels: renderedPowerLevels) }
     }
@@ -260,16 +269,7 @@ final class DesktopScene: SKScene {
     }
 
     private func rebuildChecker() {
-        removeAllChildren()
-        addChild(tileLayer)
-        addChild(lightingLayer)
-        addChild(particleLayer)
-        addChild(circuitLayer)
-        addChild(outputFlash)
-        addChild(occupancyLayer)
-        addChild(highlight)
-        addChild(clickFlash)
-        addChild(finderMarkers)
+        checkerLayer.removeAllChildren()
         guard size.width > 0, size.height > 0,
               let first = mapper.tile(atScreen: screen.frame.origin),
               let last = mapper.tile(atScreen: CGPoint(x: screen.frame.minX + size.width, y: screen.frame.minY + size.height)) else { return }
@@ -290,7 +290,7 @@ final class DesktopScene: SKScene {
             node.fillColor = colors[index]
             node.strokeColor = .clear
             node.isAntialiased = false
-            addChild(node)
+            checkerLayer.addChild(node)
         }
         rebuildDiagnostics()
     }

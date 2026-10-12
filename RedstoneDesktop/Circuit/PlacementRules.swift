@@ -7,6 +7,7 @@ enum PlacementFailureReason: Equatable, Sendable {
     case unsupportedSurface
     case blockedByDecoration(DecorationID)
     case circuitOccupied
+    case libraryFull
 
     var message: String {
         switch self {
@@ -17,6 +18,7 @@ enum PlacementFailureReason: Equatable, Sendable {
         case .liquid: return "Circuit components cannot be placed on water or lava."
         case .unsupportedSurface: return "This terrain does not support that component."
         case let .blockedByDecoration(decoration): return "Placement is blocked by \(decoration == .rock ? "a solid decoration" : decoration.rawValue)."
+        case .libraryFull: return "This change would exceed the 2 MB library limit. Nothing changed."
         case .circuitOccupied: return "This tile already contains a circuit component."
         }
     }

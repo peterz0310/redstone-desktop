@@ -168,15 +168,14 @@ final class AssetLibrary: ObservableObject, AssetProvider {
         isLoading = true; status = "Loading \(url.lastPathComponent)…"
         let result = await Task.detached(priority: .userInitiated) { Result { try ResourcePackLoader.load(url) } }.value
         guard generation == request else { return }
-        source = url
         switch result {
         case .success(let value):
+            source = url
             apply(value)
             status = "\(value.textures.count) textures · \(value.sounds.count) sounds · \(value.warnings.count) warnings"
             preferences?.set(url.path, forKey: "assetPackPath")
         case .failure(let error):
-            apply(nil); status = "Pack refused: \(error.localizedDescription) Built-in assets active."
-            preferences?.removeObject(forKey: "assetPackPath")
+            status = "Pack refused: \(error.localizedDescription) Your current appearance and sounds are unchanged."
         }
         isLoading = false
     }

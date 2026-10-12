@@ -42,11 +42,12 @@ final class DesktopWindowTests: XCTestCase {
         let screen = ScreenDescriptor(id: "test", frame: CGRect(x: 0, y: 0, width: 1920, height: 1080), backingScale: 2)
         let mapper = try CoordinateMapper(canvasFrame: screen.frame, camera: camera)
         let scene = DesktopScene(screen: screen, mapper: mapper)
-        XCTAssertEqual(scene.children.count, 11)
+        XCTAssertEqual(scene.children.count, 10)
         for size in [CGSize(width: 800, height: 600), CGSize(width: 2560, height: 1440)] {
             scene.size = size
-            XCTAssertEqual(scene.children.count, 11)
-            XCTAssertEqual(scene.children.filter { $0 is SKShapeNode }.count, 4)
+            XCTAssertEqual(scene.children.count, 10)
+            XCTAssertEqual(scene.children.filter { $0 is SKShapeNode }.count, 2)
+            XCTAssertEqual(scene.childNode(withName: "checker")?.children.count, 2)
             XCTAssertTrue(try XCTUnwrap(scene.childNode(withName: "output-flash")).children.isEmpty)
         }
     }

@@ -27,7 +27,7 @@ final class SilentSoundPlayer: SoundPlaying {
 /// It never connects to the input node or requests microphone access.
 @MainActor
 final class AudioEngine: SoundPlaying {
-    private let engine = AVAudioEngine()
+    private let engine: AVAudioEngine
     private let voices = (0..<8).map { _ in AVAudioPlayerNode() }
     private var buffers: [SoundID: AVAudioPCMBuffer] = [:]
     private var builtInBuffers: [SoundID: AVAudioPCMBuffer] = [:]
@@ -39,7 +39,8 @@ final class AudioEngine: SoundPlaying {
     private var configurationObserver: AnyCancellable?
     private(set) var status = "Sound effects ready."
 
-    init(offline: Bool = false, idleDelay: Duration = .seconds(2)) throws {
+    init(offline: Bool = false, idleDelay: Duration = .seconds(2), engine: AVAudioEngine = AVAudioEngine()) throws {
+        self.engine = engine
         self.idleDelay = idleDelay
         let mono = AVAudioFormat(standardFormatWithSampleRate: BuiltInSounds.sampleRate, channels: 1)!
         for voice in voices {
@@ -60,6 +61,9 @@ final class AudioEngine: SoundPlaying {
         }
         engine.mainMixerNode.outputVolume = settings.gain
         configurationObserver = NotificationCenter.default.publisher(for: .AVAudioEngineConfigurationChange, object: engine)
+            // The engine posts on its internal queue. Hop before entering an actor-isolated sink.
+            // Delivery must be asynchronous: stopping the engine on that queue can deadlock.
+            .receive(on: DispatchQueue.main)
             .sink { [weak self] _ in
                 Task { @MainActor [weak self] in
                     self?.stop()

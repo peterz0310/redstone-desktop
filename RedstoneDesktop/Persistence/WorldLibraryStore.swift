@@ -19,7 +19,7 @@ struct WorldLibraryStore: WorldLibraryStoring {
 
     func load() throws -> WorldLibraryDocument? {
         let data: Data
-        do { data = try Data(contentsOf: fileURL) }
+        do { data = try BoundedFileReader.read(fileURL, maximumBytes: Self.maximumBytes) }
         catch let error as NSError where error.domain == NSCocoaErrorDomain && error.code == NSFileReadNoSuchFileError {
             guard let legacy = try WorldStore(fileURL: legacyFileURL).load() else { return nil }
             let library = try WorldLibraryDocument(legacy: legacy)
@@ -40,12 +40,19 @@ struct WorldLibraryStore: WorldLibraryStoring {
         return library
     }
 
+    /// One encoding contract for edits, disk saves, exports and imports. Callers validate structure separately.
+    static func encodedData(_ document: WorldLibraryDocument, maximumBytes limit: Int = maximumBytes) throws -> Data {
+        let encoder = JSONEncoder(); encoder.outputFormatting = [.prettyPrinted, .sortedKeys]
+        let data = try encoder.encode(document)
+        guard data.count <= limit else {
+            throw WorldStoreError.invalidDocument("This change would exceed the 2 MB library limit. Remove unused worlds or restore painted terrain to make room.")
+        }
+        return data
+    }
+
     func save(_ document: WorldLibraryDocument) throws {
         try document.validate()
-        let encoder = JSONEncoder()
-        encoder.outputFormatting = [.prettyPrinted, .sortedKeys]
-        let data = try encoder.encode(document)
-        guard data.count <= Self.maximumBytes else { throw WorldStoreError.invalidDocument("Library exceeds the 2 MB limit.") }
+        let data = try Self.encodedData(document)
         try FileManager.default.createDirectory(at: fileURL.deletingLastPathComponent(), withIntermediateDirectories: true)
         try data.write(to: fileURL, options: .atomic)
     }

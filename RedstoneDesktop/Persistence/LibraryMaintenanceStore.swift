@@ -31,7 +31,7 @@ struct LibraryMaintenanceStore {
         guard journal.standardizedFileURL == journal.resolvingSymlinksInPath().standardizedFileURL else {
             throw MaintenanceError(message: "Reset recovery journal is linked; automatic recovery refused.")
         }
-        let data = try Data(contentsOf: journal)
+        let data = try BoundedFileReader.read(journal, maximumBytes: 4096)
         guard data.count <= 4096,
               let record = try JSONSerialization.jsonObject(with: data) as? [String: String],
               record["root"] == root.standardizedFileURL.path,
@@ -44,7 +44,7 @@ struct LibraryMaintenanceStore {
               root.standardizedFileURL == root.resolvingSymlinksInPath().standardizedFileURL else {
             throw MaintenanceError(message: "Linked reset recovery paths; automatic recovery refused.")
         }
-        let saved = try Data(contentsOf: backup.appendingPathComponent("preferences.plist"))
+        let saved = try BoundedFileReader.read(backup.appendingPathComponent("preferences.plist"), maximumBytes: 16 * 1024 * 1024)
         guard saved.count <= 16 * 1024 * 1024,
               let preferences = try PropertyListSerialization.propertyList(from: saved, format: nil) as? [String: Any] else {
             throw MaintenanceError(message: "Reset preferences backup is invalid. Original data retained at \(backup.path).")
@@ -115,7 +115,7 @@ struct LibraryMaintenanceStore {
         let backupLibrary = WorldLibraryStore(fileURL: backup.appendingPathComponent("library.json"), legacyFileURL: backup.appendingPathComponent("unused-legacy.json"))
         try backupLibrary.save(library)
         try prefData.write(to: backup.appendingPathComponent("preferences.plist"), options: .atomic)
-        let validatedPreferences = try PropertyListSerialization.propertyList(from: Data(contentsOf: backup.appendingPathComponent("preferences.plist")), format: nil) as? [String: Any]
+        let validatedPreferences = try PropertyListSerialization.propertyList(from: BoundedFileReader.read(backup.appendingPathComponent("preferences.plist"), maximumBytes: 16 * 1024 * 1024), format: nil) as? [String: Any]
         guard try backupLibrary.load() == library, let validatedPreferences,
               NSDictionary(dictionary: validatedPreferences) == NSDictionary(dictionary: preferences) else {
             throw MaintenanceError(message: "Backup validation failed. Nothing replaced.")

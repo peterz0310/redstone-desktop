@@ -72,6 +72,29 @@ final class AudioTests: XCTestCase {
         XCTAssertTrue(Array(UnsafeBufferPointer(start: silent.floatChannelData![0], count: Int(silent.frameLength))).allSatisfy { abs($0) < 0.0001 })
     }
     @MainActor
+    func testBackgroundDeviceChangeStopsOfflineGraphAndNextEffectRecovers() async throws {
+        let graph = AVAudioEngine()
+        let audio = try AudioEngine(offline: true, idleDelay: .seconds(60), engine: graph)
+        defer { audio.stop() }
+        audio.play(.buttonPress)
+        XCTAssertTrue(audio.isRunning)
+        let reference = AudioNotificationObject(graph)
+        await Task.detached {
+            NotificationCenter.default.post(name: .AVAudioEngineConfigurationChange, object: reference.value)
+        }.value
+        for _ in 0..<100 {
+            if audio.status.contains("Audio device changed") { break }
+            try await Task.sleep(for: .milliseconds(10))
+        }
+        XCTAssertTrue(audio.status.contains("Audio device changed"))
+        XCTAssertFalse(audio.isRunning)
+        audio.play(.leverToggleOn)
+        let rendered = try audio.renderOffline(frames: 2048)
+        XCTAssertTrue(Array(UnsafeBufferPointer(start: rendered.floatChannelData![0], count: Int(rendered.frameLength))).contains { abs($0) > 0.001 })
+        XCTAssertEqual(audio.status, "Sound effects ready.")
+    }
+
+    @MainActor
     func testPlacementRemovalAndInvalidPlacementPlayOnlyCorrespondingEffects() {
         let player = RecordingSoundPlayer()
         let state = AppState(soundPlayer: player)
@@ -127,4 +150,10 @@ final class AudioTests: XCTestCase {
 @MainActor
 private final class EmptyAudioProvider: DesktopItemProviding {
     func currentDesktopItems() async throws -> [DesktopItem] { [] }
+}
+
+/// Only the immutable notification identity crosses executors; graph operations stay on MainActor.
+private final class AudioNotificationObject: @unchecked Sendable {
+    let value: AVAudioEngine
+    init(_ value: AVAudioEngine) { self.value = value }
 }

@@ -27,7 +27,7 @@ struct WorldStore: WorldStoring {
 
     func load() throws -> LegacyWorldDocument? {
         let data: Data
-        do { data = try Data(contentsOf: fileURL) }
+        do { data = try BoundedFileReader.read(fileURL, maximumBytes: 2_000_000) }
         catch let error as NSError where error.domain == NSCocoaErrorDomain && error.code == NSFileReadNoSuchFileError { return nil }
         guard data.count <= 2_000_000 else { throw WorldStoreError.invalidDocument("World document is too large.") }
         let document = try JSONDecoder().decode(LegacyWorldDocument.self, from: data)

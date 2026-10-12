@@ -22,7 +22,9 @@ Desktop pressure plates and file sensors consume mapped occupancy snapshots thro
 
 ## Persistence and UI
 
-`WorldLibraryDocument` validates references, IDs, terrain and component configuration. Publication follows successful durable commits for library management operations. Import validates a bounded JSON file, copies IDs and appends worlds/areas transactionally; it never restores permissions, scripts or imported assets and never changes the current desktop assignment. Reset is backed up and staged, with failure/rollback handling; see [RECOVERY.md](RECOVERY.md).
+`WorldLibraryDocument` validates references, IDs, terrain and component configuration. Every proposed edit checks the whole library against the shared pretty-printed 2,000,000-byte encoding contract before model/history/runtime publication. Circuit placement, paste, desktop strokes, lever changes and world/area metadata use this boundary; rejection preserves the prior pending snapshot. `BoundedFileReader` checks an opened regular-file descriptor and caps chunk reads, including legacy saves, imports, blueprints and reset journal/preferences recovery. Publication follows successful durable commits for library management operations. Import validates a bounded JSON file, copies IDs and appends worlds/areas transactionally; it never restores permissions, scripts or imported assets and never changes the current desktop assignment. Reset is backed up and staged, with failure/rollback handling; see [RECOVERY.md](RECOVERY.md).
+
+`AppStartup.state` supplies the same isolated-or-production state to SwiftUI and `AppTerminationDelegate`. Public AppKit deferred termination handles failed saves before Quit; cancellation leaves pending data and the desktop runtime intact. Recovery snapshots are atomic and verified independently of the failing store. A successful reset discards its old writer, so deferred termination cannot resurrect old data. See [RECOVERY.md](RECOVERY.md).
 
 Live pointer, rendering and power updates should not rebuild menu trees. `MenuPresentation` publishes only changes to its equatable menu snapshot. The root app owns the AppState reference without subscribing all scenes to every runtime update; each screen observes the state it needs. Selection loading does not write component settings; user picker changes save immediately.
 
@@ -33,6 +35,8 @@ Blueprint previews are cached, bounded AppKit images mapped through CoordinateMa
 ## Assets and verification
 
 Original assets provide a complete fallback. Local Java/custom packs are bounded image/audio data, not executable content. Imported world assets remain outside the repository and app bundles. App/menu/Dust-tool identity comes from the owner-provided logo; other toolbar icons use native system symbols. No game-derived artwork is shipped. Logo provenance is in [artwork notices](../THIRD_PARTY_NOTICES.md). Keep all imported world textures, particles and audio local.
+
+Audio configuration notifications are scheduled onto the main queue before entering an actor-isolated Combine sink. Engine teardown never runs synchronously on the engine notification queue. Scenes attach owned layers once after initialization; size/camera updates replace only checker geometry and preserve editor overlays. Failed custom-pack replacements retain the current pack, textures, sounds, source and saved preference.
 
 Add meaningful automated coverage for behavior changes, build, and run the full suite. Keep physical validation separate in [TESTING.md](TESTING.md), including untested backup/reset, multi-display and distribution gates. Test hosts, reset harnesses and profiling must never use the owner’s production save/preferences. The retired implementation roadmap is available in Git history.
 
