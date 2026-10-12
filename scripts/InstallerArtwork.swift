@@ -17,7 +17,7 @@ arrow.move(to: NSPoint(x: 305, y: 200)); arrow.line(to: NSPoint(x: 370, y: 200))
 arrow.move(to: NSPoint(x: 357, y: 212)); arrow.line(to: NSPoint(x: 370, y: 200)); arrow.line(to: NSPoint(x: 357, y: 188))
 arrow.lineWidth = 3; arrow.lineCapStyle = .round; arrow.lineJoinStyle = .round
 NSColor(calibratedRed: 0.25, green: 0.49, blue: 0.37, alpha: 1).setStroke(); arrow.stroke()
-text("A little redstone world beneath your files.", y: 44, font: .systemFont(ofSize: 14), color: NSColor(calibratedWhite: 0.34, alpha: 1))
+text("A redstone world beneath your files.", y: 44, font: .systemFont(ofSize: 14), color: NSColor(calibratedWhite: 0.34, alpha: 1))
 image.unlockFocus()
 guard CommandLine.arguments.count == 2,
       let tiff = image.tiffRepresentation, let bitmap = NSBitmapImageRep(data: tiff),

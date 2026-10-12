@@ -38,9 +38,6 @@ struct AssetSettingsView: View {
                 JavaAssetImportView(assets: assets)
                 DisclosureGroup("More options & custom packs") {
                     VStack(alignment: .leading, spacing: 12) {
-                        Button("Look for Installed Versions Again") { Task { await assets.discoverJava() } }
-                        Text(assets.discoveryStatus).font(.caption)
-                        Divider()
                         HStack {
                             Text("Redstone Desktop packs").font(.headline)
                             HelpButton(title: "Custom packs", text: "These are packs made specifically for Redstone Desktop, with a pack.json file, PNG textures and optional WAV effects. For normal Minecraft packs, use Choose a Texture Pack above. Use Original Look to return to the built-in textures and sounds.")

@@ -12,17 +12,23 @@ enum JavaInstallation {
     }
     static func discover(in directory: URL = defaultVersionsDirectory) throws -> [InstalledJavaVersion] {
         let folders = try FileManager.default.contentsOfDirectory(at: directory, includingPropertiesForKeys: [.isDirectoryKey], options: [.skipsHiddenFiles])
-        return folders.sorted { $0.lastPathComponent < $1.lastPathComponent }.prefix(512).compactMap { folder in
-            guard (try? folder.resourceValues(forKeys: [.isDirectoryKey]).isDirectory) == true else { return nil }
+        // Filter unrelated files before the bound, and inspect the newest versions first.
+        return folders.filter { (try? $0.resourceValues(forKeys: [.isDirectoryKey]).isDirectory) == true }
+            .sorted { comesBefore($0.lastPathComponent, $1.lastPathComponent) }.prefix(512).compactMap { folder in
             let jar = folder.appendingPathComponent(folder.lastPathComponent + ".jar")
             guard let values = try? jar.resourceValues(forKeys: [.isRegularFileKey, .isSymbolicLinkKey, .fileSizeKey]),
                   values.isRegularFile == true, values.isSymbolicLink != true,
-                  let size = values.fileSize, size >= 22, size <= 256 * 1024 * 1024 else { return nil }
+                  let size = values.fileSize, size >= 22, size <= 256 * 1024 * 1024,
+                  FileManager.default.isReadableFile(atPath: jar.path) else { return nil }
             return InstalledJavaVersion(name: folder.lastPathComponent, url: jar)
         }.sorted {
-            if $0.name.hasPrefix("1.") != $1.name.hasPrefix("1.") { return $0.name.hasPrefix("1.") }
-            return $0.name.compare($1.name, options: .numeric) == .orderedDescending
+            comesBefore($0.name, $1.name)
         }
+    }
+    private static func comesBefore(_ lhs: String, _ rhs: String) -> Bool {
+        if lhs.hasPrefix("1.") != rhs.hasPrefix("1.") { return lhs.hasPrefix("1.") }
+        let order = lhs.compare(rhs, options: .numeric)
+        return order == .orderedSame ? lhs < rhs : order == .orderedDescending
     }
 }
 

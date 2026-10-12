@@ -28,7 +28,7 @@ Use the cards beneath the editor to switch worlds or areas. Save a new view or u
 - **Select:** drag around a group. Copy, paste and undo work when the map has keyboard focus.
 - **Terrain:** paint ground or decorations. Restore generated terrain to remove your edits.
 - **Build:** pick a component and click to place it. Drag Dust to draw a wire. Erase removes components.
-- **Inspector:** change the selected component’s settings. Valid changes save automatically. Hover a repeater and press **R** to rotate it or **T** to change its delay.
+- **Inspector:** change the selected component’s settings. Most changes save automatically; sensor filters use **Save**. Hover a repeater and press **R** to rotate it or **T** to change its delay.
 - **Blueprints:** browse ready-made circuits, place one, or save a selection for reuse. Example Outputs start with **Do nothing**; choose an action when you’re ready.
 
 Right-click for relevant actions such as delete, rotate or changing a sensor’s detection source. Tools explain themselves on hover and beneath the selected tool.
@@ -43,7 +43,9 @@ An Output acts when its power turns on. Holding it powered does not repeat the a
 
 ### Pressure plates and file sensors
 
-A wooden plate detects **Any item** on its tile. A stone plate detects an exact item name or a file extension. Set the filter in Inspector, or right-click the component for detection options. Names and extensions ignore case; name matching includes the actual filename extension. Extension filters exclude folders, apps and Finder aliases.
+A wooden plate detects **Any item** on its tile. A stone plate detects an exact item name or one of several file extensions. Set the filter in Inspector, then press **Save** or Return. Changes stay as a draft until saved. Right-click the component for detection options.
+
+For **File extension**, enter a comma-separated list such as `pdf, png, jpg`. Spaces around entries and leading dots are accepted, and matching ignores case. A file matching any listed extension activates the sensor; folders, apps and Finder aliases are excluded. Empty entries cannot be saved. **Item name** matches one full filename, including its extension; commas in that mode are part of the name.
 
 Detection uses the Finder icon’s center. Any matching item keeps the plate powered. Finder updates can take a moment after moving an icon. In Test Circuit, click a plate or sensor to simulate detection.
 
@@ -63,9 +65,9 @@ Outputs need exactly one current item on the visible tile. Empty or overlapping 
 
 ## Textures and sounds
 
-The original look works without Minecraft. To use your own Java Edition assets, open **Settings → Appearance**, choose an installed Minecraft version and click **Use Minecraft Assets**. Setup offers this too.
+The original look works without Minecraft. To use your own Java Edition assets, open **Settings → Appearance**, choose an installed Minecraft version and click **Use Minecraft Assets**. Setup offers this too. Both screens automatically check Minecraft’s usual macOS versions folder and select the newest detected version. **Refresh** checks again after installing or launching a version, while keeping your selection if it is still available. Installing the launcher alone may not download a version’s assets; launch that version first.
 
-**Choose a Texture Pack…** accepts a local Java version JAR, Java pack ZIP, or unpacked pack folder. For another launcher location, choose its JAR manually. A folder needs `assets/minecraft/textures/` or supported sound paths. Bedrock packs, mods, shaders and custom models aren’t supported.
+**Choose a Texture Pack or JAR…** accepts a local Java version JAR, Java pack ZIP, or unpacked pack folder. For another launcher location, choose its JAR manually. A folder needs `assets/minecraft/textures/` or supported sound paths. Bedrock packs, mods, shaders and custom models aren’t supported.
 
 Supported terrain, circuit, particle and short sound assets are converted into a local cache. Installed-version sounds need the launcher’s asset cache. Missing assets use the original artwork or effects. Check **Import details** for skipped files. Water and lava can use their Java animations; other animated textures use their first frame. The app never downloads assets or executes game or pack code.
 

@@ -5,7 +5,7 @@
 
 # Redstone Desktop
 
-Turn your Mac desktop into a little redstone world. Build a circuit beneath your files, press a button, and open a folder — or make lights, clocks and useful desktop automations.
+Turn your Mac desktop into a redstone world. Build a circuit beneath your files, press a button, and open a folder — or make lights, clocks and useful desktop automations.
 
 Your files stay in Finder, right where you left them. Everything runs locally. No account or Minecraft installation is required.
 

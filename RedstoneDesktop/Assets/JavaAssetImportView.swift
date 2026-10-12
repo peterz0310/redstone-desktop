@@ -11,23 +11,29 @@ struct JavaAssetImportView: View {
         VStack(alignment: .leading, spacing: 12) {
             HStack {
                 Text("Minecraft textures & sounds").font(.headline)
-                HelpButton(title: "Textures from your game", text: "Choose an installed Minecraft Java Edition version or a Java texture pack. Redstone Desktop copies supported textures, particles and short sounds into its own cache. It never runs game code or changes your installation. Missing assets use the original look and sounds. Nothing is downloaded.")
+                HelpButton(title: "Textures from your game", text: "Downloaded Minecraft Java versions in the usual Minecraft folder appear automatically. Use Refresh after installing or launching a version. For another launcher location, use Choose a Texture Pack or JAR. Redstone Desktop copies supported textures and short sounds without changing your installation or running game code. Missing assets use the original look and sounds.")
             }
             Text("Have Minecraft Java Edition? Bring its look and sounds into your desktop. Or keep the original artwork — no game installation is needed.")
                 .foregroundStyle(.secondary)
-            Picker("Minecraft version", selection: $selectedVersion) {
-                Text("Choose a version").tag(Optional<URL>.none)
-                ForEach(assets.installedVersions) { version in Text(version.name).tag(Optional(version.url)) }
+            HStack {
+                Picker("Minecraft version", selection: $selectedVersion) {
+                    Text("Choose a version").tag(Optional<URL>.none)
+                    ForEach(assets.installedVersions) { version in Text(version.name).tag(Optional(version.url)) }
+                }.disabled(assets.isDiscoveringJava || assets.isLoading)
+                Button("Refresh") { Task { await assets.discoverJava() } }
+                    .disabled(assets.isDiscoveringJava || assets.isLoading)
+                    .help("Look again for downloaded Minecraft Java versions.")
             }
             HStack {
                 Button("Use Minecraft Assets") {
                     if let selectedVersion { Task { await assets.importJava(selectedVersion) } }
-                }.buttonStyle(.borderedProminent).disabled(selectedVersion == nil || assets.isLoading)
+                }.buttonStyle(.borderedProminent).disabled(selectedVersion == nil || assets.isLoading || assets.isDiscoveringJava)
                 Button("Choose a Texture Pack or JAR…") { choosingJava = true }.disabled(assets.isLoading)
             }
-            if assets.installedVersions.isEmpty {
-                Text("No installed versions found. You can choose a Java texture pack or game JAR instead, or come back later.")
-                    .font(.caption).foregroundStyle(.secondary)
+            if assets.isDiscoveringJava {
+                ProgressView("Looking for installed versions…").controlSize(.small)
+            } else if !assets.discoveryStatus.isEmpty {
+                Text(assets.discoveryStatus).font(.caption).foregroundStyle(.secondary)
             }
             if assets.isLoading { ProgressView("Getting your assets ready…") }
             Text(assets.status).font(.caption).textSelection(.enabled)

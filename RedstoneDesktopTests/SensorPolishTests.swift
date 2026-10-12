@@ -48,6 +48,34 @@ final class SensorPolishTests: XCTestCase {
         XCTAssertEqual(app.library, before); XCTAssertFalse(app.finderDiagnostics.hasRead)
     }
 
+    @MainActor func testSavingExtensionListsIsUndoableInEditorAndDesktopAndRejectsInvalidLists() throws {
+        let app = app(); defer { app.shutdown() }
+        XCTAssertEqual(app.placeCircuitComponent(CircuitComponent(kind: .fileSensor), at: tile), .allowed)
+        let filter = FileSensorFilter(match: .fileExtension, value: "pdf, .PNG")
+        XCTAssertTrue(app.configureFileSensor(at: tile, filter: filter))
+        let saved = app.library
+        XCTAssertFalse(app.configureFileSensor(at: tile, filter: FileSensorFilter(match: .fileExtension, value: "pdf,")))
+        XCTAssertEqual(app.library, saved)
+        XCTAssertTrue(app.undoCircuit())
+        XCTAssertEqual(app.editorWorld.circuit.components[tile]?.sensorFilter, FileSensorFilter())
+        XCTAssertTrue(app.undoCircuit(redo: true))
+        XCTAssertEqual(app.editorWorld.circuit.components[tile]?.sensorFilter, filter)
+        XCTAssertTrue(app.enterDesktopBuildMode())
+        let desktopFilter = FileSensorFilter(match: .fileExtension, value: "txt, md")
+        app.configureBuildFileSensor(at: tile, filter: desktopFilter)
+        XCTAssertEqual(app.desktopWorld.circuit.components[tile]?.sensorFilter, desktopFilter)
+        XCTAssertEqual(app.selectedDocument.circuit.components[tile]?.sensorFilter, desktopFilter)
+        let desktopSaved = app.library
+        app.configureBuildFileSensor(at: tile, filter: FileSensorFilter(match: .fileExtension, value: "txt,,md"))
+        XCTAssertEqual(app.library, desktopSaved)
+        let reopened = try LibraryImport.decode(JSONEncoder().encode(app.library))
+        XCTAssertEqual(reopened.worlds.first?.circuit.components[tile]?.sensorFilter, desktopFilter)
+        app.exitDesktopBuildMode()
+        XCTAssertTrue(app.undoCircuit())
+        XCTAssertEqual(app.editorWorld.circuit.components[tile]?.sensorFilter, filter)
+        XCTAssertNil(app.activationTask); XCTAssertFalse(app.finderDiagnostics.hasRead)
+    }
+
     @MainActor func testContextShortcutsOpenCorrectDraftAndAnyItemSavesWithoutActions() throws {
         let app = app(), editor = EditorSession(); defer { app.shutdown() }
         XCTAssertEqual(app.placeCircuitComponent(CircuitComponent(kind: .pressurePlate), at: tile), .allowed)

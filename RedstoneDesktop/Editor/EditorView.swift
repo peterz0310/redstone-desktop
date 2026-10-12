@@ -201,7 +201,7 @@ struct EditorView: View {
                     .disabled(editor.isPreviewing(appState) || editor.circuitTest != nil || appState.isEditorConfigurationLocked)
             }
             if editor.tool == .pressurePlate || editor.tool == .fileSensor {
-                HelpButton(title: "Desktop detectors", text: "A plate holds power while a Finder item is on its tile. A sensor can match an item name or a file extension. Icon centers determine the tile; automatic Finder refresh detects changes about twice a second. Empty or unavailable readings turn detectors off. In Test Circuit, click detectors to toggle simulated detection without moving files.")
+                HelpButton(title: "Desktop detectors", text: "A plate holds power while a Finder item is on its tile. A sensor can match an item name or a comma-separated list of file extensions, such as pdf, png, jpg. Press Save to apply its filter. Icon centers determine the tile; Finder refresh detects changes about twice a second. Empty or unavailable readings turn detectors off. In Test Circuit, click detectors to toggle simulated detection without moving files.")
             }
             Divider()
             selectionControls

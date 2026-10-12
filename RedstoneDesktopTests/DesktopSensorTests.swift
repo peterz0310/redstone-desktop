@@ -37,6 +37,51 @@ final class DesktopSensorTests: XCTestCase {
         }
         XCTAssertTrue(FileSensorFilter(match: .exactName, value: ".hidden").isValid)
     }
+    func testExtensionListsMatchAnyEntryIgnoringCaseSpacesAndLeadingDots() {
+        let filter = FileSensorFilter(match: .fileExtension, value: " .PDF, png , .JpG, pdf ")
+        XCTAssertTrue(filter.isValid)
+        for name in ["Report.pdf", "photo.PNG", "photo.jpg"] { XCTAssertTrue(filter.matches(item(name)), name) }
+        for name in ["notes.txt", "pdf", "image.jpeg", "report.pdf.txt"] { XCTAssertFalse(filter.matches(item(name)), name) }
+        for kind in [DesktopItemKind.folder, .application, .alias, .unknown] {
+            XCTAssertFalse(filter.matches(item("report.pdf", kind: kind)))
+        }
+    }
+    func testExtensionListsRejectEmptyEntriesControlsAndOversizedDrafts() {
+        for value in ["", ",", "pdf,", ",png", "pdf,,png", "pdf,  ,png", "pdf,.", "pdf,\n png", "pdf,\t png", String(repeating: "é", count: 128)] {
+            let filter = FileSensorFilter(match: .fileExtension, value: value)
+            XCTAssertFalse(filter.isValid, value)
+            XCTAssertFalse(filter.matches(item("report.pdf")), value)
+        }
+        let filename = FileSensorFilter(match: .exactName, value: "Report, final.PDF")
+        XCTAssertTrue(filename.matches(item("report, FINAL.pdf")), "Item names retain literal commas")
+        XCTAssertFalse(filename.matches(item("Report.PDF")))
+    }
+    func testExtensionListsPersistInWorldsAndBlueprintsAndPreserveSingleExtensionSaves() throws {
+        let old = Data(#"{"kind":"fileSensor","direction":"east","sensorFilter":{"match":"fileExtension","value":"pdf"}}"#.utf8)
+        XCTAssertTrue(try JSONDecoder().decode(CircuitComponent.self, from: old).sensorFilter.matches(item("report.PDF")))
+        let filter = FileSensorFilter(match: .fileExtension, value: "pdf, .PNG, jpg")
+        var document = WorldDocument(name: "Extension list", terrainProfile: .legacyFixtureV1)
+        document.circuit.components[p(16)] = CircuitComponent(kind: .fileSensor, sensorFilter: filter)
+        let restored = try JSONDecoder().decode(WorldDocument.self, from: JSONEncoder().encode(document)).restoredWorld()
+        XCTAssertEqual(restored.circuit.components[p(16)]?.sensorFilter, filter)
+        XCTAssertTrue(restored.circuit.components[p(16)]!.sensorFilter.matches(item("image.png")))
+        let blueprint = try CircuitBlueprint.capture(name: "Extensions", components: document.circuit.components)
+        let decoded = try JSONDecoder().decode(CircuitBlueprint.self, from: JSONEncoder().encode(blueprint)).rotatedClockwise()
+        XCTAssertEqual(decoded.circuit.components.values.first?.sensorFilter, filter)
+        document.circuit.components[p(16)]?.sensorFilter.value = "pdf,"
+        XCTAssertThrowsError(try document.restoredWorld())
+    }
+    func testExtensionListOccupancyKeepsPowerWhenReplacingWithAnotherMatchingType() {
+        let world = CircuitWorld(components: [p(16): CircuitComponent(kind: .fileSensor, sensorFilter: FileSensorFilter(match: .fileExtension, value: "pdf, png")), p(17): CircuitComponent(kind: .dust), p(18): CircuitComponent(kind: .output)])
+        var simulator = CircuitSimulator(world: world)
+        for (index, names) in [["notes.txt", "report.pdf"], ["image.PNG"], ["notes.txt"], ["image.png"]].enumerated() {
+            let occupancy = DesktopOccupancySnapshot.available([p(16): DesktopOccupancy(coordinate: p(16), items: names.map { item($0) })])
+            simulator.setDesktopSensors(DesktopSensorInputs.active(in: world, occupancy: occupancy))
+            let events = simulator.advanceTick()
+            XCTAssertEqual(events, index == 0 || index == 3 ? [.outputActivated(p(18))] : [])
+            XCTAssertEqual(simulator.power(at: p(16)), index == 2 ? .off : .full)
+        }
+    }
     func testMappedOccupancySupportsMultipleItemsAndUnavailableFailsOff() {
         let world = CircuitWorld(components: [p(16): CircuitComponent(kind: .pressurePlate), p(17): CircuitComponent(kind: .fileSensor, sensorFilter: FileSensorFilter(match: .fileExtension, value: "pdf"))])
         let occupancy = DesktopOccupancySnapshot.available([

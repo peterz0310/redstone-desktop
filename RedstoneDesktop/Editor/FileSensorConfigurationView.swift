@@ -1,6 +1,6 @@
 import SwiftUI
 
-/// Valid drafts save immediately. An unfinished name never replaces the stored filter.
+/// Editing remains a draft until Save or Return; invalid drafts never replace the stored filter.
 struct FileSensorConfigurationView: View {
     let filter: FileSensorFilter
     let save: (FileSensorFilter) -> Void
@@ -17,12 +17,26 @@ struct FileSensorConfigurationView: View {
                 ForEach(FileSensorMatch.allCases, id: \.self) { Text($0.title).tag($0) }
             }
             if draft.match != .anyItem {
-                TextField(draft.match == .fileExtension ? "Extension, e.g. pdf" : "Full name, e.g. Notes.txt", text: $draft.value)
+                TextField(draft.match == .fileExtension ? "Extensions, e.g. pdf, png, jpg" : "Full name, e.g. Notes.txt", text: $draft.value)
                     .textFieldStyle(.roundedBorder)
-                if !draft.isValid { Text("Enter a name or extension to save this filter.").font(.caption).foregroundStyle(.secondary) }
+                    .onSubmit { saveDraft() }
+                if draft.match == .fileExtension {
+                    Text("Separate extensions with commas. Any listed type matches.").font(.caption).foregroundStyle(.secondary)
+                }
+                if !draft.isValid {
+                    Text(draft.value.utf8.count > 255 ? "This filter is too long." : draft.match == .fileExtension ? "Enter an extension between each comma." : "Enter an item name to save.")
+                        .font(.caption).foregroundStyle(.secondary)
+                }
+            }
+            HStack {
+                Button("Save") { saveDraft() }.disabled(!draft.isValid || draft == filter)
+                Text(draft == filter ? "Saved" : "Unsaved changes").font(.caption).foregroundStyle(.secondary)
             }
         }
-        .onChange(of: draft) { _, value in if value.isValid, value != filter { save(value) } }
         .onChange(of: filter) { _, value in if draft != value { draft = value } }
+    }
+    private func saveDraft() {
+        guard draft.isValid, draft != filter else { return }
+        save(draft)
     }
 }

@@ -22,6 +22,78 @@ final class JavaTextureImportTests: XCTestCase {
         XCTAssertEqual(try FileManager.default.contentsOfDirectory(atPath: root.path).count, 3)
         XCTAssertThrowsError(try JavaInstallation.discover(in: root.appendingPathComponent("missing")))
     }
+    func testDiscoverySkipsIncompleteLinkedDirectoryAndOversizedJars() throws {
+        let root = try temporary(), bytes = try Data(contentsOf: Self.fixture)
+        for version in ["1.21.10", "missing", "short", "linked", "directory", "oversized"] {
+            try FileManager.default.createDirectory(at: root.appendingPathComponent(version), withIntermediateDirectories: true)
+        }
+        try bytes.write(to: root.appendingPathComponent("1.21.10/1.21.10.jar"))
+        try Data("partial download".utf8).write(to: root.appendingPathComponent("short/short.jar"))
+        try FileManager.default.createSymbolicLink(at: root.appendingPathComponent("linked/linked.jar"), withDestinationURL: Self.fixture)
+        try FileManager.default.createDirectory(at: root.appendingPathComponent("directory/directory.jar"), withIntermediateDirectories: true)
+        let oversized = root.appendingPathComponent("oversized/oversized.jar")
+        try Data().write(to: oversized)
+        let file = try FileHandle(forWritingTo: oversized)
+        try file.truncate(atOffset: 256 * 1024 * 1024 + 1); try file.close()
+        XCTAssertEqual(try JavaInstallation.discover(in: root).map(\.name), ["1.21.10"])
+    }
+    func testDiscoveryLimitPrefersNewestVersionsAndDoesNotCountUnrelatedFiles() throws {
+        let root = try temporary(), bytes = try Data(contentsOf: Self.fixture)
+        for index in 0..<600 { try Data().write(to: root.appendingPathComponent("unrelated-\(index)")) }
+        for version in (0..<513).map({ "1.0.\($0)" }) + ["1.21.10"] {
+            let folder = root.appendingPathComponent(version)
+            try FileManager.default.createDirectory(at: folder, withIntermediateDirectories: true)
+            try bytes.write(to: folder.appendingPathComponent(version + ".jar"))
+        }
+        let versions = try JavaInstallation.discover(in: root)
+        XCTAssertEqual(versions.count, 512)
+        XCTAssertEqual(versions.first?.name, "1.21.10")
+        XCTAssertEqual(versions.last?.name, "1.0.2")
+    }
+    @MainActor
+    func testRefreshFindsNewAndRemovedInstallationsWithoutChangingAppearance() async throws {
+        let root = try temporary(), cache = try temporary(), bytes = try Data(contentsOf: Self.fixture)
+        let library = AssetLibrary(importCacheRoot: cache)
+        await library.load(ResourcePackTests.examples.appendingPathComponent("GrassOnly"))
+        let source = library.source, revision = library.revision, name = library.name
+        await library.discoverJava(in: root)
+        XCTAssertTrue(library.installedVersions.isEmpty)
+        XCTAssertFalse(library.isDiscoveringJava)
+        for version in ["1.9", "1.21.10"] {
+            let folder = root.appendingPathComponent(version)
+            try FileManager.default.createDirectory(at: folder, withIntermediateDirectories: true)
+            try bytes.write(to: folder.appendingPathComponent(version + ".jar"))
+            await library.discoverJava(in: root)
+            XCTAssertEqual(library.installedVersions.first?.name, version)
+            XCTAssertFalse(library.isDiscoveringJava)
+        }
+        try FileManager.default.removeItem(at: root.appendingPathComponent("1.21.10"))
+        await library.discoverJava(in: root)
+        XCTAssertEqual(library.installedVersions.map(\.name), ["1.9"])
+        await library.discoverJava(in: root.appendingPathComponent("missing"))
+        XCTAssertTrue(library.installedVersions.isEmpty)
+        XCTAssertFalse(library.isDiscoveringJava)
+        XCTAssertTrue(library.discoveryStatus.contains("Couldn’t read"))
+        XCTAssertEqual(library.source, source); XCTAssertEqual(library.revision, revision); XCTAssertEqual(library.name, name)
+        XCTAssertNil(library.importRecord)
+        XCTAssertTrue(try FileManager.default.contentsOfDirectory(atPath: cache.path).isEmpty)
+    }
+    @MainActor
+    func testDiscoveryDoesNotScanUserInstallationsInIsolatedTestsOrDuringMaintenance() async throws {
+        let root = try temporary(), library = AssetLibrary()
+        let folder = root.appendingPathComponent("1.21.10")
+        try FileManager.default.createDirectory(at: folder, withIntermediateDirectories: true)
+        try Data(contentsOf: Self.fixture).write(to: folder.appendingPathComponent("1.21.10.jar"))
+        await library.discoverJava()
+        XCTAssertTrue(library.installedVersions.isEmpty); XCTAssertEqual(library.discoveryStatus, "")
+        await library.suspendForMaintenance()
+        await library.discoverJava(in: root)
+        XCTAssertTrue(library.installedVersions.isEmpty); XCTAssertFalse(library.isDiscoveringJava)
+        library.resumeAfterMaintenance()
+        await library.discoverJava(in: root)
+        XCTAssertEqual(library.installedVersions.map(\.name), ["1.21.10"])
+        XCTAssertFalse(library.isDiscoveringJava)
+    }
     func testSyntheticDeflatedJavaArchiveImportsOnlyPNGAndPreservesSourceBytes() throws {
         let root = try temporary(), sourceBefore = try Data(contentsOf: Self.fixture)
         let result = try JavaTextureImporter.importTextures(from: Self.fixture, cacheRoot: root)

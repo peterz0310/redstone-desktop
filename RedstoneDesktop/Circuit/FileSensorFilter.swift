@@ -11,8 +11,20 @@ struct FileSensorFilter: Codable, Equatable, Sendable {
     var match: FileSensorMatch = .anyItem
     var value = ""
     var isValid: Bool {
-        value.utf8.count <= 255 && !value.unicodeScalars.contains(where: { $0.value < 32 }) &&
-        (match == .anyItem || !value.trimmingCharacters(in: .whitespacesAndNewlines).trimmingCharacters(in: CharacterSet(charactersIn: ".")).isEmpty)
+        guard value.utf8.count <= 255, !value.unicodeScalars.contains(where: { $0.value < 32 }) else { return false }
+        switch match {
+        case .anyItem: return true
+        case .exactName:
+            return !value.trimmingCharacters(in: .whitespacesAndNewlines).trimmingCharacters(in: CharacterSet(charactersIn: ".")).isEmpty
+        case .fileExtension:
+            let entries = extensions
+            return !entries.isEmpty && entries.allSatisfy { !$0.isEmpty }
+        }
+    }
+    private var extensions: [String] {
+        value.split(separator: ",", omittingEmptySubsequences: false).map {
+            String($0).trimmingCharacters(in: .whitespacesAndNewlines).trimmingCharacters(in: CharacterSet(charactersIn: "."))
+        }
     }
     func matches(_ item: DesktopItem) -> Bool {
         guard isValid else { return false }
@@ -22,7 +34,7 @@ struct FileSensorFilter: Codable, Equatable, Sendable {
         case .exactName: return item.url.lastPathComponent.caseInsensitiveCompare(query) == .orderedSame
         case .fileExtension:
             guard item.kind == .file else { return false }
-            return item.url.pathExtension.caseInsensitiveCompare(query.trimmingCharacters(in: CharacterSet(charactersIn: "."))) == .orderedSame
+            return extensions.contains { item.url.pathExtension.caseInsensitiveCompare($0) == .orderedSame }
         }
     }
 }

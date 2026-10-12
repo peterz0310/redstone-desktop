@@ -83,6 +83,8 @@ final class AssetLibrary: ObservableObject, AssetProvider {
     let importCacheRoot: URL?
     @Published private(set) var installedVersions: [InstalledJavaVersion] = []
     @Published private(set) var discoveryStatus = ""
+    @Published private(set) var isDiscoveringJava = false
+    private var discoveryGeneration = UUID()
     @Published private(set) var importFolder: URL?
     @Published private(set) var importRecord: JavaImportRecord?
     private(set) var terrainResolution = 8
@@ -97,18 +99,20 @@ final class AssetLibrary: ObservableObject, AssetProvider {
     }
 
     func discoverJava(in directory: URL? = nil) async {
-        guard !maintenanceSuspended else { return }
-        let request = generation
+        guard !maintenanceSuspended, !isDiscoveringJava else { return }
         guard importCacheRoot != nil || directory != nil else { return } // Isolated test hosts never scan the owner's installation.
+        discoveryGeneration = UUID(); let request = discoveryGeneration
+        isDiscoveringJava = true
+        defer { if discoveryGeneration == request { isDiscoveringJava = false } }
         let result = await Task.detached { Result { try JavaInstallation.discover(in: directory ?? JavaInstallation.defaultVersionsDirectory) } }.value
-        guard !maintenanceSuspended, generation == request else { return }
+        guard !maintenanceSuspended, discoveryGeneration == request else { return }
         switch result {
         case .success(let versions):
             installedVersions = versions
-            discoveryStatus = versions.isEmpty ? "No installed version JARs found. Choose a local JAR/Java pack manually." : "\(versions.count) local Java versions found. Choose one to import."
+            discoveryStatus = versions.isEmpty ? "No downloaded Minecraft versions found. Launch a version in Minecraft, then refresh, or choose a texture pack or JAR." : "\(versions.count) installed \(versions.count == 1 ? "version" : "versions") found."
         case .failure:
             installedVersions = []
-            discoveryStatus = "Minecraft's usual versions folder was not found/readable. Choose a local JAR/Java pack manually."
+            discoveryStatus = "Couldn’t read Minecraft’s usual installation folder. Launch a version in Minecraft and refresh, or choose a texture pack or JAR."
         }
     }
 
@@ -188,6 +192,7 @@ final class AssetLibrary: ObservableObject, AssetProvider {
     /// Invalidate publication, then wait for cache-writing workers to finish before a reset rename.
     func suspendForMaintenance() async {
         maintenanceSuspended = true; generation = UUID(); isLoading = false
+        discoveryGeneration = UUID(); isDiscoveringJava = false
         while activeImports > 0 {
             // Cancellation cannot turn this quiescence wait into a busy main-actor loop.
             await withCheckedContinuation { continuation in

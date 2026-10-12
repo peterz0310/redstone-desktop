@@ -23,7 +23,7 @@ struct SetupWizardView: View {
                 VStack(alignment: .leading, spacing: 16) {
             switch page {
             case 0:
-                Text("Build little circuits underneath your desktop files. A button can open a folder, launch a file, or run a script you choose.")
+                Text("Build circuits underneath your desktop files. A button can open a folder, launch a file, or run a script you choose.")
                 Text("Keep different builds in separate worlds. Save your favorite places as areas, then choose which area appears on your desktop.")
             case 1:
                 Text("Your files stay right where they are. Connect to Finder so a circuit can find the file or folder sitting on its Output block.")
