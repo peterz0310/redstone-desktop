@@ -10,12 +10,9 @@ import sys
 import zipfile
 import stat
 import re
-import importlib.util
 import os
 
-_spec = importlib.util.spec_from_file_location("check_docs", Path(__file__).with_name("check-docs.py"))
-_docs = importlib.util.module_from_spec(_spec); _spec.loader.exec_module(_docs)
-
+APP_NAME = 'Redstone Desktop.app'
 
 
 def require(condition, message):
@@ -32,8 +29,11 @@ def check_archive_paths(archive):
         key = name.rstrip('/').casefold()
         require(key not in seen, 'Archive has duplicate or case-colliding entries')
         seen.add(key)
-        if stat.S_ISLNK(entry.external_attr >> 16):
-            require(name == 'RedstoneDesktop/Applications' and archive.read(entry) == b'/Applications', 'Archive has an unexpected symbolic link')
+        is_link = stat.S_ISLNK(entry.external_attr >> 16)
+        if name == 'RedstoneDesktop/Applications':
+            require(is_link and archive.read(entry) == b'/Applications', 'Installer Applications shortcut')
+        elif is_link:
+            raise ValueError('Archive has an unexpected symbolic link')
         require(name.startswith(('RedstoneDesktop/', '__MACOSX/')), 'Unexpected archive root')
 
 
@@ -59,20 +59,29 @@ def check_payload_names(names):
         require(item.suffix.lower() not in {'.jar', '.sh', '.command', '.zsh', '.class', '.lua', '.py', '.ogg', '.wav', '.zip'}, 'Source pack/script/audio bundled: ' + name)
 
 
+def check_installer_names(names):
+    """Only the app, install shortcut, and optional Finder presentation files ship."""
+    allowed = {APP_NAME, 'Applications', '.DS_Store', '.background', '.background/background.png', '.fseventsd', '.Trashes'}
+    for name in names:
+        event_metadata = re.fullmatch(r'\.fseventsd/(?:[0-9a-fA-F]{16}|fseventsd-uuid)', name) is not None
+        require(name in allowed or event_metadata or name.startswith(APP_NAME + '/'), 'Unexpected installer content: ' + name)
+    require(any(name.startswith(APP_NAME + '/') for name in names), 'Missing installer app')
+    require('Applications' in names, 'Missing installer shortcut')
+
+
 def validate_package(root):
     root = Path(root)
     link = root / 'Applications'
     require(link.is_symlink() and link.readlink() == Path('/Applications'), 'Installer Applications shortcut')
     names = []
     for path in root.rglob('*'):
-        if path == link: continue
+        if path == link:
+            names.append('Applications'); continue
         require(not path.is_symlink(), 'Unexpected installer symlink')
-        if path.is_file(): names.append(path.relative_to(root).as_posix())
+        names.append(path.relative_to(root).as_posix())
+    check_installer_names(names)
     check_payload_names(names)
-    for name in ['README.md', 'INSTALL.md', 'CHANGELOG.md', 'LICENSE', 'THIRD_PARTY_NOTICES.md', 'docs/RELEASE.md', 'docs/RELEASE_CHECKLIST.md', 'docs/RECOVERY.md', 'docs/TESTING.md', 'docs/KNOWN_LIMITATIONS.md']:
-        require((root / name).is_file() and (root / name).stat().st_size > 0, 'Missing release guide: ' + name)
-    _docs.validate_files(names, lambda name: (root / name).read_bytes())
-    validate(root / 'RedstoneDesktop.app')
+    validate(root / APP_NAME)
 
 
 def validate_dmg(path):
@@ -86,7 +95,7 @@ def validate_dmg(path):
             validate_package(mount)
         finally:
             if attached or os.path.ismount(mount): subprocess.run(['hdiutil', 'detach', str(mount)], check=True, stdout=subprocess.DEVNULL)
-    print('DMG verified: read-only installer, Applications shortcut, documentation and app.')
+    print('DMG verified: read-only installer, Applications shortcut and app.')
 
 def validate(path):
     path = Path(path)
@@ -100,21 +109,22 @@ def validate(path):
     else:
         archive = zipfile.ZipFile(path)
         check_archive_paths(archive)
-        prefix = 'RedstoneDesktop/RedstoneDesktop.app/'
+        prefix = 'RedstoneDesktop/' + APP_NAME + '/'
         names = [name[len(prefix):] for name in archive.namelist() if name.startswith(prefix)]
         read = lambda name: archive.read(prefix + name)
-        for name in ['LICENSE', 'THIRD_PARTY_NOTICES.md', 'README.md', 'INSTALL.md', 'CHANGELOG.md', 'docs/RELEASE_CHECKLIST.md', 'docs/RELEASE.md', 'docs/RECOVERY.md', 'docs/TESTING.md', 'docs/KNOWN_LIMITATIONS.md', 'docs/media/icon-light.png', 'docs/media/icon-dark.png', 'docs/media/circuit-demo.gif', 'docs/media/worlds.png', 'docs/media/lighting.png']:
-            if not archive.read('RedstoneDesktop/' + name):
-                raise ValueError('Missing release guide/notice: ' + name)
-        package_names = [name[len('RedstoneDesktop/'):] for name in archive.namelist() if name.startswith('RedstoneDesktop/') and not name.endswith('/')]
-        check_payload_names(package_names)
-        _docs.validate_files(package_names, lambda name: archive.read('RedstoneDesktop/' + name))
+        package_names = [name[len('RedstoneDesktop/'):] for name in archive.namelist() if name.startswith('RedstoneDesktop/') and name != 'RedstoneDesktop/']
+        try:
+            check_installer_names([name.rstrip('/') for name in package_names])
+            check_payload_names(package_names)
+        except Exception:
+            archive.close(); raise
     try:
         info = plistlib.loads(read('Contents/Info.plist'))
         require(info['CFBundleIdentifier'] == 'org.redstonedesktop.RedstoneDesktop', 'Bundle identity')
         require(info['LSMinimumSystemVersion'] == '14.0', 'Deployment target')
         require(re.fullmatch(r'\d+\.\d+\.\d+', info['CFBundleShortVersionString']) is not None, 'Marketing version')
         require(re.fullmatch(r'\d+(?:\.\d+){0,2}', info['CFBundleVersion']) is not None, 'Build version')
+        require(info['CFBundleName'] == 'Redstone Desktop', 'Display name')
         require(info['CFBundleExecutable'] == 'RedstoneDesktop', 'Executable identity')
         require('MIT' in info.get('NSHumanReadableCopyright', ''), 'Copyright/license metadata')
         require(info['CFBundleIconName'] == 'AppIcon', 'Native app icon')
@@ -128,7 +138,7 @@ def validate(path):
             catalog.write_bytes(read('Contents/Resources/Assets.car'))
             entries = json.loads(subprocess.check_output(['xcrun', 'assetutil', '--info', str(catalog)]))
         asset_names = {entry.get('Name') for entry in entries}
-        require({'Logo', 'MenuLogo', 'AppLogo'}.issubset(asset_names), 'Owner logo identity missing')
+        require({'Logo', 'MenuLogo', 'AppLogo'}.issubset(asset_names), 'App logo missing')
         icon_stacks = [entry for entry in entries if entry.get('Name') == 'AppIcon' and entry.get('AssetType') == 'IconImageStack']
         appearances = {entry.get('Appearance') for entry in icon_stacks}
         require({'NSAppearanceNameAqua', 'NSAppearanceNameDarkAqua'}.issubset(appearances), 'Native light/dark icon variants missing')

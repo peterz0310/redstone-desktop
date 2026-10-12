@@ -2,12 +2,14 @@
 set -euo pipefail
 cd "$(dirname "$0")/.."
 identity=""
+layout=false
 output="$PWD/build/releases"
 while [[ $# -gt 0 ]]; do
   case "$1" in
     --sign) [[ $# -ge 2 && "$2" == "Developer ID Application:"* ]] || { echo 'Use an installed Developer ID Application identity for distribution, not Apple Development.' >&2; exit 2; }; identity="$2"; shift 2 ;;
+    --layout) layout=true; shift ;;
     --output) [[ $# -ge 2 && -n "$2" ]] || { echo 'Missing output directory' >&2; exit 2; }; output="$2"; shift 2 ;;
-    --help) echo 'Usage: scripts/release.sh [--sign "Developer ID Application: Name (TEAM)"] [--output DIRECTORY]'; exit 0 ;;
+    --help) echo 'Usage: scripts/release.sh [--sign "Developer ID Application: Name (TEAM)"] [--output DIRECTORY] [--layout]'; exit 0 ;;
     *) echo "Unknown argument: $1" >&2; exit 2 ;;
   esac
 done
@@ -20,29 +22,53 @@ xcodebuild -project RedstoneDesktop.xcodeproj -scheme RedstoneDesktop -configura
   tail -60 build/release-build.log >&2; exit 1;
 }
 staging=$(mktemp -d "$output/.redstone-release.XXXXXX")
-trap 'rm -rf "$staging"' EXIT
+mount=""
+cleanup() {
+  if [[ -n "$mount" ]] && mountpoint_output=$(hdiutil info) && [[ "$mountpoint_output" == *"$mount"* ]]; then
+    hdiutil detach "$mount" >&2 || { echo "Eject the installer volume at $mount before removing its staging directory." >&2; return; }
+  fi
+  rm -rf "$staging"
+}
+trap cleanup EXIT
 package="$staging/RedstoneDesktop"
 mkdir -p "$package"
-ditto build-release/Build/Products/Release/RedstoneDesktop.app "$package/RedstoneDesktop.app"
-app="$package/RedstoneDesktop.app"
+ditto build-release/Build/Products/Release/RedstoneDesktop.app "$package/Redstone Desktop.app"
+app="$package/Redstone Desktop.app"
 mode="unsigned-review"
 if [[ -n "$identity" ]]; then
   if [[ -d "$app/Contents/Frameworks" ]] && [[ -n "$(ls -A "$app/Contents/Frameworks")" ]]; then
-    echo 'Nested frameworks require inside-out signing/Xcode export; see docs/RELEASE.md.' >&2; exit 1
+    echo 'Nested frameworks require inside-out signing before signing the app.' >&2; exit 1
   fi
   codesign --force --options runtime --timestamp --entitlements RedstoneDesktop/Resources/RedstoneDesktop.entitlements --sign "$identity" "$app"
   codesign --verify --deep --strict --verbose=2 "$app"
   mode="developer-id"
 fi
-cp LICENSE THIRD_PARTY_NOTICES.md README.md INSTALL.md CHANGELOG.md "$package/"
-ditto docs "$package/docs"
 ln -s /Applications "$package/Applications"
 python3 scripts/verify-release.py "$app"
 version=$(/usr/libexec/PlistBuddy -c 'Print :CFBundleShortVersionString' "$app/Contents/Info.plist")
 base="RedstoneDesktop-$version-macOS"
 ditto -c -k --sequesterRsrc --keepParent "$package" "$staging/archive.zip"
 python3 scripts/verify-release.py "$staging/archive.zip"
-hdiutil create -fs HFS+ -volname 'Redstone Desktop' -srcfolder "$package" -format UDZO "$staging/installer.dmg"
+if $layout; then
+  mkdir -p "$package/.background"
+  xcrun swift scripts/InstallerArtwork.swift "$package/.background/background.png"
+  hdiutil create -fs HFS+ -volname 'Redstone Desktop' -srcfolder "$package" -format UDRW "$staging/writable.dmg"
+  mount="$staging/mount"
+  mkdir -p "$mount"
+  hdiutil attach -nobrowse -noautoopen -mountpoint "$mount" "$staging/writable.dmg"
+  # Finder's documented scripting interface writes its own layout metadata.
+  # This option is for a local interactive Mac, not a headless CI runner.
+  if ! osascript scripts/InstallerLayout.applescript "$mount"; then
+    hdiutil detach "$mount"
+    echo 'Finder could not apply the installer layout; see the error above. Retry --layout after resolving it.' >&2
+    exit 1
+  fi
+  sync
+  hdiutil detach "$mount"
+  hdiutil convert "$staging/writable.dmg" -format UDZO -o "$staging/installer.dmg"
+else
+  hdiutil create -fs HFS+ -volname 'Redstone Desktop' -srcfolder "$package" -format UDZO "$staging/installer.dmg"
+fi
 if [[ -n "$identity" ]]; then
   codesign --force --timestamp --sign "$identity" "$staging/installer.dmg"
   codesign --verify --strict --verbose=2 "$staging/installer.dmg"

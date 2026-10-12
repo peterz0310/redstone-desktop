@@ -6,6 +6,7 @@ import SwiftUI
 final class ReleaseMetadataTests: XCTestCase {
     func testBuiltApplicationDeclaresDeploymentTargetAndSpecificPermissionUse() throws {
         let bundle = Bundle.main
+        XCTAssertEqual(bundle.object(forInfoDictionaryKey: "CFBundleName") as? String, "Redstone Desktop")
         XCTAssertEqual(bundle.object(forInfoDictionaryKey: "CFBundleIdentifier") as? String, "org.redstonedesktop.RedstoneDesktop")
         XCTAssertEqual(bundle.object(forInfoDictionaryKey: "LSMinimumSystemVersion") as? String, "14.0")
         XCTAssertTrue(try XCTUnwrap(bundle.object(forInfoDictionaryKey: "NSAppleEventsUsageDescription") as? String).contains("Finder"))
@@ -41,12 +42,14 @@ final class ReleaseMetadataTests: XCTestCase {
             XCTAssertNil(NSImage(named: name), "Retired game-derived icon must not be compiled into the app")
         }
     }
-    func testBuiltApplicationKeepsOwnerLogoNoticeWithoutGameArtworkPacksOrOwnerSaves() throws {
+    func testBuiltApplicationIncludesCurrentLicenseAndExcludesImportsAndUserSaves() throws {
         let root = try XCTUnwrap(Bundle.main.resourceURL)
         let license = try String(contentsOf: root.appendingPathComponent("LICENSE"), encoding: .utf8)
         let notice = try String(contentsOf: root.appendingPathComponent("THIRD_PARTY_NOTICES.md"), encoding: .utf8)
         XCTAssertTrue(license.contains("MIT License"))
-        XCTAssertTrue(notice.contains("No Minecraft artwork")); XCTAssertTrue(notice.contains("2e2cc646437e3d992546e5b32df44ac12d1908875c1d10a15e847febf321f533"))
+        XCTAssertTrue(notice.contains("No Minecraft artwork"))
+        XCTAssertTrue(notice.contains("MIT license"))
+        XCTAssertFalse(notice.contains("previous"))
         let enumerator = try XCTUnwrap(FileManager.default.enumerator(at: root, includingPropertiesForKeys: nil))
         for case let url as URL in enumerator {
             XCTAssertFalse(["jar", "zip", "sh", "command", "zsh", "class", "lua"].contains(url.pathExtension.lowercased()))

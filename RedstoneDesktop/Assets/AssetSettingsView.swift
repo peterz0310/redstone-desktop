@@ -43,7 +43,7 @@ struct AssetSettingsView: View {
                         Divider()
                         HStack {
                             Text("Redstone Desktop packs").font(.headline)
-                            HelpButton(title: "Custom packs", text: "These are packs made specifically for Redstone Desktop, with a pack.json file, PNG textures and optional WAV effects. For normal Minecraft packs, use Choose a Texture Pack above. See docs/RESOURCE_PACKS.md in the source repository if you want to make your own.")
+                            HelpButton(title: "Custom packs", text: "These are packs made specifically for Redstone Desktop, with a pack.json file, PNG textures and optional WAV effects. For normal Minecraft packs, use Choose a Texture Pack above. Use Original Look to return to the built-in textures and sounds.")
                         }
                         Button("Choose Custom Pack Folder or ZIP…") { choosingPack = true }
                         Button("Reload Current Pack") { if let source = assets.source { Task { await assets.load(source) } } }.disabled(assets.source == nil || assets.isLoading)

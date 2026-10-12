@@ -62,6 +62,7 @@ def validate_pack_contract(asset_source, sound_source, guide):
 def validate(root):
     root = Path(root).resolve()
     names = subprocess.check_output(['git', '-C', str(root), 'ls-files', '--cached', '--others', '--exclude-standard'], text=True).splitlines()
+    names = [name for name in names if (root / name).is_file()]
     validate_files(names, lambda name: (root / name).read_bytes())
     validate_pack_contract((root / "RedstoneDesktop/Assets/AssetID.swift").read_text(),
         (root / "RedstoneDesktop/Audio/SoundID.swift").read_text(), (root / "docs/RESOURCE_PACKS.md").read_text())

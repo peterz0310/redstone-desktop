@@ -39,7 +39,7 @@ struct AppSettingsView: View {
                         Button("Center") { appState.previewSound(.buttonPress) }
                         Button("Right") { appState.previewSound(.buttonPress, pan: 1) }
                     }
-                    Menu("Preview Effects") { ForEach(SoundID.allCases, id: \.self) { id in Button(id.rawValue) { appState.previewSound(id) } } }
+                    Menu("Preview Effects") { ForEach(SoundID.allCases, id: \.self) { id in Button(id.displayName) { appState.previewSound(id) } } }
                     Text(appState.audioStatus).font(.caption)
                     Text("Sounds follow your circuit across the screen. Components outside the visible desktop stay quiet.").font(.caption).foregroundStyle(.secondary)
                 }

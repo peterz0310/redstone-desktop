@@ -11,7 +11,7 @@ struct AppHelpView: View {
                     Image("AppLogo").resizable().frame(width: 56, height: 56)
                     VStack(alignment: .leading) {
                         Text("Welcome to Redstone Desktop").font(.title)
-                        Text("Version \(version) · Early preview").foregroundStyle(.secondary)
+                        Text("Version \(version)").foregroundStyle(.secondary)
                     }
                 }
                 section("Your first circuit", symbol: "play.circle") {
@@ -43,7 +43,7 @@ struct AppHelpView: View {
                 section("Your files and privacy", symbol: "lock.shield") {
                     Text("Everything runs locally on your Mac, without an account. Finder reads names, paths and icon positions to connect your circuit to the current file. Texture packs never execute code.")
                     Text("Outputs open items by default. Running supported shell scripts is optional and needs separate approval for a new or changed file. Remembered approvals can be forgotten in Settings → Outputs. Only run scripts you trust.")
-                    Text("The app includes original artwork and an owner-provided logo. Minecraft graphics and audio are optional local imports; none is bundled.")
+                    Text("The app includes original artwork and its own logo. Minecraft graphics and audio are optional local imports; none is bundled.")
                     HStack {
                         Button("View License") { revealResource("LICENSE") }
                         Button("Artwork Notices") { revealResource("THIRD_PARTY_NOTICES", extension: "md") }

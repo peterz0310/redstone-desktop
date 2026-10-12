@@ -13,9 +13,9 @@ Your files stay in Finder, right where you left them. Everything runs locally. N
 
 ## Download
 
-A **public DMG download is coming**. This is an early preview; there isn’t a public signed installer yet. The source release script already produces local DMG and ZIP review builds. It requires **macOS 14 or newer**.
+[Download for Mac](https://github.com/peterz0310/redstone-desktop/releases) · **macOS 14 or newer** · Apple silicon and Intel
 
-Already have a build? Move **RedstoneDesktop.app** to Applications and open it normally. You don’t need Xcode to use the app. If you’re building from source, see the [development and release guide](docs/RELEASE.md).
+Open the downloaded DMG, drag **Redstone Desktop** into **Applications**, and open it from there. Setup helps you connect to Finder and choose your look. You don’t need Xcode or Minecraft to use the app.
 
 ## Your first circuit
 
@@ -45,11 +45,9 @@ These examples use the app’s original artwork, rendered with the same engine a
 - **Build on Desktop:** edit directly beneath your files, then return to normal desktop use.
 - **Make it yours:** adjust textures, sounds, animations and particles in Settings. The `?` buttons explain the options.
 
-Outputs open files by default. Running scripts is optional and asks for your approval. You can export and import your worlds in **Settings → Data**; see [backups and recovery](docs/RECOVERY.md) for restoring or starting over.
+Outputs open files by default. Running scripts is optional and asks for your approval. You can export and import your worlds in **Settings → Data**; see [saving and backups](docs/USER_GUIDE.md#saving-and-backups) for restoring or starting over.
 
-Open **Help → Redstone Desktop Help** for offline instructions. See the [release notes](CHANGELOG.md) for this preview.
-
-For a closer look, read the [editor guide](docs/EDITOR_TOOLS.md), [circuit guide](docs/REDSTONE_RULES.md), or [Minecraft import guide](docs/JAVA_TEXTURE_IMPORT.md).
+Open **Help → Redstone Desktop Help** for offline instructions, or read the [user guide](docs/USER_GUIDE.md). Making your own textures? See the [custom-pack format](docs/RESOURCE_PACKS.md).
 
 ---
 

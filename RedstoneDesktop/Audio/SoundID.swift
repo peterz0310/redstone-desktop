@@ -3,6 +3,21 @@ import Foundation
 enum SoundID: String, Codable, CaseIterable, Sendable {
     case buttonPress, buttonRelease, leverToggleOn, leverToggleOff, repeaterTick, torchToggle
     case placeCircuit, removeCircuit, invalidPlacement, outputActivate
+
+    var displayName: String {
+        switch self {
+        case .buttonPress: "Button press"
+        case .buttonRelease: "Button release"
+        case .leverToggleOn: "Lever on"
+        case .leverToggleOff: "Lever off"
+        case .repeaterTick: "Repeater tick"
+        case .torchToggle: "Redstone torch"
+        case .placeCircuit: "Place component"
+        case .removeCircuit: "Erase component"
+        case .invalidPlacement: "Can't place here"
+        case .outputActivate: "Output activation"
+        }
+    }
 }
 
 struct AudioSettings: Equatable, Codable, Sendable {

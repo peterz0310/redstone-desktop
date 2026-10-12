@@ -14,7 +14,7 @@ final class AppState: ObservableObject {
     private let maintenanceStore: LibraryMaintenanceStore?
     private let preferencesDomain: String?
     private let relauncher: any AppRelaunching
-    @Published private(set) var desktopStatus = "Desktop checker is disabled."
+    @Published private(set) var desktopStatus = "Desktop is stopped."
     @Published private(set) var pointer: PointerSnapshot?
     @Published private(set) var lastClick: DesktopClickSnapshot?
     @Published private(set) var observedClickCount = 0
@@ -1253,7 +1253,7 @@ final class AppState: ObservableObject {
         observedClickCount = 0
         closeDesktopRenderers()
         isDesktopWorldEnabled = false
-        desktopStatus = "Desktop checker is disabled."
+        desktopStatus = "Desktop is stopped."
         if preserveEditorTracking { startEditorFinderTrackingIfNeeded() }
         else { editorFinderItemsVisible = false }
     }
@@ -1282,7 +1282,7 @@ final class AppState: ObservableObject {
                 startCircuitTimer()
                 lastActionResult = "Desktop running. Use a visible button/lever to power an Output; its current occupant is refreshed before action."
             } catch {
-                desktopStatus = "Display geometry cannot be mapped. Desktop checker remains disabled."
+                desktopStatus = "The display layout could not be read. Desktop is stopped."
             }
         }
     }

@@ -2,13 +2,7 @@
 
 Redstone Desktop packs are optional **data**: PNG images, short WAV effects and a JSON manifest. The app runs without a pack or Minecraft installation. Nothing in a pack is executed. World generation, terrain capabilities, component placement, simulation, Finder occupancy and action permissions are independent of appearance.
 
-To use an already-installed Minecraft Java version or native Java pack, see [Local Java texture import](JAVA_TEXTURE_IMPORT.md). That importer creates a local format-1 pack; it does not require you to write a manifest or add game assets to this repository.
-
-## Try the original example from a source checkout
-
-Open **Advanced → Appearance & Packs → More options & custom packs → Choose Custom Pack Folder or ZIP…**. Select `examples/GrassOnly` or `examples/GrassOnly.zip` from this repository. Grass becomes a purple/teal checker; every other terrain, decoration, circuit and sound uses its built-in default. Both forms should look the same. Choose **Use Original Look** to restore the original appearance.
-
-This example is original project art under the repository's MIT license, not Minecraft art. It is safe to commit/share. The ZIP includes one wrapper folder, as macOS Finder's Compress action normally does.
+To use an already-installed Minecraft Java version or native Java pack, see [the user guide](USER_GUIDE.md#textures-and-sounds). That importer creates a local format-1 pack; it does not require you to write a manifest yourself.
 
 ## Create a pack
 
@@ -45,7 +39,7 @@ To ZIP on macOS, right-click the pack folder → **Compress**. A ZIP can have it
 
 ## Texture IDs (case-sensitive)
 
-All IDs below accept **PNG only**. These are the actual format-1 names; examples in older planning documents may differ.
+All IDs below accept **PNG only**. IDs are case-sensitive.
 
 | ID | Appearance |
 | --- | --- |
@@ -75,7 +69,7 @@ All IDs below accept **PNG only**. These are the actual format-1 names; examples
 | `decorationCoal` | Coal deposit surface |
 | `decorationIron` | Iron deposit surface |
 | `decorationCactus` | Cactus top on sand; original fallback, never ore-family fallback |
-| `decorationRock` | Legacy family fallback for coal/iron deposits; retained for older packs |
+| `decorationRock` | Family fallback for coal/iron deposits |
 | `decorationReed` | Reed overlay |
 | `redstoneDustOff` | Unpowered wire material |
 | `redstoneDustOn` | Powered wire material |
@@ -94,11 +88,11 @@ All IDs below accept **PNG only**. These are the actual format-1 names; examples
 | `redstoneOutputOff` | Unpowered output icon |
 | `redstoneOutputOn` | Powered output icon |
 
-PNG bounds: 1–1024 pixels in each dimension, at most 4 MiB encoded, one image frame. Square images are recommended; rectangular images stretch to the semantic surface. Transparent decorations overlay the terrain; alpha is decoded as premultiplied RGBA and composited. Texture sampling is nearest-neighbor. There are 49 texture IDs in format 1; the lava ID, two tree log IDs, three new landscape surface IDs and three scenery IDs, the seven decoration variant IDs, two torch IDs and four desktop detector IDs are additive, so earlier manifests remain valid. Button/lever/repeater icons retain labels, rotation and power frames; full-tile Outputs retain soft occupancy glows; a pack does not replace interaction geometry. Dust uses filled square junctions and cardinal strips one fifth of a tile wide; its material is overridden, not a full-tile vanilla dust model. Built-in powered material is bright red, with dark red when off. Texture colors are displayed without multiplying by a yellow/orange UI tint. Positive power multiplies material RGB by a neutral brightness factor `0.45 + 0.55 × power/15`, preserving hue and alpha; zero uses the separate off material. Custom packs may deliberately choose other colors. Repeaters cover 86% of a tile, with short wire strips bridging compatible front/rear ports to adjacent repeaters and other connected components; side/head-to-head neighbors do not gain ports. Button/lever art has transparent backing; button/lever state labels and repeater rotation/delay remain. Outputs cover a full tile without app text or colored backing; their glow is green for one occupant, gently red for empty, amber for ambiguous and gray for unavailable. Highlight/selection/diagnostic overlays remain app UI.
+PNG bounds: 1–1024 pixels in each dimension, at most 4 MiB encoded, one image frame. Square images are recommended; rectangular images stretch to the semantic surface. Transparent decorations overlay the terrain; alpha is decoded as premultiplied RGBA and composited. Texture sampling is nearest-neighbor. There are 49 texture IDs in format 1. Button/lever/repeater icons retain labels, rotation and power frames; full-tile Outputs retain soft occupancy glows; a pack does not replace interaction geometry. Dust uses filled square junctions and cardinal strips one fifth of a tile wide; its material is overridden, not a full-tile vanilla dust model. Built-in powered material is bright red, with dark red when off. Texture colors are displayed without multiplying by a yellow/orange UI tint. Positive power multiplies material RGB by a neutral brightness factor `0.45 + 0.55 × power/15`, preserving hue and alpha; zero uses the separate off material. Custom packs may deliberately choose other colors. Repeaters cover 86% of a tile, with short wire strips bridging compatible front/rear ports to adjacent repeaters and other connected components; side/head-to-head neighbors do not gain ports. Button/lever art has transparent backing; button/lever state labels and repeater rotation/delay remain. Outputs cover a full tile without app text or colored backing; their glow is green for one occupant, gently red for empty, amber for ambiguous and gray for unavailable. Highlight/selection/diagnostic overlays remain app UI.
 
-Generated terrain is baked into bounded chunk sprites. Generated dirt uses `terrainGrass` (Java grass-block top); explicit saved dirt overrides still use `terrainDirt`. Legacy rock slots on sand, including sandy shores, use `decorationCactus`; other rock slots choose coal/iron. These are appearance choices independent of generation and placement rules. Default terrain generation has changed; see [World generation](WORLD_GENERATION.md). Outputs use original terminal-block defaults or optional command-block Java art; occupancy glow, inspector details and actions remain separate. Built-in terrain uses 8 pixels/tile. A terrain/decoration override uses 16 pixels/tile, sampled from the source PNG (higher-resolution files are reduced with nearest sampling). This keeps memory bounded and preserves standard 16-pixel Java texture detail. Circuit textures retain their source raster resolution. Shelf thumbnails remain schematic summaries rather than pack previews. Explicit non-generated diagnostic terrain uses provider textures; generated legacy overrides use the same terrain pack as their surroundings.
+Terrain and decoration overrides are sampled at 16 pixels per tile with nearest-neighbor filtering. Circuit textures retain their source resolution. Tree leaves overlay several tiles, with a log beneath the center. Transparent leaf pixels reveal the log or ground. An opaque leaf image hides the log.
 
-Tree canopies span five to ten world tiles, with a 3×3 core and an occasional arm extending one block; the cross is always present and each corner may be missing. `decorationTree` / `decorationPine` provide the leaves on every canopy tile; the renderer puts `decorationOakLog` / `decorationSpruceLog` beneath the center only. Transparent center pixels reveal wood, while outer leaf holes reveal terrain. Missing log textures use original opaque wood, so older imported packs immediately gain proper trunks. Reimport a Java version to use its log textures. A custom leaf image should keep its transparency; an entirely opaque image will naturally hide the log.
+Shallow water is darkened at display time (70% red/green, 88% blue), preserving alpha and animation timing. Water is composited over an opaque blue base so transparent water does not reveal the viewport backdrop. Source images remain unchanged.
 
 ## Sound IDs (case-sensitive)
 
@@ -106,41 +100,25 @@ Tree canopies span five to ten world tiles, with a 3×3 core and an occasional a
 
 Sounds require **little-endian RIFF WAV**, PCM 16-bit or IEEE float 32-bit, mono or stereo, 8–96 kHz, at most 2 seconds and 8 MiB encoded. Stereo is averaged to mono, linearly resampled to 44.1 kHz, and peaks above 0.11 are reduced to 0.11 to leave overlap headroom. The engine then applies master volume/mute and per-event stereo pan. NaN/infinite samples are refused. WAV extensible/compressed WAV, OGG, MP3, streaming audio, playlists and code are not supported in format 1.
 
-Decoration type/positions come from the current generator or explicit saved terrain. A separate stable seed/coordinate hash chooses five flower appearances and coal/iron at legacy rock positions. These choices never depend on load order, camera or system randomness; changing art does not invalidate saved builds. The inspector names the visible variant. Built-in art supplies every variant without requiring a pack.
-
 Effects replace semantic events only: changing `buttonPress` does not change when a button accepts input. Eight simultaneous voices are retained; at saturation the oldest is recycled. Changing packs clears currently playing effects, preserves volume/mute, and does not replay held circuit events.
 
 ## Fallback and diagnostics
 
 Resolution order is selected custom/imported pack → built-in original assets. Only **one** pack is active; imported Java textures use this same slot.
 
-- An omitted ID uses built-in assets without warning, except decoration variants first try their family override: flowers → `decorationFlower`; coal/iron → legacy `decorationRock`. A specific variant override takes priority.
+- An omitted ID uses built-in assets without warning, except decoration variants first try their family override: flowers → `decorationFlower`; coal/iron → `decorationRock`. A specific variant override takes priority.
 - Unknown IDs are ignored with a warning (useful for spotting misspellings).
 - Missing, oversized, unsupported or undecodable individual files warn and fall back **only that asset**.
 - Bad manifests, escaping manifest paths, or unsafe/unsupported ZIP structures refuse the replacement and preserve the current pack, sounds and saved choice. At startup, an unreadable remembered pack leaves the original fallback active.
 - Appearance & Packs shows active name, selected source, counts and expandable per-asset diagnostics.
 
-The loader constructs a complete immutable snapshot before applying it. A newer selection or Use Original Look supersedes a pending load; a late load cannot switch the pack back. Snapshot/revision changes invalidate circuit/terrain appearance caches while retaining world data, simulator, camera, input monitors and Finder targets. Assets are decoded off the main thread; renderers never read paths from disk. Audio receives validated sample arrays, not pack code.
-
-Selection is stored in app preferences, **not library.json**. Reopening revalidates the selected source, starts Desktop disabled, and falls back if the source was moved/damaged. A successful reload updates the snapshot. Use Original Look clears the remembered selection. Tests construct isolated preferences and temporary packs; the application test host does not restore the owner's selection.
+Selection is remembered separately from exported worlds. Reopening revalidates the source and falls back to the original look if it was moved or damaged. Reload Current Pack reads the selected source again. Use Original Look clears the selection.
 
 ## Archive contract and limits
 
-The shared `SafeZIP` reader supports ordinary single-disk ZIP/JAR using stored or raw DEFLATE entries, UTF-8/ASCII names, and validates decompression output length and CRC-32. It does **not** invoke shell commands or unpack an archive into a folder. It inspects the central directory and only reads selected manifest/assets into memory.
+Archives support ordinary single-disk ZIP/JAR using stored or raw DEFLATE entries, UTF-8/ASCII names, and validates decompression output length and CRC-32. It does **not** invoke shell commands or unpack an archive into a folder. It inspects the central directory and only reads selected manifest/assets into memory.
 
 Limits: archive ≤256 MiB; central directory ≤32 MiB; individual declared expanded entry ≤16 MiB; compressed entry ≤32 MiB; total declared expanded content ≤512 MiB; manifest/image/audio have the smaller limits above. Encrypted, multi-disk, ZIP64, unsupported compression, symbolic-link entries, unsafe names and duplicate/case-colliding normalized paths are refused. A ZIP64 export must be recreated as a normal ZIP. Metadata/source names must agree with local entry headers when read. Archive paths are never used as output paths.
-
-Bounds are checked before raster decode using [ImageIO image properties](https://developer.apple.com/documentation/imageio/cgimagesourcecopypropertiesatindex(_:_:_:)). Archive parsing follows the [PKWARE ZIP specification](https://pkware.cachefly.net/webdocs/casestudies/APPNOTE.TXT), and raw DEFLATE/CRC use the system zlib SDK. These are explicit narrow support boundaries; extend with tests rather than bypassing validation.
-
-## Contributing
-
-Relevant files: `Assets/AssetID.swift` defines the contract; `ResourcePack.swift` validates manifest/raster/WAV; `SafeZIP.swift` handles archives; `AssetProvider.swift` resolves overrides/fallback and manages revisions; `AssetSettingsView.swift` exposes controls. `TerrainChunkRenderer`, `CircuitTextures` and `AudioEngine` consume validated assets. Pure simulation/domain code has no asset or SpriteKit dependency.
-
-When adding an ID, update enum, built-in fallback, renderer consumer, this table and tests. When changing accepted data, version/document the contract and add malformed/boundary cases. Never add third-party game art to examples, fixtures or the app bundle. Use original tiny test images, or load an owner's local game installation outside the repository for manual validation.
-
-Shallow-water RGB is multiplied by 70% red/green and 88% blue at display time to soften its contrast with deep water. This applies to static textures and every animation frame, preserving alpha, frame order and timing. Deep water, lava and decoration colors are unaffected.
-
-Water textures are composited over an opaque blue base for their depth, so translucent Java/custom water does not expose the checker backdrop. Decoration transparency is preserved. Imported/cache PNGs are unchanged; this is a rendering rule and requires no re-import.
 
 ## Optional liquid animation (format 1)
 
@@ -158,6 +136,4 @@ Existing static packs need no changes. To animate `waterShallow`, `waterDeep` or
 
 Indices are zero-based, from the top of the PNG. Durations are seconds, one per sequence entry; `interpolate` defaults to false. Limits: 1–64 stored frames, 1–256 sequence steps, finite 0.05–10 second durations, at most the three liquid IDs. An animation ID must have a matching `assets` entry; other animation IDs refuse the pack. Invalid per-image animation data warns and uses original fallback for that image. PNG/manifest/archive bounds and safe-path rules remain unchanged. Custom packs without animation declarations remain static; Java imports convert `.png.mcmeta` into these declarations. No user-supplied shader code is accepted.
 
-See [Terrain animation](TERRAIN_ANIMATION.md) for implementation and testing. Liquid alpha is composited over an opaque liquid color, keeping the diagnostic grid from showing through. World/area preview cards remain static thumbnails; the editor and Desktop animate.
-
-Particle PNG IDs use the app’s bounded [scene effects](SCENE_EFFECTS.md); packs supply images only. No pack-supplied emitter/shader/model code is accepted. Java imports may decode supported local Ogg effects into these packs’ existing semantic WAV IDs; custom format-1 manifests still accept WAV only, as specified above. See [Java asset import](JAVA_TEXTURE_IMPORT.md) for supported paths and cache provenance.
+The editor and Desktop animate liquids; world and area cards use static previews. Reduce Motion and the app’s animation setting can pause effects. Particle PNGs supply images for the built-in effects. Packs cannot supply emitters, models or shader code. Java imports can convert supported local Ogg effects to the semantic WAV IDs; custom format-1 packs accept WAV only.

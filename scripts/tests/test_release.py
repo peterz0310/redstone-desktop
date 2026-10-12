@@ -1,6 +1,7 @@
 import importlib.util
 import io
 import stat
+import sys
 import struct
 import subprocess
 import tempfile
@@ -55,6 +56,10 @@ class ReleaseTests(unittest.TestCase):
                 else:
                     with self.assertRaises(ValueError): release.check_archive_paths(archive)
 
+    def test_archive_refuses_a_regular_file_disguised_as_install_shortcut(self):
+        with self.archive([('RedstoneDesktop/Applications', b'/Applications')]) as archive:
+            with self.assertRaises(ValueError): release.check_archive_paths(archive)
+
     def test_payload_refuses_owner_data_and_executable_imports_anywhere(self):
         for name in ['docs/library.json', 'Contents/Resources/ImportedTextures/a.png', 'docs/local.jar', 'Contents/Resources/a.ogg', 'Contents/Resources/a.wav', 'docs/hello.sh', 'docs/pack.json', 'docs/local-pack.zip']:
             with self.assertRaises(ValueError): release.check_payload_names([name])
@@ -103,6 +108,21 @@ class ReleaseTests(unittest.TestCase):
         result = subprocess.run([str(SCRIPTS / 'release.sh'), '--sign', 'Apple Development: Fixture'], capture_output=True, text=True)
         self.assertEqual(result.returncode, 2)
         self.assertIn('Developer ID Application', result.stderr)
+
+    @unittest.skipUnless(sys.platform == 'darwin', 'Finder scripting is macOS-only')
+    def test_finder_layout_compiles_against_public_dictionary(self):
+        with tempfile.TemporaryDirectory() as temporary:
+            result = subprocess.run(['osacompile', '-o', str(Path(temporary) / 'layout.scpt'), str(SCRIPTS / 'InstallerLayout.applescript')], capture_output=True, text=True)
+            self.assertEqual(result.returncode, 0, result.stderr)
+
+    def test_customer_installer_excludes_developer_documents_logs_and_symbols(self):
+        names = ['Redstone Desktop.app/Contents/Info.plist', 'Applications']
+        release.check_installer_names(names)
+        release.check_installer_names(names + ['.DS_Store', '.background', '.background/background.png', '.fseventsd', '.fseventsd/fseventsd-uuid', '.fseventsd/0000000000001234'])
+        for extra in ['README.md', 'docs/RELEASE.md', 'build.log', 'symbols.zip', 'RedstoneDesktop.app.dSYM/Contents/Info.plist', '.background/local.jar', '.background/other.png', '.fseventsd/private.txt', '.Trashes/secret']:
+            with self.assertRaises(ValueError): release.check_installer_names(names + [extra])
+        for incomplete in [[], ['Applications'], ['Redstone Desktop.app/Contents/Info.plist']]:
+            with self.assertRaises(ValueError): release.check_installer_names(incomplete)
 
     def test_installer_requires_exact_applications_link(self):
         with tempfile.TemporaryDirectory() as temporary:
