@@ -13,7 +13,9 @@ Your files stay in Finder, right where you left them. Everything runs locally. N
 
 ## Download
 
-[Download for Mac](https://github.com/peterz0310/redstone-desktop/releases) · **macOS 14 or newer** · Apple silicon and Intel
+[Download for Mac](https://github.com/peterz0310/redstone-desktop/releases/latest/download/RedstoneDesktop-macOS.dmg) · [All releases](https://github.com/peterz0310/redstone-desktop/releases)
+
+**macOS 14 or newer** · Apple silicon and Intel
 
 Open the downloaded DMG, drag **Redstone Desktop** into **Applications**, and open it from there. Setup helps you connect to Finder and choose your look. You don’t need Xcode or Minecraft to use the app.
 

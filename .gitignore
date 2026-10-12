@@ -10,3 +10,6 @@ build-release/
 
 __pycache__/
 *.pyc
+
+/RedstoneDesktop*-macOS.dmg
+/RedstoneDesktop*-macOS.dmg.sha256
